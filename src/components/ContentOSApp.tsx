@@ -1,997 +1,525 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { useState, useEffect } from 'react'
+import { createClient } from '@supabase/supabase-js'
 
-// ===== 类型定义 =====
-interface User { id: string; email: string }
-interface Account { id?: string; name: string; emoji: string; industry: string; positioning: string; targetAudience: string; color: string; user_id?: string }
-interface CopyVersion { style: string; hook: string; content: string }
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+type Tab = 'dashboard' | 'materials' | 'content' | 'video' | 'operations'
+type MatTab = 'hotspot' | 'topics' | 'radar' | 'creator' | 'style'
+type OpsTab = 'schedule' | 'stats' | 'goals'
+type VideoStep = 'input' | 'voice' | 'avatar' | 'preview'
+
+interface Account { id: string; name: string; emoji: string; industry: string; positioning: string; targetAudience: string; color: string }
+interface SavedContent { id: string; topic: string; style: string; content: string; createdAt: string }
 interface Topic { title: string; category: string; reason: string; hook: string; tags: string[] }
-interface Insight { icon: string; title: string; detail: string }
-interface SavedContent { id?: string; topic: string; style: string; content: string; created_at?: string }
-interface StyleTemplate { id: string; name: string; summary: string; traits: string[]; structure: any; vocabulary: any; examples: any; bestFor: string[]; score: number }
-interface CreatorVideo { rank: number; title: string; script: string; likes: number; comments: number; collects: number; shares: number; publishDate: string; duration: string; tags: string[]; hook: string; type: string }
-interface RadarData { date: string; mediaHotspots: any[]; industryTrends: any[]; viralFormats: any[]; keywords: any[]; todayAction: any }
-interface ScheduleItem { time: string; title: string; status: string; platform: string }
 
-// ===== 默认数据 =====
 const DEFAULT_ACCOUNTS: Account[] = [
-  { name: '老李面馆', emoji: '🍜', industry: '餐饮', positioning: '本地餐饮·老板IP流·面馆老板的真实日常', targetAudience: '周边3km上班族、家庭用户，25-45岁', color: 'linear-gradient(135deg,#FF6B6B,#FF8E53)' },
-  { name: '美颜工坊', emoji: '💆', industry: '美业', positioning: '本地美容·技术流·真实效果展示', targetAudience: '25-40岁女性，注重外貌管理', color: 'linear-gradient(135deg,#4ECDC4,#44A08D)' },
+  { id: '1', name: '老李面馆', emoji: '🍜', industry: '餐饮', positioning: '本地餐饮·老板IP流', targetAudience: '周边3km上班族', color: 'from-orange-400 to-amber-500' },
+  { id: '2', name: '健身工作室', emoji: '💪', industry: '健身', positioning: '专业健身教练', targetAudience: '18-35岁健身爱好者', color: 'from-blue-500 to-cyan-400' },
 ]
-
 const HOTSPOTS = [
-  { rank: 1, title: '#端午节限定套餐', heat: '2.3M播放 · ↑340%', rel: '强相关', relColor: '#FF9500' },
-  { rank: 2, title: '#餐饮老板真实日常', heat: '1.8M播放 · ↑180%', rel: '相关', relColor: '#007AFF' },
-  { rank: 3, title: '#创业踩坑经历', heat: '1.2M播放 · ↑95%', rel: '相关', relColor: '#007AFF' },
-  { rank: 4, title: '#本地探店攻略', heat: '980K播放 · ↑62%', rel: '一般', relColor: '#8E8E93' },
-  { rank: 5, title: '#上班族午餐推荐', heat: '760K播放 · ↑48%', rel: '强相关', relColor: '#34C759' },
+  { title: '端午节限定套餐', heat: 98, tag: '节日热点' },
+  { title: '夏日消暑特饮', heat: 92, tag: '季节热点' },
+  { title: '老板的一天', heat: 87, tag: '老板IP' },
+  { title: '顾客感动故事', heat: 85, tag: '情感共鸣' },
+  { title: '开店3年踩过的坑', heat: 94, tag: '干货分享' },
 ]
 
-const QUICK_TOPICS = [
-  '开店3年，我踩过的5个最贵的坑',
-  '为什么我的店午餐时间总是排队？',
-  '顾客说了一句话，让我感动了好久',
-  '上班族午餐选择困难？30元吃好吃饱',
-]
-
-const TV = { '--bg': '#F2F2F7', '--card': '#FFF', '--card2': '#F9F9FB', '--inp': '#EFEFF4', '--tab-bg': 'rgba(255,255,255,.96)', '--b': 'rgba(0,0,0,.07)', '--t1': '#1C1C1E', '--t2': '#3A3A3C', '--t3': '#8E8E93', '--t4': '#C7C7CC', '--accent': '#007AFF', '--green': '#34C759', '--orange': '#FF9500', '--purple': '#AF52DE', '--red': '#FF3B30' }
+function Toast({ msg }: { msg: string }) {
+  if (!msg) return null
+  return (
+    <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 bg-gray-900/90 text-white text-xs font-medium px-4 py-2 rounded-full shadow-lg backdrop-blur-sm whitespace-nowrap">
+      {msg}
+    </div>
+  )
+}
 
 export default function ContentOSApp() {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<any>(null)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
   const [authLoading, setAuthLoading] = useState(false)
   const [authError, setAuthError] = useState('')
-  const [tab, setTab] = useState<'dashboard' | 'materials' | 'content' | 'video' | 'operations'>('dashboard')
-  const [accounts, setAccounts] = useState<Account[]>(DEFAULT_ACCOUNTS)
-  const [account, setAccount] = useState(0)
+  const [tab, setTab] = useState<Tab>('dashboard')
   const [toast, setToast] = useState('')
-  const toastTimer = useRef<any>(null)
+  const [accounts, setAccounts] = useState<Account[]>(DEFAULT_ACCOUNTS)
+  const [accountIdx, setAccountIdx] = useState(0)
   const [contentStep, setContentStep] = useState(1)
   const [selectedTopic, setSelectedTopic] = useState('开面馆 3 年，我踩过的 5 个最贵的坑')
   const [copyStyle, setCopyStyle] = useState('犀利观点')
   const [userInput, setUserInput] = useState('')
-  const [copyVersions, setCopyVersions] = useState<CopyVersion[]>([])
+  const [copyVersions, setCopyVersions] = useState<any[]>([])
   const [copyLoading, setCopyLoading] = useState(false)
   const [copyError, setCopyError] = useState('')
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
-  const [expandedIdx, setExpandedIdx] = useState<number | null>(null)
-  const [copyTokens, setCopyTokens] = useState<number | null>(null)
+  const [savedContents, setSavedContents] = useState<SavedContent[]>([])
+  const [matTab, setMatTab] = useState<MatTab>('hotspot')
   const [aiTopics, setAiTopics] = useState<Topic[]>([])
   const [topicsLoading, setTopicsLoading] = useState(false)
-  const [matTab, setMatTab] = useState<'hotspot' | 'topics' | 'saved' | 'creator' | 'radar'>('hotspot')
-  const [insights, setInsights] = useState<Insight[]>([])
-  const [insightsLoading, setInsightsLoading] = useState(false)
-  const [showInsights, setShowInsights] = useState(false)
-  const [savedContents, setSavedContents] = useState<SavedContent[]>([])
-  const [posStep, setPosStep] = useState(0)
-  const [posForm, setPosForm] = useState({ industry: '', product: '', targetCustomer: '', city: '', advantage: '' })
-  const [posResult, setPosResult] = useState<any>(null)
-  const [posLoading, setPosLoading] = useState(false)
-  // 博主追踪
   const [creatorUrl, setCreatorUrl] = useState('')
-  const [creatorCount, setCreatorCount] = useState(20)
-  const [creatorSort, setCreatorSort] = useState('likes')
   const [creatorLoading, setCreatorLoading] = useState(false)
   const [creatorData, setCreatorData] = useState<any>(null)
   const [trackedCreators, setTrackedCreators] = useState<any[]>([])
-  const [creatorView, setCreatorView] = useState<'list' | 'detail'>('list')
-  // 内容情报雷达
-  const [radarData, setRadarData] = useState<RadarData | null>(null)
+  const [radarData, setRadarData] = useState<any>(null)
   const [radarLoading, setRadarLoading] = useState(false)
-  const [radarTab, setRadarTab] = useState<'hotspot' | 'format' | 'keyword' | 'action'>('hotspot')
-  // 文案风格模板
-  const [styleTemplates, setStyleTemplates] = useState<StyleTemplate[]>([])
-  const [styleMode, setStyleMode] = useState<'list' | 'create' | 'detail'>('list')
-  const [styleInput, setStyleInput] = useState('')
+  const [styleTemplates, setStyleTemplates] = useState<any[]>([])
+  const [styleLoading, setStyleLoading] = useState(false)
   const [styleUrl, setStyleUrl] = useState('')
   const [styleName, setStyleName] = useState('')
-  const [styleLoading, setStyleLoading] = useState(false)
-  const [selectedTemplate, setSelectedTemplate] = useState<StyleTemplate | null>(null)
-      // 多账号管理
-      const [showAccountManager, setShowAccountManager] = useState(false)
-      const [editingIdx, setEditingIdx] = useState<number | null>(null)
-      const [accountForm, setAccountForm] = useState({ name: '', emoji: '🏪', industry: '', positioning: '', targetAudience: '', color: 'linear-gradient(135deg,#007AFF,#30D5C8)' })
-      // 运营中心
-      const [schedule, setSchedule] = useState<ScheduleItem[]>([
-        { time: '今天 18:30', title: '端午节限定套餐来了！', status: '待发布', platform: '抖音' },
-        { time: '明天 12:00', title: '开面馆3年踩过的坑', status: '草稿', platform: '抖音' },
-        { time: '后天 19:00', title: '顾客感动故事', status: '计划中', platform: '小红书' },
-      ])
-      const [opsTab, setOpsTab] = useState<'schedule'|'stats'|'goals'>('schedule')
-  // 视频生成
-  const [videoStep, setVideoStep] = useState<'input'|'voice'|'avatar'|'preview'>('input')
+  const [opsTab, setOpsTab] = useState<OpsTab>('schedule')
+  const [schedule, setSchedule] = useState([
+    { time: '今天 18:30', title: '端午节限定套餐来了！', status: '待发布', platform: '抖音' },
+    { time: '明天 12:00', title: '开面馆3年踩过的坑', status: '草稿', platform: '抖音' },
+    { time: '后天 19:00', title: '顾客感动故事', status: '计划中', platform: '小红书' },
+  ])
+  const [videoStep, setVideoStep] = useState<VideoStep>('input')
   const [videoCopy, setVideoCopy] = useState('')
   const [videoVoiceId, setVideoVoiceId] = useState('female-shaonv')
   const [videoSpeed, setVideoSpeed] = useState(1.0)
-  const [videoAvatarType, setVideoAvatarType] = useState<'upload'|'preset'>('preset')
+  const [videoAvatarType, setVideoAvatarType] = useState<'preset' | 'upload'>('preset')
   const [videoAvatarPreset, setVideoAvatarPreset] = useState('business-female')
-  const [videoBgType, setVideoBgType] = useState<'color'|'image'|'blur'>('color')
+  const [videoBgType, setVideoBgType] = useState<'color' | 'image' | 'blur'>('color')
   const [videoBgColor, setVideoBgColor] = useState('#1a1a2e')
   const [videoLoading, setVideoLoading] = useState(false)
   const [videoAudioB64, setVideoAudioB64] = useState('')
-  const [videoResult, setVideoResult] = useState<any>(null)
   const [videoError, setVideoError] = useState('')
 
-  const acc = accounts[account] || accounts[0]
+  const acc = accounts[accountIdx] || accounts[0]
 
-  // 检查登录状态
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) setUser({ id: session.user.id, email: session.user.email! })
-    })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) setUser({ id: session.user.id, email: session.user.email! })
-      else setUser(null)
-    })
+    supabase.auth.getSession().then(({ data: { session } }) => { if (session?.user) setUser(session.user) })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => { setUser(session?.user ?? null) })
     return () => subscription.unsubscribe()
   }, [])
 
-  // 加载保存的内容
-  useEffect(() => {
-    if (user) loadSavedContents()
-  }, [user])
-
-  // 加载本地风格模板
   useEffect(() => {
     try {
-      const local = localStorage.getItem('contentos_style_templates')
-      if (local) setStyleTemplates(JSON.parse(local))
-    } catch {}
-    try {
-      const local = localStorage.getItem('contentos_tracked_creators')
-      if (local) setTrackedCreators(JSON.parse(local))
+      const s = localStorage.getItem('contentos_saved'); if (s) setSavedContents(JSON.parse(s))
+      const t = localStorage.getItem('contentos_style_templates'); if (t) setStyleTemplates(JSON.parse(t))
+      const c = localStorage.getItem('contentos_creators'); if (c) setTrackedCreators(JSON.parse(c))
     } catch {}
   }, [])
 
-  async function loadSavedContents() {
-    try {
-      const { data, error } = await supabase.from('contents').select('*').order('created_at', { ascending: false }).limit(20)
-      if (data && !error) { setSavedContents(data); return }
-    } catch {}
-    try {
-      const local = localStorage.getItem('contentos_saved')
-      if (local) setSavedContents(JSON.parse(local))
-    } catch {}
-  }
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 2500) }
 
-  function showToast(msg: string) {
-    setToast(msg)
-    if (toastTimer.current) clearTimeout(toastTimer.current)
-    toastTimer.current = setTimeout(() => setToast(''), 2500)
-  }
-
-  async function handleAuth() {
+  async function handleLogin() {
     setAuthLoading(true); setAuthError('')
-    try {
-      if (authMode === 'register') {
-        const { error } = await supabase.auth.signUp({ email: authEmail, password: authPassword })
-        if (error) setAuthError(error.message)
-        else showToast('注册成功，请查收验证邮件')
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword })
-        if (error) setAuthError('邮箱或密码错误')
-      }
-    } catch { setAuthError('网络错误，请重试') }
-    finally { setAuthLoading(false) }
+    const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword })
+    if (error) setAuthError(error.message)
+    setAuthLoading(false)
   }
-
-  async function handleLogout() {
-    await supabase.auth.signOut()
-    showToast('已退出登录')
+  async function handleRegister() {
+    setAuthLoading(true); setAuthError('')
+    const { error } = await supabase.auth.signUp({ email: authEmail, password: authPassword })
+    if (error) setAuthError(error.message); else showToast('注册成功，请查收验证邮件')
+    setAuthLoading(false)
   }
+  async function handleLogout() { await supabase.auth.signOut(); setUser(null) }
 
   async function generateCopy() {
-    setCopyLoading(true); setCopyVersions([]); setCopyError('')
+    if (!selectedTopic.trim()) { showToast('请先选择选题'); return }
+    setCopyLoading(true); setCopyError(''); setCopyVersions([])
     try {
-      const res = await fetch('/api/generate-copy', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topicTitle: selectedTopic, accountName: acc.name, industry: acc.industry, positioning: acc.positioning, targetAudience: acc.targetAudience, style: copyStyle, userInput }),
-      })
+      const res = await fetch('/api/generate-copy', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topicTitle: selectedTopic, style: copyStyle, userInput, accountName: acc.name, industry: acc.industry, positioning: acc.positioning, targetAudience: acc.targetAudience }) })
       const data = await res.json()
-      if (data.success) { setCopyVersions(data.versions); setCopyTokens(data.tokens); setExpandedIdx(0) }
-      else setCopyError(data.error || '生成失败')
-    } catch { setCopyError('网络错误，请重试') }
-    finally { setCopyLoading(false) }
-  }
-
-  async function saveCopy(version: CopyVersion) {
-    const newItem = {
-      id: Date.now().toString(),
-      topic: selectedTopic, style: version.style, content: version.content,
-      account_name: acc.name, created_at: new Date().toISOString()
-    }
-    if (user) {
-      try {
-        const { error } = await supabase.from('contents').insert({
-          user_id: user.id, topic: selectedTopic, style: version.style, content: version.content, account_name: acc.name
-        })
-        if (!error) { showToast('✅ 文案已保存'); loadSavedContents(); return }
-      } catch {}
-    }
-    try {
-      const local = localStorage.getItem('contentos_saved')
-      const existing: SavedContent[] = local ? JSON.parse(local) : []
-      const updated = [newItem, ...existing].slice(0, 50)
-      localStorage.setItem('contentos_saved', JSON.stringify(updated))
-      setSavedContents(updated)
-      showToast('✅ 文案已保存（本地）')
-    } catch { showToast('保存失败') }
+      if (data.versions) { setCopyVersions(data.versions); setContentStep(3) } else setCopyError(data.error || '生成失败')
+    } catch (e: any) { setCopyError(e.message) } finally { setCopyLoading(false) }
   }
 
   async function generateTopics() {
-    setTopicsLoading(true); setAiTopics([])
+    setTopicsLoading(true)
     try {
-      const res = await fetch('/api/generate-topics', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ positioning: acc.positioning, industry: acc.industry, accountName: acc.name }),
-      })
-      const data = await res.json()
-      if (data.success) setAiTopics(data.topics)
-    } catch {}
-    finally { setTopicsLoading(false) }
+      const res = await fetch('/api/generate-topics', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ positioning: acc.positioning, industry: acc.industry, accountName: acc.name, count: 6 }) })
+      const data = await res.json(); if (data.topics) setAiTopics(data.topics)
+    } catch {} finally { setTopicsLoading(false) }
   }
 
-  async function generateInsights() {
-    setInsightsLoading(true)
-    try {
-      const res = await fetch('/api/generate-insights', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ views: '12.3万', likes: '8900', comments: '342', collects: '1200' }),
-      })
-      const data = await res.json()
-      if (data.success) { setInsights(data.insights); setShowInsights(true) }
-    } catch {}
-    finally { setInsightsLoading(false) }
-  }
-
-  async function generatePositioning() {
-    setPosLoading(true)
-    try {
-      const res = await fetch('/api/generate-positioning', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(posForm),
-      })
-      const data = await res.json()
-      if (data.success) {
-        setPosResult(data.result); setPosStep(2)
-        if (user) {
-          try { await supabase.from('positionings').insert({ user_id: user.id, ...posForm, result: data.result }) } catch {}
-        }
-      }
-    } catch {}
-    finally { setPosLoading(false) }
-  }
-
-  async function copyText(text: string, idx: number) {
-    try { await navigator.clipboard.writeText(text); setCopiedIdx(idx); setTimeout(() => setCopiedIdx(null), 2000) } catch {}
-  }
-
-  function useTopic(title: string) {
-    setSelectedTopic(title); setTab('content'); setContentStep(2); setCopyVersions([])
-    showToast(`已选：${title.slice(0, 15)}...`)
-  }
-
-  // ===== 博主追踪 =====
   async function scrapeCreator() {
-    if (!creatorUrl.trim()) { showToast('请输入博主主页链接'); return }
-    setCreatorLoading(true); setCreatorData(null)
+    if (!creatorUrl.trim()) { showToast('请输入博主链接'); return }
+    setCreatorLoading(true)
     try {
-      const res = await fetch('/api/scrape-creator', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: creatorUrl, count: creatorCount, sortBy: creatorSort }),
-      })
+      const res = await fetch('/api/scrape-creator', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: creatorUrl, count: 20, sort: 'likes' }) })
       const data = await res.json()
-      if (data.success) {
+      if (data.creator) {
         setCreatorData(data)
-        setCreatorView('detail')
-        // 保存到追踪列表
-        const newCreator = { ...data.creator, url: creatorUrl, videos: data.videos, summary: data.summary, addedAt: new Date().toISOString() }
-        const updated = [newCreator, ...trackedCreators.filter((c: any) => c.url !== creatorUrl)].slice(0, 10)
-        setTrackedCreators(updated)
-        try { localStorage.setItem('contentos_tracked_creators', JSON.stringify(updated)) } catch {}
+        const updated = [{ ...data.creator, videos: data.videos, summary: data.summary, addedAt: new Date().toISOString() }, ...trackedCreators.filter((c: any) => c.url !== creatorUrl)]
+        setTrackedCreators(updated); localStorage.setItem('contentos_creators', JSON.stringify(updated))
         showToast(`✅ 已抓取 ${data.videos?.length || 0} 条视频`)
-      } else showToast(data.error || '抓取失败')
-    } catch { showToast('网络错误，请重试') }
-    finally { setCreatorLoading(false) }
+      }
+    } catch (e: any) { showToast('抓取失败: ' + e.message) } finally { setCreatorLoading(false) }
   }
 
-  // ===== 内容情报雷达 =====
   async function fetchRadar() {
     setRadarLoading(true)
     try {
-      const res = await fetch('/api/daily-radar', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ industry: acc.industry, positioning: acc.positioning }),
-      })
-      const data = await res.json()
-      if (data.success !== false) setRadarData(data)
-      else showToast(data.error || '获取失败')
-    } catch { showToast('网络错误，请重试') }
-    finally { setRadarLoading(false) }
+      const res = await fetch('/api/daily-radar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ industry: acc.industry }) })
+      const data = await res.json(); if (data.hotspots) setRadarData(data)
+    } catch {} finally { setRadarLoading(false) }
   }
 
-  // ===== 文案风格模板 =====
   async function analyzeStyle() {
-    if (!styleInput.trim() && !styleUrl.trim()) { showToast('请输入文案样本或博主链接'); return }
+    if (!styleUrl.trim() && !styleName.trim()) { showToast('请输入博主链接或名称'); return }
     setStyleLoading(true)
     try {
-      const res = await fetch('/api/analyze-style', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ samples: styleInput, creatorUrl: styleUrl, templateName: styleName || '自定义风格' }),
-      })
+      const res = await fetch('/api/analyze-style', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: styleUrl, name: styleName, industry: acc.industry }) })
       const data = await res.json()
-      if (data.success) {
-        const newTemplate: StyleTemplate = { ...data.template, id: Date.now().toString() }
-        const updated = [newTemplate, ...styleTemplates]
-        setStyleTemplates(updated)
-        try { localStorage.setItem('contentos_style_templates', JSON.stringify(updated)) } catch {}
-        setStyleMode('list')
-        setStyleInput(''); setStyleUrl(''); setStyleName('')
-        showToast('✅ 风格模板已保存')
-      } else showToast(data.error || '分析失败')
-    } catch { showToast('网络错误，请重试') }
-    finally { setStyleLoading(false) }
+      if (data.template) {
+        const updated = [data.template, ...styleTemplates]; setStyleTemplates(updated)
+        localStorage.setItem('contentos_style_templates', JSON.stringify(updated))
+        showToast('✅ 风格模板已保存'); setStyleUrl(''); setStyleName('')
+      }
+    } catch { showToast('分析失败') } finally { setStyleLoading(false) }
   }
 
-  function deleteTemplate(id: string) {
-    const updated = styleTemplates.filter(t => t.id !== id)
-    setStyleTemplates(updated)
-    try { localStorage.setItem('contentos_style_templates', JSON.stringify(updated)) } catch {}
-    showToast('已删除')
+  function saveCopy(content: string, style: string) {
+    const item: SavedContent = { id: Date.now().toString(), topic: selectedTopic, style, content, createdAt: new Date().toISOString() }
+    const updated = [item, ...savedContents]; setSavedContents(updated)
+    localStorage.setItem('contentos_saved', JSON.stringify(updated)); showToast('✅ 已保存到素材库')
   }
 
-  function applyTemplate(template: StyleTemplate) {
-    setCopyStyle(template.name)
-    setTab('content'); setContentStep(2)
-    showToast(`已应用风格：${template.name}`)
+  async function copyText(text: string, idx: number) {
+    await navigator.clipboard.writeText(text); setCopiedIdx(idx)
+    setTimeout(() => setCopiedIdx(null), 2000); showToast('✅ 已复制')
   }
 
+  async function generateTTS() {
+    if (!videoCopy.trim()) { showToast('请先输入文案'); return }
+    setVideoLoading(true); setVideoError(''); setVideoAudioB64('')
+    try {
+      const res = await fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: videoCopy, voiceId: videoVoiceId, speed: videoSpeed }) })
+      const data = await res.json()
+      if (data.audio) { setVideoAudioB64(data.audio); showToast('✅ 语音合成成功'); setVideoStep('avatar') }
+      else setVideoError(data.configured === false ? '⚙️ MiniMax API 未配置，请在 Vercel 添加 MINIMAX_API_KEY 和 MINIMAX_GROUP_ID' : (data.error || '合成失败'))
+    } catch (e: any) { setVideoError(e.message) } finally { setVideoLoading(false) }
+  }
 
-      // ===== 多账号管理 =====
-      function saveAccount() {
-        if (!accountForm.name.trim() || !accountForm.industry.trim()) { showToast('请填写账号名称和行业'); return }
-        const newAcc: Account = { ...accountForm }
-        let updated: Account[]
-        if (editingIdx !== null) {
-          updated = accounts.map((a, i) => i === editingIdx ? newAcc : a)
-          showToast('✅ 账号已更新')
-        } else {
-          updated = [...accounts, newAcc]; setAccount(updated.length - 1); showToast('✅ 账号已添加')
-        }
-        setAccounts(updated)
-        try { localStorage.setItem('contentos_accounts', JSON.stringify(updated)) } catch {}
-        setShowAccountManager(false); setEditingIdx(null)
-        setAccountForm({ name: '', emoji: '🏪', industry: '', positioning: '', targetAudience: '', color: 'linear-gradient(135deg,#007AFF,#30D5C8)' })
-      }
-      function deleteAccount(idx: number) {
-        if (accounts.length <= 1) { showToast('至少保留一个账号'); return }
-        const updated = accounts.filter((_, i) => i !== idx)
-        setAccounts(updated); setAccount(0)
-        try { localStorage.setItem('contentos_accounts', JSON.stringify(updated)) } catch {}
-        showToast('已删除账号')
-      }
-      function startEditAccount(idx: number) {
-        const a = accounts[idx]; setEditingIdx(idx)
-        setAccountForm({ name: a.name, emoji: a.emoji, industry: a.industry, positioning: a.positioning, targetAudience: a.targetAudience, color: a.color })
-        setShowAccountManager(true)
-      }
-      function startAddAccount() {
-        setEditingIdx(null)
-        setAccountForm({ name: '', emoji: '🏪', industry: '', positioning: '', targetAudience: '', color: 'linear-gradient(135deg,#007AFF,#30D5C8)' })
-        setShowAccountManager(true)
-      }
-
-      if (!user) return (
-    <div style={{ width: 390, height: 844, borderRadius: 50, overflow: 'hidden', background: 'linear-gradient(160deg,#0a0a14,#1a1a2e,#16213e)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 28px', boxShadow: '0 0 0 10px #111,0 40px 100px rgba(0,0,0,.7)' }}>
-      <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <div style={{ width: 64, height: 64, background: 'linear-gradient(135deg,#007AFF,#30D5C8)', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, margin: '0 auto 16px', boxShadow: '0 8px 24px rgba(0,122,255,.4)' }}>✦</div>
-        <div style={{ fontSize: 28, fontWeight: 800, color: '#fff', marginBottom: 6 }}>ContentOS</div>
-        <div style={{ fontSize: 14, color: 'rgba(255,255,255,.4)' }}>AI 内容增长工作台</div>
-      </div>
-      <div style={{ width: '100%' }}>
-        <div style={{ display: 'flex', background: 'rgba(255,255,255,.08)', borderRadius: 12, padding: 3, marginBottom: 20, gap: 3 }}>
-          {['login','register'].map(m => (
-            <div key={m} onClick={() => { setAuthMode(m as any); setAuthError('') }} style={{ flex: 1, padding: '8px', borderRadius: 9, fontSize: 14, fontWeight: 600, color: authMode === m ? '#fff' : 'rgba(255,255,255,.4)', background: authMode === m ? 'rgba(0,122,255,.8)' : 'transparent', textAlign: 'center', cursor: 'pointer', transition: 'all .2s' }}>
-              {m === 'login' ? '登录' : '注册'}
-            </div>
-          ))}
-        </div>
-        <input value={authEmail} onChange={e => setAuthEmail(e.target.value)} style={{ width: '100%', padding: '14px 16px', border: '.5px solid rgba(255,255,255,.12)', borderRadius: 12, background: 'rgba(255,255,255,.07)', fontSize: 15, color: '#fff', marginBottom: 12, fontFamily: 'inherit', boxSizing: 'border-box' }} placeholder="邮箱地址" type="email" />
-        <input value={authPassword} onChange={e => setAuthPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAuth()} style={{ width: '100%', padding: '14px 16px', border: '.5px solid rgba(255,255,255,.12)', borderRadius: 12, background: 'rgba(255,255,255,.07)', fontSize: 15, color: '#fff', marginBottom: 8, fontFamily: 'inherit', boxSizing: 'border-box' }} placeholder="密码（至少6位）" type="password" />
-        {authError && <div style={{ color: '#FF6B6B', fontSize: 12, marginBottom: 8, textAlign: 'center' }}>{authError}</div>}
-        <button onClick={handleAuth} disabled={authLoading} style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg,#007AFF,#30D5C8)', border: 'none', borderRadius: 12, fontSize: 16, fontWeight: 700, color: '#fff', cursor: 'pointer', marginBottom: 16 }}>
-          {authLoading ? '处理中...' : authMode === 'login' ? '登录' : '注册'}
-        </button>
-        <div onClick={() => { setUser({ id: 'guest', email: 'guest@contentos.ai' }); showToast('已进入体验模式') }} style={{ textAlign: 'center', color: 'rgba(255,255,255,.4)', fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
-          跳过登录，先体验
-        </div>
-      </div>
-    </div>
-  )
-
-  return (
-    <div style={{ width: 390, height: 844, borderRadius: 50, overflow: 'hidden', background: TV['--bg'], display: 'flex', flexDirection: 'column', boxShadow: '0 0 0 10px #111,0 40px 100px rgba(0,0,0,.7)', position: 'relative' }}>
-      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        {tab === 'dashboard' && <Dashboard tv={TV} acc={acc} accounts={accounts} account={account} setAccount={setAccount} setTab={setTab} showToast={showToast} insights={insights} insightsLoading={insightsLoading} showInsights={showInsights} generateInsights={generateInsights} user={user} onLogout={handleLogout} onAddAccount={startAddAccount} onEditAccount={startEditAccount} onDeleteAccount={deleteAccount} />}
-        {tab === 'materials' && <Materials tv={TV} acc={acc} matTab={matTab} setMatTab={setMatTab} hotspots={HOTSPOTS} aiTopics={aiTopics} topicsLoading={topicsLoading} generateTopics={generateTopics} useTopic={useTopic} showToast={showToast} savedContents={savedContents}
-          creatorUrl={creatorUrl} setCreatorUrl={setCreatorUrl} creatorCount={creatorCount} setCreatorCount={setCreatorCount} creatorSort={creatorSort} setCreatorSort={setCreatorSort} creatorLoading={creatorLoading} creatorData={creatorData} trackedCreators={trackedCreators} creatorView={creatorView} setCreatorView={setCreatorView} scrapeCreator={scrapeCreator} setCreatorData={setCreatorData}
-          radarData={radarData} radarLoading={radarLoading} radarTab={radarTab} setRadarTab={setRadarTab} fetchRadar={fetchRadar}
-          styleTemplates={styleTemplates} styleMode={styleMode} setStyleMode={setStyleMode} styleInput={styleInput} setStyleInput={setStyleInput} styleUrl={styleUrl} setStyleUrl={setStyleUrl} styleName={styleName} setStyleName={setStyleName} styleLoading={styleLoading} selectedTemplate={selectedTemplate} setSelectedTemplate={setSelectedTemplate} analyzeStyle={analyzeStyle} deleteTemplate={deleteTemplate} applyTemplate={applyTemplate}
-        />}
-        {tab === 'content' && <Content tv={TV} acc={acc} step={contentStep} setStep={setContentStep} topic={selectedTopic} setTopic={setSelectedTopic} style={copyStyle} setStyle={setCopyStyle} userInput={userInput} setUserInput={setUserInput} versions={copyVersions} loading={copyLoading} error={copyError} copiedIdx={copiedIdx} expandedIdx={expandedIdx} setExpandedIdx={setExpandedIdx} tokens={copyTokens} generate={generateCopy} copy={copyText} save={saveCopy} showToast={showToast} quickTopics={QUICK_TOPICS} setTab={setTab} styleTemplates={styleTemplates} />}
-        {tab === 'video' && <VideoStudio tv={TV} acc={acc} step={videoStep} setStep={setVideoStep} copy={videoCopy} setCopy={setVideoCopy} voiceId={videoVoiceId} setVoiceId={setVideoVoiceId} speed={videoSpeed} setSpeed={setVideoSpeed} avatarType={videoAvatarType} setAvatarType={setVideoAvatarType} avatarPreset={videoAvatarPreset} setAvatarPreset={setVideoAvatarPreset} bgType={videoBgType} setBgType={setVideoBgType} bgColor={videoBgColor} setBgColor={setVideoBgColor} loading={videoLoading} setLoading={setVideoLoading} audioB64={videoAudioB64} setAudioB64={setVideoAudioB64} result={videoResult} setResult={setVideoResult} error={videoError} setError={setVideoError} showToast={showToast} savedContents={savedContents} setTab={setTab} />}
-        {tab === 'operations' && <Operations tv={TV} acc={acc} showToast={showToast} schedule={schedule} setSchedule={setSchedule} opsTab={opsTab} setOpsTab={setOpsTab} savedContents={savedContents} />}
-      </div>
-
-      {/* 底部导航 */}
-      <div style={{ height: 90, background: TV['--tab-bg'], backdropFilter: 'blur(28px)', borderTop: `.5px solid ${TV['--b']}`, display: 'flex', alignItems: 'flex-start', paddingTop: 8, paddingBottom: 20, flexShrink: 0, zIndex: 60 }}>
-        {[{id:'dashboard',icon:'🏠',label:'工作台'},{id:'materials',icon:'📦',label:'素材中心'},{id:'content',icon:'✍️',label:'内容中心'},{id:'video',icon:'🎬',label:'视频生成'},{id:'operations',icon:'📊',label:'运营中心'}].map(t => (
-          <div key={t.id} onClick={() => setTab(t.id as any)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '4px 2px', cursor: 'pointer' }}>
-            <span style={{ fontSize: 21, transform: tab === t.id ? 'scale(1.1)' : 'scale(1)', display: 'block', transition: 'transform .2s' }}>{t.icon}</span>
-            <span style={{ fontSize: 10, fontWeight: tab === t.id ? 700 : 500, color: tab === t.id ? TV['--accent'] : TV['--t3'] }}>{t.label}</span>
-            {tab === t.id && <div style={{ width: 16, height: 3, borderRadius: 2, background: TV['--accent'] }} />}
+  if (!user) {
+    return (
+      <div className="w-[390px] h-[844px] rounded-[50px] overflow-hidden bg-white flex flex-col shadow-[0_0_0_10px_#111,0_40px_100px_rgba(0,0,0,.7)] relative">
+        <div className="flex-1 flex flex-col items-center justify-center px-8">
+          <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center mb-6 shadow-lg">
+            <span className="text-3xl">🎬</span>
           </div>
-        ))}
-      </div>
-
-      {/* 账号管理弹窗 */}
-          {showAccountManager && (
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'flex-end', borderRadius: 50, overflow: 'hidden' }}>
-              <div style={{ width: '100%', background: TV['--card'], borderRadius: '24px 24px 0 0', padding: '20px 20px 32px', maxHeight: '85%', overflowY: 'auto' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                  <div style={{ fontSize: 17, fontWeight: 800, color: TV['--t1'] }}>{editingIdx !== null ? '编辑账号' : '添加账号'}</div>
-                  <button onClick={() => setShowAccountManager(false)} style={{ width: 28, height: 28, borderRadius: '50%', background: TV['--inp'], border: 'none', fontSize: 14, cursor: 'pointer', color: TV['--t3'] }}>✕</button>
-                </div>
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 12, color: TV['--t3'], marginBottom: 6 }}>账号头像</div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {['🍜','🍕','💆','💪','📚','🏪','🎨','🎵','🌿','💄','🏋️','🍰','☕','🛍️','🏠','🎯'].map(e => (
-                      <div key={e} onClick={() => setAccountForm({...accountForm, emoji: e})} style={{ width: 36, height: 36, borderRadius: 10, background: accountForm.emoji === e ? `${TV['--accent']}20` : TV['--inp'], border: `1.5px solid ${accountForm.emoji === e ? TV['--accent'] : 'transparent'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, cursor: 'pointer' }}>{e}</div>
-                    ))}
-                  </div>
-                </div>
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 12, color: TV['--t3'], marginBottom: 6 }}>主题色</div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {['linear-gradient(135deg,#007AFF,#30D5C8)','linear-gradient(135deg,#FF6B6B,#FF8E53)','linear-gradient(135deg,#4ECDC4,#44A08D)','linear-gradient(135deg,#AF52DE,#007AFF)','linear-gradient(135deg,#34C759,#30D5C8)','linear-gradient(135deg,#FF9500,#FF6B6B)'].map(c => (
-                      <div key={c} onClick={() => setAccountForm({...accountForm, color: c})} style={{ width: 32, height: 32, borderRadius: '50%', background: c, border: `2.5px solid ${accountForm.color === c ? TV['--t1'] : 'transparent'}`, cursor: 'pointer' }} />
-                    ))}
-                  </div>
-                </div>
-                {[{key:'name',label:'账号名称 *',ph:'如：老李面馆...'},{key:'industry',label:'行业 *',ph:'如：餐饮、美业...'},{key:'positioning',label:'账号定位',ph:'如：本地餐饮·老板IP流...'},{key:'targetAudience',label:'目标受众',ph:'如：周边上班族，25-45岁...'}].map(f => (
-                  <div key={f.key} style={{ marginBottom: 10 }}>
-                    <div style={{ fontSize: 12, color: TV['--t3'], marginBottom: 4 }}>{f.label}</div>
-                    <input value={(accountForm as any)[f.key]} onChange={(e: any) => setAccountForm({...accountForm, [f.key]: e.target.value})} placeholder={f.ph} style={{ width: '100%', padding: '10px 12px', border: `.5px solid ${TV['--b']}`, borderRadius: 10, fontSize: 13, color: TV['--t1'], background: TV['--inp'], boxSizing: 'border-box', fontFamily: 'inherit' }} />
-                  </div>
-                ))}
-                <button onClick={saveAccount} style={{ width: '100%', padding: '13px', background: 'linear-gradient(135deg,#007AFF,#30D5C8)', border: 'none', borderRadius: 12, fontSize: 15, color: '#fff', cursor: 'pointer', fontWeight: 700, marginTop: 8 }}>
-                  {editingIdx !== null ? '保存修改' : '添加账号'}
-                </button>
-              </div>
-            </div>
-          )}
-                {toast && <div style={{ position: 'absolute', bottom: 96, left: '50%', transform: 'translateX(-50%)', background: 'rgba(28,28,30,.92)', backdropFilter: 'blur(20px)', color: '#fff', padding: '10px 20px', borderRadius: 999, fontSize: 13, fontWeight: 500, zIndex: 9999, whiteSpace: 'nowrap' }}>{toast}</div>}
-    </div>
-  )
-}
-
-// ===== 工作台 =====
-function Dashboard({ tv, acc, accounts, account, setAccount, setTab, showToast, insights, insightsLoading, showInsights, generateInsights, user, onLogout, onAddAccount, onEditAccount, onDeleteAccount }: any) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: tv['--bg'] }}>
-      <div style={{ padding: '14px 16px 10px', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: tv['--t1'] }}>ContentOS</div>
-            <div style={{ fontSize: 12, color: tv['--t3'] }}>AI 内容增长工作台</div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ fontSize: 11, color: tv['--t3'], maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email?.split('@')[0]}</div>
-            <button onClick={onLogout} style={{ padding: '5px 10px', background: tv['--inp'], border: 'none', borderRadius: 8, fontSize: 11, color: tv['--t3'], cursor: 'pointer' }}>退出</button>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-          {accounts.map((a: any, i: number) => (
-            <div key={i} onClick={() => setAccount(i)} style={{ flexShrink: 0, padding: '8px 14px', borderRadius: 20, background: account === i ? 'linear-gradient(135deg,#007AFF,#30D5C8)' : tv['--card'], border: account === i ? 'none' : `.5px solid ${tv['--b']}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 16 }}>{a.emoji}</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: account === i ? '#fff' : tv['--t1'] }}>{a.name}</span>
-            </div>
-          ))}
-          <div onClick={() => showToast('多账号管理即将上线')} style={{ flexShrink: 0, padding: '8px 14px', borderRadius: 20, background: tv['--inp'], cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontSize: 16 }}>＋</span>
-            <span style={{ fontSize: 13, color: tv['--t3'] }}>添加</span>
-          </div>
-        </div>
-      </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
-        {/* 账号数据卡片 */}
-        <div style={{ background: acc.color, borderRadius: 20, padding: 16, marginBottom: 16, color: '#fff' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 800 }}>{acc.emoji} {acc.name}</div>
-              <div style={{ fontSize: 11, opacity: .8, marginTop: 2 }}>{acc.positioning}</div>
-            </div>
-            <button onClick={generateInsights} style={{ padding: '6px 12px', background: 'rgba(255,255,255,.2)', border: 'none', borderRadius: 10, fontSize: 12, color: '#fff', cursor: 'pointer', fontWeight: 600 }}>
-              {insightsLoading ? '分析中...' : '✨ AI 诊断'}
+          <h1 className="text-2xl font-black text-gray-900 mb-1">ContentOS</h1>
+          <p className="text-sm text-gray-400 mb-8">AI 内容增长工作台</p>
+          <div className="w-full space-y-3">
+            <input value={authEmail} onChange={e => setAuthEmail(e.target.value)} type="email" placeholder="邮箱" className="w-full px-4 py-3 rounded-2xl bg-gray-100 text-sm outline-none focus:ring-2 focus:ring-blue-400 transition-all" />
+            <input value={authPassword} onChange={e => setAuthPassword(e.target.value)} type="password" placeholder="密码" className="w-full px-4 py-3 rounded-2xl bg-gray-100 text-sm outline-none focus:ring-2 focus:ring-blue-400 transition-all" onKeyDown={e => e.key === 'Enter' && (authMode === 'login' ? handleLogin() : handleRegister())} />
+            {authError && <p className="text-xs text-red-500 px-1">{authError}</p>}
+            <button onClick={authMode === 'login' ? handleLogin : handleRegister} disabled={authLoading} className="w-full py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm disabled:opacity-60 active:scale-[0.98] transition-all">
+              {authLoading ? '处理中...' : authMode === 'login' ? '登录' : '注册'}
+            </button>
+            <button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="w-full py-2 text-sm text-gray-400">
+              {authMode === 'login' ? '没有账号？注册' : '已有账号？登录'}
+            </button>
+            <div className="flex items-center gap-3"><div className="flex-1 h-px bg-gray-100" /><span className="text-xs text-gray-300">或</span><div className="flex-1 h-px bg-gray-100" /></div>
+            <button onClick={() => setUser({ id: 'guest', email: 'guest' })} className="w-full py-3 bg-gray-100 text-gray-600 font-semibold rounded-2xl text-sm active:scale-[0.98] transition-all">
+              跳过登录，先体验
             </button>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
-            {[['粉丝','1.2万'],['点赞','8.9万'],['完播率','34%'],['涨粉/周','＋234']].map(([l,v]) => (
-              <div key={l} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 16, fontWeight: 800 }}>{v}</div>
-                <div style={{ fontSize: 10, opacity: .7 }}>{l}</div>
-              </div>
-            ))}
-          </div>
         </div>
-        {/* AI 诊断结果 */}
-        {showInsights && insights.length > 0 && (
-          <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>✨ AI 运营诊断</div>
-            {insights.map((ins: any, i: number) => (
-              <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-                <span style={{ fontSize: 18, flexShrink: 0 }}>{ins.icon}</span>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: tv['--t1'] }}>{ins.title}</div>
-                  <div style={{ fontSize: 11, color: tv['--t3'], marginTop: 2 }}>{ins.detail}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        {/* 快捷入口 */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10, marginBottom: 16 }}>
-          {[
-            { icon: '📡', label: '内容情报雷达', sub: '今日热点+爆款形式', tab: 'materials', matTab: 'radar', color: '#FF6B6B' },
-            { icon: '🎯', label: '博主追踪', sub: '爬取竞品内容', tab: 'materials', matTab: 'creator', color: '#007AFF' },
-            { icon: '✍️', label: '生成文案', sub: '一键AI创作', tab: 'content', color: '#34C759' },
-            { icon: '🎨', label: '风格模板', sub: '分析+复用风格', tab: 'materials', matTab: 'style', color: '#AF52DE' },
-          ].map((item: any) => (
-            <div key={item.label} onClick={() => { setTab(item.tab) }} style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, cursor: 'pointer' }}>
-              <div style={{ fontSize: 24, marginBottom: 6 }}>{item.icon}</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'] }}>{item.label}</div>
-              <div style={{ fontSize: 11, color: tv['--t3'], marginTop: 2 }}>{item.sub}</div>
-            </div>
-          ))}
-        </div>
-        {/* 今日任务 */}
-        <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>📋 今日任务</div>
-          {[
-            { done: true, text: '查看今日热点情报' },
-            { done: false, text: '生成本周选题（0/3）' },
-            { done: false, text: '创作口播文案' },
-            { done: false, text: '发布今日视频' },
-          ].map((task, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <div style={{ width: 18, height: 18, borderRadius: '50%', background: task.done ? tv['--green'] : tv['--inp'], display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                {task.done && <span style={{ color: '#fff', fontSize: 10 }}>✓</span>}
-              </div>
-              <span style={{ fontSize: 13, color: task.done ? tv['--t3'] : tv['--t1'], textDecoration: task.done ? 'line-through' : 'none' }}>{task.text}</span>
-            </div>
-          ))}
-        </div>
+      </div>
+    )
+  }
+
+  const NAV_TABS = [
+    { id: 'dashboard', icon: '🏠', label: '工作台' },
+    { id: 'materials', icon: '📦', label: '素材中心' },
+    { id: 'content', icon: '✍️', label: '内容中心' },
+    { id: 'video', icon: '🎬', label: '视频生成' },
+    { id: 'operations', icon: '📊', label: '运营中心' },
+  ]
+
+  return (
+    <div className="w-[390px] h-[844px] rounded-[50px] overflow-hidden bg-[#F2F2F7] flex flex-col shadow-[0_0_0_10px_#111,0_40px_100px_rgba(0,0,0,.7)] relative">
+      <Toast msg={toast} />
+      <div className="flex-1 overflow-hidden flex flex-col">
+        {tab === 'dashboard' && <Dashboard acc={acc} accounts={accounts} accountIdx={accountIdx} setAccountIdx={setAccountIdx} setTab={setTab} showToast={showToast} user={user} onLogout={handleLogout} savedContents={savedContents} schedule={schedule} />}
+        {tab === 'materials' && <Materials acc={acc} matTab={matTab} setMatTab={setMatTab} hotspots={HOTSPOTS} aiTopics={aiTopics} topicsLoading={topicsLoading} generateTopics={generateTopics} useTopic={(t: string) => { setSelectedTopic(t); setTab('content'); setContentStep(2) }} savedContents={savedContents} creatorUrl={creatorUrl} setCreatorUrl={setCreatorUrl} creatorLoading={creatorLoading} creatorData={creatorData} setCreatorData={setCreatorData} trackedCreators={trackedCreators} scrapeCreator={scrapeCreator} showToast={showToast} radarData={radarData} radarLoading={radarLoading} fetchRadar={fetchRadar} styleTemplates={styleTemplates} styleLoading={styleLoading} styleUrl={styleUrl} setStyleUrl={setStyleUrl} styleName={styleName} setStyleName={setStyleName} analyzeStyle={analyzeStyle} applyTemplate={(t: any) => showToast(`✅ 已应用「${t.name}」风格`)} deleteTemplate={(id: string) => { const u = styleTemplates.filter((t: any) => t.id !== id); setStyleTemplates(u); localStorage.setItem('contentos_style_templates', JSON.stringify(u)) }} />}
+        {tab === 'content' && <ContentCenter acc={acc} step={contentStep} setStep={setContentStep} topic={selectedTopic} setTopic={setSelectedTopic} style={copyStyle} setStyle={setCopyStyle} userInput={userInput} setUserInput={setUserInput} versions={copyVersions} loading={copyLoading} error={copyError} copiedIdx={copiedIdx} generate={generateCopy} copy={copyText} save={saveCopy} showToast={showToast} setTab={setTab} hotspots={HOTSPOTS} savedContents={savedContents} />}
+        {tab === 'video' && <VideoStudio acc={acc} step={videoStep} setStep={setVideoStep} copy={videoCopy} setCopy={setVideoCopy} voiceId={videoVoiceId} setVoiceId={setVideoVoiceId} speed={videoSpeed} setSpeed={setVideoSpeed} avatarType={videoAvatarType} setAvatarType={setVideoAvatarType} avatarPreset={videoAvatarPreset} setAvatarPreset={setVideoAvatarPreset} bgType={videoBgType} setBgType={setVideoBgType} bgColor={videoBgColor} setBgColor={setVideoBgColor} loading={videoLoading} audioB64={videoAudioB64} error={videoError} generateTTS={generateTTS} showToast={showToast} savedContents={savedContents} setTab={setTab} />}
+        {tab === 'operations' && <Operations acc={acc} opsTab={opsTab} setOpsTab={setOpsTab} schedule={schedule} setSchedule={setSchedule} savedContents={savedContents} showToast={showToast} />}
+      </div>
+      <div className="h-[90px] bg-white/95 backdrop-blur-xl border-t border-gray-100 flex items-start pt-2 pb-5 flex-shrink-0 z-50">
+        {NAV_TABS.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id as Tab)} className="flex-1 flex flex-col items-center gap-0.5 py-1">
+            <span className={`text-[22px] transition-transform duration-200 ${tab === t.id ? 'scale-110' : 'scale-100'}`}>{t.icon}</span>
+            <span className={`text-[10px] font-medium transition-colors ${tab === t.id ? 'text-blue-500 font-bold' : 'text-gray-400'}`}>{t.label}</span>
+            {tab === t.id && <div className="w-4 h-0.5 rounded-full bg-blue-500 mt-0.5" />}
+          </button>
+        ))}
       </div>
     </div>
   )
 }
 
-// ===== 素材中心（含博主追踪/情报雷达/风格模板）=====
-function Materials({ tv, acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, useTopic, showToast, savedContents,
-  creatorUrl, setCreatorUrl, creatorCount, setCreatorCount, creatorSort, setCreatorSort, creatorLoading, creatorData, trackedCreators, creatorView, setCreatorView, scrapeCreator, setCreatorData,
-  radarData, radarLoading, radarTab, setRadarTab, fetchRadar,
-  styleTemplates, styleMode, setStyleMode, styleInput, setStyleInput, styleUrl, setStyleUrl, styleName, setStyleName, styleLoading, selectedTemplate, setSelectedTemplate, analyzeStyle, deleteTemplate, applyTemplate
-}: any) {
-  const tabs = [
-    { id: 'hotspot', label: '🔥 热点' },
-    { id: 'topics', label: '📌 选题' },
-    { id: 'radar', label: '📡 雷达' },
-    { id: 'creator', label: '👤 博主' },
-    { id: 'style', label: '🎨 风格' },
-    { id: 'saved', label: '💾 已存' },
-  ]
+
+// ═══════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════
+function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, showToast, user, onLogout, savedContents, schedule }: any) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: tv['--bg'] }}>
-      <div style={{ padding: '10px 16px 8px', flexShrink: 0 }}>
-        <div style={{ fontSize: 22, fontWeight: 800, color: tv['--t1'], marginBottom: 8 }}>素材中心</div>
-        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
-          {tabs.map(t => (
-            <div key={t.id} onClick={() => setMatTab(t.id)} style={{ flexShrink: 0, padding: '6px 12px', borderRadius: 20, background: matTab === t.id ? tv['--accent'] : tv['--inp'], cursor: 'pointer' }}>
-              <span style={{ fontSize: 12, fontWeight: matTab === t.id ? 700 : 500, color: matTab === t.id ? '#fff' : tv['--t2'] }}>{t.label}</span>
+    <div className="flex flex-col h-full bg-[#F2F2F7]">
+      <div className="px-5 pt-4 pb-3 flex-shrink-0">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-xs text-gray-400 font-medium">AI 内容增长工作台</p>
+            <h1 className="text-xl font-black text-gray-900">ContentOS</h1>
+          </div>
+          <button onClick={onLogout} className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center text-base">
+            {user?.id === 'guest' ? '👤' : '👋'}
+          </button>
+        </div>
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+          {accounts.map((a: any, i: number) => (
+            <button key={a.id} onClick={() => setAccountIdx(i)} className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-2xl text-sm font-semibold transition-all ${i === accountIdx ? 'bg-blue-500 text-white shadow-md' : 'bg-white text-gray-600 shadow-sm'}`}>
+              <span>{a.emoji}</span><span>{a.name}</span>
+            </button>
+          ))}
+          <button onClick={() => showToast('多账号管理')} className="flex-shrink-0 w-9 h-9 rounded-2xl bg-white shadow-sm flex items-center justify-center text-gray-400 text-lg">+</button>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4 space-y-3">
+        <div className={`bg-gradient-to-br ${acc.color} rounded-3xl p-5 text-white shadow-lg`}>
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <div className="text-3xl mb-1">{acc.emoji}</div>
+              <div className="font-black text-lg">{acc.name}</div>
+              <div className="text-white/70 text-xs mt-0.5">{acc.positioning}</div>
+            </div>
+            <div className="bg-white/20 rounded-2xl px-3 py-1.5"><span className="text-xs font-bold">{acc.industry}</span></div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            {[['粉丝', '1.2万'], ['获赞', '8.6万'], ['作品', '47']].map(([l, v]) => (
+              <div key={l} className="bg-white/15 rounded-2xl p-2 text-center">
+                <div className="font-black text-base">{v}</div>
+                <div className="text-white/60 text-[10px]">{l}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { icon: '✍️', label: '生成文案', sub: '一键AI创作', tab: 'content', color: 'from-blue-500 to-cyan-400' },
+            { icon: '🎬', label: '生成视频', sub: '文案转视频', tab: 'video', color: 'from-purple-500 to-pink-400' },
+            { icon: '📡', label: '内容情报', sub: '今日热点', tab: 'materials', color: 'from-orange-400 to-amber-400' },
+            { icon: '🎯', label: '博主追踪', sub: '竞品分析', tab: 'materials', color: 'from-green-400 to-emerald-500' },
+          ].map(item => (
+            <button key={item.label} onClick={() => setTab(item.tab)} className="bg-white rounded-3xl p-4 shadow-sm text-left active:scale-[0.97] transition-transform">
+              <div className={`w-10 h-10 rounded-2xl bg-gradient-to-br ${item.color} flex items-center justify-center text-xl mb-2 shadow-sm`}>{item.icon}</div>
+              <div className="font-bold text-gray-900 text-sm">{item.label}</div>
+              <div className="text-gray-400 text-xs mt-0.5">{item.sub}</div>
+            </button>
+          ))}
+        </div>
+        <div className="bg-white rounded-3xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold text-gray-900 text-sm">📅 今日计划</h3>
+            <button onClick={() => setTab('operations')} className="text-xs text-blue-500 font-medium">查看全部</button>
+          </div>
+          {schedule.slice(0, 2).map((s: any, i: number) => (
+            <div key={i} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
+              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${s.status === '待发布' ? 'bg-orange-400' : s.status === '已发布' ? 'bg-green-400' : 'bg-gray-300'}`} />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-gray-800 truncate">{s.title}</div>
+                <div className="text-xs text-gray-400">{s.time} · {s.platform}</div>
+              </div>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.status === '待发布' ? 'bg-orange-50 text-orange-500' : 'bg-gray-100 text-gray-400'}`}>{s.status}</span>
             </div>
           ))}
         </div>
-      </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
-
-        {/* 热点 */}
-        {matTab === 'hotspot' && hotspots.map((h: any) => (
-          <div key={h.rank} style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: h.rank <= 3 ? tv['--orange'] : tv['--t4'], width: 20, textAlign: 'center', flexShrink: 0 }}>{h.rank}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: tv['--t1'] }}>{h.title}</div>
-              <div style={{ fontSize: 10, color: tv['--t3'] }}>🔥 {h.heat}</div>
+        {savedContents.length > 0 && (
+          <div className="bg-white rounded-3xl p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-gray-900 text-sm">💾 已保存文案</h3>
+              <span className="text-xs text-gray-400">{savedContents.length} 条</span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-              <span style={{ background: `${h.relColor}20`, color: h.relColor, padding: '3px 9px', borderRadius: 999, fontSize: 10, fontWeight: 600 }}>{h.rel}</span>
-              <button onClick={() => { setMatTab('topics'); showToast(`已选：${h.title}`) }} style={{ padding: '3px 9px', background: tv['--accent'], border: 'none', borderRadius: 999, fontSize: 10, color: '#fff', cursor: 'pointer' }}>借势</button>
-            </div>
-          </div>
-        ))}
-
-        {/* 选题库 */}
-        {matTab === 'topics' && (
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <div style={{ fontSize: 13, color: tv['--t2'] }}>AI 为 {acc.name} 推荐</div>
-              <button onClick={generateTopics} style={{ padding: '6px 14px', background: 'linear-gradient(135deg,#007AFF,#30D5C8)', border: 'none', borderRadius: 20, fontSize: 12, color: '#fff', cursor: 'pointer', fontWeight: 600 }}>
-                {topicsLoading ? '生成中...' : '✨ AI 生成选题'}
-              </button>
-            </div>
-            {(aiTopics.length === 0 ? QUICK_TOPICS.map((t: string) => ({ title: t, tags: [], reason: '' })) : aiTopics).map((t: any, i: number) => (
-              <div key={i} style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 14, padding: '12px 14px', marginBottom: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: tv['--t1'], flex: 1, lineHeight: 1.4 }}>{t.title}</div>
-                  <button onClick={() => useTopic(t.title)} style={{ padding: '5px 11px', background: tv['--accent'], border: 'none', borderRadius: 20, fontSize: 11, color: '#fff', cursor: 'pointer', flexShrink: 0, fontWeight: 600 }}>用这个</button>
-                </div>
-                {t.tags?.length > 0 && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>{t.tags.map((tag: string) => <span key={tag} style={{ background: `${tv['--accent']}15`, color: tv['--accent'], padding: '2px 8px', borderRadius: 999, fontSize: 10 }}>{tag}</span>)}</div>}
-                {t.reason && <div style={{ fontSize: 11, color: tv['--t3'], marginTop: 5 }}>{t.reason}</div>}
+            {savedContents.slice(0, 2).map((c: any) => (
+              <div key={c.id} className="py-2 border-b border-gray-50 last:border-0">
+                <div className="text-sm font-medium text-gray-800 truncate">{c.topic}</div>
+                <div className="text-xs text-gray-400 mt-0.5 line-clamp-1">{c.content}</div>
               </div>
             ))}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
 
-        {/* 内容情报雷达 */}
+// ═══════════════════════════════════════════════════════════
+// MATERIALS
+// ═══════════════════════════════════════════════════════════
+function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, useTopic, savedContents, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, analyzeStyle, applyTemplate, deleteTemplate }: any) {
+  const TABS = [{ id: 'hotspot', label: '热点' }, { id: 'topics', label: '选题库' }, { id: 'radar', label: '情报雷达' }, { id: 'creator', label: '博主追踪' }, { id: 'style', label: '风格模板' }]
+  return (
+    <div className="flex flex-col h-full bg-[#F2F2F7]">
+      <div className="px-5 pt-4 pb-0 flex-shrink-0">
+        <h1 className="text-xl font-black text-gray-900 mb-3">素材中心</h1>
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-3">
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setMatTab(t.id)} className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${matTab === t.id ? 'bg-blue-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>{t.label}</button>
+          ))}
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4">
+        {matTab === 'hotspot' && (
+          <div className="space-y-2">
+            <p className="text-xs text-gray-400 mb-3">今日热点 · 点击使用</p>
+            {hotspots.map((h: any, i: number) => (
+              <div key={i} onClick={() => useTopic(h.title)} className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3 active:scale-[0.98] transition-transform cursor-pointer">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-400 to-amber-400 flex items-center justify-center text-white font-black text-sm flex-shrink-0">{i + 1}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-gray-900 text-sm">{h.title}</div>
+                  <div className="text-xs text-gray-400 mt-0.5">{h.tag}</div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                  <span className="text-xs font-bold text-red-400">{h.heat}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {matTab === 'topics' && (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-gray-400">AI 为你生成的选题</p>
+              <button onClick={generateTopics} disabled={topicsLoading} className="text-xs text-blue-500 font-semibold disabled:opacity-50">{topicsLoading ? '生成中...' : '🔄 重新生成'}</button>
+            </div>
+            {aiTopics.length === 0 ? (
+              <div className="bg-white rounded-3xl p-8 text-center shadow-sm">
+                <div className="text-4xl mb-3">💡</div>
+                <div className="font-bold text-gray-800 mb-1">AI 选题生成</div>
+                <div className="text-xs text-gray-400 mb-4">基于你的账号定位，生成高完播率选题</div>
+                <button onClick={generateTopics} disabled={topicsLoading} className="px-6 py-2.5 bg-blue-500 text-white text-sm font-bold rounded-2xl disabled:opacity-60">{topicsLoading ? '生成中...' : '✨ 生成选题'}</button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {aiTopics.map((t: any, i: number) => (
+                  <div key={i} className="bg-white rounded-2xl p-4 shadow-sm">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="font-semibold text-gray-900 text-sm flex-1">{t.title}</div>
+                      <button onClick={() => useTopic(t.title)} className="flex-shrink-0 px-3 py-1 bg-blue-500 text-white text-xs font-bold rounded-xl">使用</button>
+                    </div>
+                    <div className="text-xs text-gray-400 mb-1">💡 {t.reason}</div>
+                    <div className="text-xs text-orange-500">🎣 {t.hook}</div>
+                    <div className="flex gap-1 mt-2 flex-wrap">
+                      {t.tags?.map((tag: string) => <span key={tag} className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full">{tag}</span>)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {matTab === 'radar' && (
           <div>
             {!radarData ? (
-              <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <div style={{ fontSize: 48, marginBottom: 12 }}>📡</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: tv['--t1'], marginBottom: 6 }}>内容情报雷达</div>
-                <div style={{ fontSize: 12, color: tv['--t3'], marginBottom: 20, lineHeight: 1.6 }}>每日热点 · 爆款形式 · 关键词热度<br/>AI 为你的账号定制今日内容情报</div>
-                <button onClick={fetchRadar} disabled={radarLoading} style={{ padding: '12px 28px', background: 'linear-gradient(135deg,#FF6B6B,#FF8E53)', border: 'none', borderRadius: 24, fontSize: 14, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
-                  {radarLoading ? '🔄 扫描中...' : '🚀 立即扫描'}
-                </button>
+              <div className="bg-white rounded-3xl p-8 text-center shadow-sm">
+                <div className="text-4xl mb-3">📡</div>
+                <div className="font-bold text-gray-800 mb-1">内容情报雷达</div>
+                <div className="text-xs text-gray-400 mb-4">每日热点 · 爆款形式 · 关键词热度</div>
+                <button onClick={fetchRadar} disabled={radarLoading} className="px-6 py-2.5 bg-orange-400 text-white text-sm font-bold rounded-2xl disabled:opacity-60">{radarLoading ? '获取中...' : '📡 获取今日情报'}</button>
               </div>
             ) : (
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <div style={{ fontSize: 13, color: tv['--t3'] }}>📅 {radarData.date} · {acc.industry}</div>
-                  <button onClick={fetchRadar} disabled={radarLoading} style={{ padding: '5px 12px', background: tv['--inp'], border: 'none', borderRadius: 20, fontSize: 11, color: tv['--t2'], cursor: 'pointer' }}>
-                    {radarLoading ? '刷新中...' : '🔄 刷新'}
-                  </button>
-                </div>
-                {/* 雷达子 Tab */}
-                <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-                  {[['hotspot','🔥 热点'],['format','💡 形式'],['keyword','🏷️ 关键词'],['action','⚡ 今日行动']].map(([id, label]) => (
-                    <div key={id} onClick={() => setRadarTab(id)} style={{ padding: '5px 10px', borderRadius: 20, background: radarTab === id ? tv['--accent'] : tv['--inp'], cursor: 'pointer' }}>
-                      <span style={{ fontSize: 11, fontWeight: radarTab === id ? 700 : 500, color: radarTab === id ? '#fff' : tv['--t2'] }}>{label}</span>
+              <div className="space-y-3">
+                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                  <h3 className="font-bold text-gray-900 text-sm mb-3">🔥 今日热点</h3>
+                  {radarData.hotspots?.slice(0, 5).map((h: any, i: number) => (
+                    <div key={i} className="flex items-center gap-2 py-1.5 border-b border-gray-50 last:border-0">
+                      <span className="text-xs font-black text-gray-300 w-4">{i + 1}</span>
+                      <span className="text-sm text-gray-800 flex-1">{h.title || h}</span>
                     </div>
                   ))}
                 </div>
-                {/* 热点 */}
-                {radarTab === 'hotspot' && radarData.mediaHotspots?.map((h: any, i: number) => (
-                  <div key={i} style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 14, padding: '12px 14px', marginBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: i < 3 ? tv['--orange'] : tv['--t4'] }}>#{i+1}</span>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: tv['--t1'], flex: 1 }}>{h.title}</span>
-                      <span style={{ fontSize: 10, background: `${tv['--orange']}20`, color: tv['--orange'], padding: '2px 8px', borderRadius: 999 }}>{h.urgency}</span>
-                    </div>
-                    <div style={{ fontSize: 11, color: tv['--t3'], marginBottom: 6 }}>🔥 {h.heat}</div>
-                    <div style={{ fontSize: 11, color: tv['--accent'], background: `${tv['--accent']}10`, padding: '6px 10px', borderRadius: 8 }}>💡 {h.angle}</div>
-                  </div>
-                ))}
-                {/* 爆款形式 */}
-                {radarTab === 'format' && radarData.viralFormats?.map((f: any, i: number) => (
-                  <div key={i} style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 14, padding: '12px 14px', marginBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'] }}>{f.format}</span>
-                      <span style={{ fontSize: 10, background: f.difficulty === '简单' ? `${tv['--green']}20` : `${tv['--orange']}20`, color: f.difficulty === '简单' ? tv['--green'] : tv['--orange'], padding: '2px 8px', borderRadius: 999 }}>{f.difficulty}</span>
-                    </div>
-                    <div style={{ fontSize: 12, color: tv['--t2'], marginBottom: 4 }}>示例：{f.example}</div>
-                    <div style={{ fontSize: 11, color: tv['--t3'] }}>🔥 {f.reason}</div>
-                  </div>
-                ))}
-                {/* 关键词 */}
-                {radarTab === 'keyword' && (
-                  <div>
-                    {radarData.keywords?.map((k: any, i: number) => (
-                      <div key={i} style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 14, padding: '12px 14px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                            <span style={{ fontSize: 14, fontWeight: 700, color: tv['--t1'] }}>#{k.word}</span>
-                            <span style={{ fontSize: 11, color: k.trend === '上升' ? tv['--green'] : k.trend === '下降' ? tv['--red'] : tv['--t3'] }}>{k.trend === '上升' ? '↑' : k.trend === '下降' ? '↓' : '→'} {k.trend}</span>
-                          </div>
-                          <div style={{ fontSize: 11, color: tv['--t3'] }}>{k.suggestion}</div>
-                        </div>
-                        <div style={{ textAlign: 'center' }}>
-                          <div style={{ fontSize: 16, fontWeight: 800, color: tv['--accent'] }}>{k.heat}</div>
-                          <div style={{ fontSize: 9, color: tv['--t4'] }}>热度</div>
-                        </div>
-                      </div>
+                {radarData.formats && (
+                  <div className="bg-white rounded-2xl p-4 shadow-sm">
+                    <h3 className="font-bold text-gray-900 text-sm mb-3">🎬 爆款形式</h3>
+                    {radarData.formats?.slice(0, 4).map((f: any, i: number) => (
+                      <div key={i} className="text-sm text-gray-700 py-1.5 border-b border-gray-50 last:border-0">{f.format || f}</div>
                     ))}
                   </div>
                 )}
-                {/* 今日行动 */}
-                {radarTab === 'action' && radarData.todayAction && (
-                  <div>
-                    <div style={{ background: 'linear-gradient(135deg,#007AFF,#30D5C8)', borderRadius: 16, padding: 16, marginBottom: 10, color: '#fff' }}>
-                      <div style={{ fontSize: 11, opacity: .8, marginBottom: 4 }}>⚡ 今日首选</div>
-                      <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>{radarData.todayAction.priority1?.title}</div>
-                      <div style={{ fontSize: 11, opacity: .85, marginBottom: 8 }}>{radarData.todayAction.priority1?.reason}</div>
-                      <div style={{ background: 'rgba(255,255,255,.15)', borderRadius: 10, padding: '8px 12px', fontSize: 12 }}>
-                        💬 建议开头：{radarData.todayAction.priority1?.hook}
-                      </div>
-                    </div>
-                    <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 14, padding: 14, marginBottom: 10 }}>
-                      <div style={{ fontSize: 12, color: tv['--t3'], marginBottom: 4 }}>备选选题</div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: tv['--t1'], marginBottom: 4 }}>{radarData.todayAction.priority2?.title}</div>
-                      <div style={{ fontSize: 11, color: tv['--t3'] }}>{radarData.todayAction.priority2?.reason}</div>
-                    </div>
-                    <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 14, padding: 14, display: 'flex', gap: 10 }}>
-                      <span style={{ fontSize: 20 }}>⏰</span>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: tv['--t1'] }}>最佳发布时间</div>
-                        <div style={{ fontSize: 12, color: tv['--accent'], fontWeight: 700 }}>{radarData.todayAction.bestPostTime}</div>
-                        <div style={{ fontSize: 11, color: tv['--t3'], marginTop: 4 }}>{radarData.todayAction.tip}</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <button onClick={fetchRadar} disabled={radarLoading} className="w-full py-2.5 bg-white rounded-2xl text-sm text-blue-500 font-semibold shadow-sm disabled:opacity-50">{radarLoading ? '刷新中...' : '🔄 刷新情报'}</button>
               </div>
             )}
           </div>
         )}
-
-        {/* 博主追踪 */}
         {matTab === 'creator' && (
           <div>
-            {creatorView === 'list' ? (
-              <div>
-                {/* 输入区 */}
-                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, marginBottom: 12 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>🔍 抓取博主内容</div>
-                  <input value={creatorUrl} onChange={(e: any) => setCreatorUrl(e.target.value)} placeholder="粘贴抖音/小红书博主主页链接" style={{ width: '100%', padding: '10px 12px', border: `.5px solid ${tv['--b']}`, borderRadius: 10, fontSize: 13, color: tv['--t1'], background: tv['--inp'], marginBottom: 8, boxSizing: 'border-box', fontFamily: 'inherit' }} />
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 11, color: tv['--t3'], marginBottom: 4 }}>抓取数量</div>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        {[20, 50].map(n => (
-                          <div key={n} onClick={() => setCreatorCount(n)} style={{ flex: 1, padding: '6px', textAlign: 'center', borderRadius: 8, background: creatorCount === n ? tv['--accent'] : tv['--inp'], cursor: 'pointer' }}>
-                            <span style={{ fontSize: 12, fontWeight: 600, color: creatorCount === n ? '#fff' : tv['--t2'] }}>前{n}条</span>
-                          </div>
-                        ))}
+            <div className="bg-white rounded-2xl p-4 shadow-sm mb-3">
+              <div className="font-bold text-gray-900 text-sm mb-3">🔍 抓取博主内容</div>
+              <input value={creatorUrl} onChange={e => setCreatorUrl(e.target.value)} placeholder="粘贴抖音/小红书博主主页链接..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none mb-2" />
+              <button onClick={scrapeCreator} disabled={creatorLoading} className="w-full py-2.5 bg-blue-500 text-white text-sm font-bold rounded-xl disabled:opacity-60">{creatorLoading ? '抓取中...' : '🚀 开始抓取'}</button>
+            </div>
+            {creatorData && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm mb-3">
+                <div className="font-bold text-gray-900 text-sm mb-2">📊 {creatorData.creator?.name || '博主'} 的内容分析</div>
+                <div className="text-xs text-gray-500 mb-3 leading-relaxed">{creatorData.summary}</div>
+                <div className="space-y-2">
+                  {creatorData.videos?.slice(0, 5).map((v: any, i: number) => (
+                    <div key={i} className="flex items-center gap-2 py-1.5 border-b border-gray-50 last:border-0">
+                      <span className="text-xs font-black text-gray-300 w-4">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium text-gray-800 truncate">{v.title}</div>
+                        <div className="text-[10px] text-gray-400">👍 {v.likes} · 💬 {v.comments}</div>
                       </div>
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 11, color: tv['--t3'], marginBottom: 4 }}>排序方式</div>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        {[['likes','点赞'],['comments','评论'],['collects','收藏']].map(([v, l]) => (
-                          <div key={v} onClick={() => setCreatorSort(v)} style={{ flex: 1, padding: '6px 2px', textAlign: 'center', borderRadius: 8, background: creatorSort === v ? tv['--accent'] : tv['--inp'], cursor: 'pointer' }}>
-                            <span style={{ fontSize: 10, fontWeight: 600, color: creatorSort === v ? '#fff' : tv['--t2'] }}>{l}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <button onClick={scrapeCreator} disabled={creatorLoading} style={{ width: '100%', padding: '11px', background: 'linear-gradient(135deg,#007AFF,#30D5C8)', border: 'none', borderRadius: 12, fontSize: 14, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
-                    {creatorLoading ? '🔄 抓取中...' : '🚀 开始抓取'}
-                  </button>
+                  ))}
                 </div>
-                {/* 已追踪列表 */}
-                {trackedCreators.length > 0 && (
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 8 }}>📋 已追踪博主</div>
-                    {trackedCreators.map((c: any, i: number) => (
-                      <div key={i} onClick={() => { setCreatorData({ creator: c, videos: c.videos, summary: c.summary }); setCreatorView('detail') }} style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 14, padding: '12px 14px', marginBottom: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#007AFF,#30D5C8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>👤</div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'] }}>{c.name}</div>
-                          <div style={{ fontSize: 11, color: tv['--t3'] }}>{c.platform} · {c.followers} · {c.industry}</div>
-                        </div>
-                        <div style={{ fontSize: 11, color: tv['--accent'] }}>查看 ›</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {trackedCreators.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '30px 0', color: tv['--t4'] }}>
-                    <div style={{ fontSize: 32, marginBottom: 8 }}>👤</div>
-                    <div style={{ fontSize: 13 }}>还没有追踪的博主</div>
-                    <div style={{ fontSize: 11, marginTop: 4 }}>输入博主主页链接开始追踪</div>
-                  </div>
-                )}
               </div>
-            ) : (
-              /* 博主详情 */
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <button onClick={() => setCreatorView('list')} style={{ padding: '6px 12px', background: tv['--inp'], border: 'none', borderRadius: 20, fontSize: 12, color: tv['--t2'], cursor: 'pointer' }}>← 返回</button>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: tv['--t1'] }}>{creatorData?.creator?.name}</div>
-                </div>
-                {/* 博主信息卡 */}
-                <div style={{ background: 'linear-gradient(135deg,#007AFF,#30D5C8)', borderRadius: 16, padding: 14, marginBottom: 12, color: '#fff' }}>
-                  <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{creatorData?.creator?.name}</div>
-                  <div style={{ fontSize: 11, opacity: .85, marginBottom: 10 }}>{creatorData?.creator?.positioning}</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
-                    {[['粉丝', creatorData?.creator?.followers], ['总点赞', creatorData?.creator?.totalLikes], ['平均点赞', creatorData?.creator?.avgLikes]].map(([l, v]) => (
-                      <div key={l} style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: 14, fontWeight: 800 }}>{v}</div>
-                        <div style={{ fontSize: 10, opacity: .7 }}>{l}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                {/* 爆款规律 */}
-                {creatorData?.summary?.topPatterns && (
-                  <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 14, padding: 14, marginBottom: 12 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 8 }}>🔥 爆款规律</div>
-                    {creatorData.summary.topPatterns.map((p: string, i: number) => (
-                      <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-                        <span style={{ color: tv['--orange'], fontWeight: 700, fontSize: 12 }}>{i+1}.</span>
-                        <span style={{ fontSize: 12, color: tv['--t2'] }}>{p}</span>
-                      </div>
-                    ))}
-                    <div style={{ marginTop: 8, padding: '8px 10px', background: `${tv['--accent']}10`, borderRadius: 8 }}>
-                      <div style={{ fontSize: 11, color: tv['--accent'] }}>💡 {creatorData.summary.recommendation}</div>
+            )}
+            {trackedCreators.length > 0 && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="font-bold text-gray-900 text-sm mb-2">📌 已追踪博主</div>
+                {trackedCreators.map((c: any, i: number) => (
+                  <div key={i} onClick={() => setCreatorData({ creator: c, videos: c.videos, summary: c.summary })} className="flex items-center gap-2 py-2 border-b border-gray-50 last:border-0 cursor-pointer">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center text-white text-xs font-bold">{c.name?.[0] || '?'}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-800">{c.name || '博主'}</div>
+                      <div className="text-xs text-gray-400">{c.videos?.length || 0} 条视频</div>
                     </div>
-                  </div>
-                )}
-                {/* 视频列表 */}
-                <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 8 }}>📹 视频列表（{creatorData?.videos?.length || 0}条）</div>
-                {creatorData?.videos?.map((v: CreatorVideo, i: number) => (
-                  <div key={i} style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 14, padding: '12px 14px', marginBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: i < 3 ? tv['--orange'] : tv['--t4'], flexShrink: 0, width: 20 }}>#{v.rank}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: tv['--t1'], lineHeight: 1.4 }}>{v.title}</div>
-                        <div style={{ fontSize: 10, color: tv['--t3'], marginTop: 2 }}>{v.publishDate} · {v.duration} · {v.type}</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
-                      {[['❤️', v.likes], ['💬', v.comments], ['⭐', v.collects], ['↗️', v.shares]].map(([icon, val]) => (
-                        <div key={icon as string} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                          <span style={{ fontSize: 11 }}>{icon}</span>
-                          <span style={{ fontSize: 11, fontWeight: 600, color: tv['--t2'] }}>{typeof val === 'number' ? (val >= 10000 ? (val/10000).toFixed(1)+'万' : val) : val}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ fontSize: 11, color: tv['--t3'], background: tv['--inp'], borderRadius: 8, padding: '8px 10px', lineHeight: 1.5 }}>
-                      <div style={{ fontWeight: 600, color: tv['--accent'], marginBottom: 3 }}>🎯 钩子：{v.hook}</div>
-                      <div style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{v.script}</div>
-                    </div>
-                    <button onClick={() => { navigator.clipboard?.writeText(v.script); }} style={{ marginTop: 8, padding: '5px 12px', background: tv['--inp'], border: 'none', borderRadius: 20, fontSize: 11, color: tv['--t2'], cursor: 'pointer' }}>📋 复制文案</button>
                   </div>
                 ))}
               </div>
             )}
           </div>
         )}
-
-        {/* 文案风格模板 */}
         {matTab === 'style' && (
           <div>
-            {styleMode === 'list' && (
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <div style={{ fontSize: 13, color: tv['--t2'] }}>已保存 {styleTemplates.length} 个风格模板</div>
-                  <button onClick={() => setStyleMode('create')} style={{ padding: '6px 14px', background: 'linear-gradient(135deg,#AF52DE,#007AFF)', border: 'none', borderRadius: 20, fontSize: 12, color: '#fff', cursor: 'pointer', fontWeight: 600 }}>＋ 新建分析</button>
-                </div>
-                {styleTemplates.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                    <div style={{ fontSize: 48, marginBottom: 12 }}>🎨</div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: tv['--t1'], marginBottom: 6 }}>文案风格模板</div>
-                    <div style={{ fontSize: 12, color: tv['--t3'], marginBottom: 20, lineHeight: 1.6 }}>粘贴博主文案或主页链接<br/>AI 分析风格，一键复用</div>
-                    <button onClick={() => setStyleMode('create')} style={{ padding: '12px 28px', background: 'linear-gradient(135deg,#AF52DE,#007AFF)', border: 'none', borderRadius: 24, fontSize: 14, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>🎨 开始分析</button>
-                  </div>
-                ) : styleTemplates.map((t: StyleTemplate) => (
-                  <div key={t.id} style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 14, padding: '12px 14px', marginBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: tv['--t1'] }}>{t.name}</div>
-                        <div style={{ fontSize: 11, color: tv['--t3'], marginTop: 2 }}>{t.summary}</div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: tv['--green'] }}>{t.score}分</span>
+            <div className="bg-white rounded-2xl p-4 shadow-sm mb-3">
+              <div className="font-bold text-gray-900 text-sm mb-3">🔮 分析博主风格</div>
+              <input value={styleUrl} onChange={e => setStyleUrl(e.target.value)} placeholder="博主主页链接（可选）" className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none mb-2" />
+              <input value={styleName} onChange={e => setStyleName(e.target.value)} placeholder="模板名称（如：犀利观点派）" className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none mb-2" />
+              <button onClick={analyzeStyle} disabled={styleLoading} className="w-full py-2.5 bg-purple-500 text-white text-sm font-bold rounded-xl disabled:opacity-60">{styleLoading ? '分析中...' : '✨ 分析并保存风格'}</button>
+            </div>
+            {styleTemplates.length === 0 ? (
+              <div className="bg-white rounded-3xl p-8 text-center shadow-sm">
+                <div className="text-4xl mb-2">🎨</div>
+                <div className="text-sm text-gray-400">还没有风格模板，分析博主风格后自动保存</div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {styleTemplates.map((t: any) => (
+                  <div key={t.id} className="bg-white rounded-2xl p-4 shadow-sm">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="font-bold text-gray-900 text-sm">{t.name}</div>
+                      <div className="flex gap-2">
+                        <button onClick={() => applyTemplate(t)} className="text-xs text-blue-500 font-semibold">应用</button>
+                        <button onClick={() => deleteTemplate(t.id)} className="text-xs text-red-400">删除</button>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
-                      {t.traits?.slice(0, 3).map((trait: string) => (
-                        <span key={trait} style={{ background: `${tv['--purple']}15`, color: tv['--purple'], padding: '2px 8px', borderRadius: 999, fontSize: 10 }}>{trait}</span>
-                      ))}
-                    </div>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => applyTemplate(t)} style={{ flex: 1, padding: '7px', background: tv['--accent'], border: 'none', borderRadius: 10, fontSize: 12, color: '#fff', cursor: 'pointer', fontWeight: 600 }}>✍️ 用此风格写文案</button>
-                      <button onClick={() => { setSelectedTemplate(t); setStyleMode('detail') }} style={{ padding: '7px 12px', background: tv['--inp'], border: 'none', borderRadius: 10, fontSize: 12, color: tv['--t2'], cursor: 'pointer' }}>详情</button>
-                      <button onClick={() => deleteTemplate(t.id)} style={{ padding: '7px 12px', background: tv['--inp'], border: 'none', borderRadius: 10, fontSize: 12, color: tv['--red'], cursor: 'pointer' }}>删除</button>
-                    </div>
+                    <div className="text-xs text-gray-500 leading-relaxed">{t.description || t.summary}</div>
                   </div>
                 ))}
               </div>
             )}
-            {styleMode === 'create' && (
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <button onClick={() => setStyleMode('list')} style={{ padding: '6px 12px', background: tv['--inp'], border: 'none', borderRadius: 20, fontSize: 12, color: tv['--t2'], cursor: 'pointer' }}>← 返回</button>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: tv['--t1'] }}>新建风格分析</div>
-                </div>
-                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14 }}>
-                  <div style={{ fontSize: 12, color: tv['--t3'], marginBottom: 6 }}>模板名称</div>
-                  <input value={styleName} onChange={(e: any) => setStyleName(e.target.value)} placeholder="如：犀利干货流、温情故事流..." style={{ width: '100%', padding: '10px 12px', border: `.5px solid ${tv['--b']}`, borderRadius: 10, fontSize: 13, color: tv['--t1'], background: tv['--inp'], marginBottom: 12, boxSizing: 'border-box', fontFamily: 'inherit' }} />
-                  <div style={{ fontSize: 12, color: tv['--t3'], marginBottom: 6 }}>方式一：粘贴博主主页链接</div>
-                  <input value={styleUrl} onChange={(e: any) => setStyleUrl(e.target.value)} placeholder="https://www.douyin.com/user/..." style={{ width: '100%', padding: '10px 12px', border: `.5px solid ${tv['--b']}`, borderRadius: 10, fontSize: 13, color: tv['--t1'], background: tv['--inp'], marginBottom: 12, boxSizing: 'border-box', fontFamily: 'inherit' }} />
-                  <div style={{ fontSize: 12, color: tv['--t3'], marginBottom: 6 }}>方式二：粘贴文案样本（3-5条效果更好）</div>
-                  <textarea value={styleInput} onChange={(e: any) => setStyleInput(e.target.value)} placeholder="粘贴你想模仿的文案，每条之间用空行分隔..." rows={6} style={{ width: '100%', padding: '10px 12px', border: `.5px solid ${tv['--b']}`, borderRadius: 10, fontSize: 13, color: tv['--t1'], background: tv['--inp'], resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: 12 }} />
-                  <button onClick={analyzeStyle} disabled={styleLoading} style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg,#AF52DE,#007AFF)', border: 'none', borderRadius: 12, fontSize: 14, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
-                    {styleLoading ? '🔄 AI 分析中...' : '✨ AI 分析风格'}
-                  </button>
-                </div>
-              </div>
-            )}
-            {styleMode === 'detail' && selectedTemplate && (
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <button onClick={() => setStyleMode('list')} style={{ padding: '6px 12px', background: tv['--inp'], border: 'none', borderRadius: 20, fontSize: 12, color: tv['--t2'], cursor: 'pointer' }}>← 返回</button>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: tv['--t1'] }}>{selectedTemplate.name}</div>
-                </div>
-                <div style={{ background: 'linear-gradient(135deg,#AF52DE,#007AFF)', borderRadius: 16, padding: 14, marginBottom: 12, color: '#fff' }}>
-                  <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{selectedTemplate.name}</div>
-                  <div style={{ fontSize: 12, opacity: .85, marginBottom: 10 }}>{selectedTemplate.summary}</div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {selectedTemplate.traits?.map((t: string) => (
-                      <span key={t} style={{ background: 'rgba(255,255,255,.2)', padding: '3px 10px', borderRadius: 999, fontSize: 11 }}>{t}</span>
-                    ))}
-                  </div>
-                </div>
-                {[
-                  { title: '📐 文案结构', content: [
-                    `开头：${selectedTemplate.structure?.hook}`,
-                    `正文：${selectedTemplate.structure?.body}`,
-                    `结尾：${selectedTemplate.structure?.cta}`,
-                  ]},
-                  { title: '🗣️ 语言风格', content: [
-                    `语气：${selectedTemplate.vocabulary?.tone}`,
-                    `常用词：${selectedTemplate.vocabulary?.highFreq?.join('、')}`,
-                    `避免：${selectedTemplate.vocabulary?.avoid?.join('、')}`,
-                  ]},
-                  { title: '💡 钩子模板', content: selectedTemplate.examples?.hookTemplates || [] },
-                  { title: '📢 结尾模板', content: selectedTemplate.examples?.ctaTemplates || [] },
-                ].map(section => (
-                  <div key={section.title} style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 14, padding: 14, marginBottom: 10 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 8 }}>{section.title}</div>
-                    {section.content.map((item: string, i: number) => (
-                      <div key={i} style={{ fontSize: 12, color: tv['--t2'], marginBottom: 4, lineHeight: 1.5 }}>• {item}</div>
-                    ))}
-                  </div>
-                ))}
-                <button onClick={() => applyTemplate(selectedTemplate)} style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg,#AF52DE,#007AFF)', border: 'none', borderRadius: 12, fontSize: 14, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>✍️ 用此风格写文案</button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 已保存 */}
-        {matTab === 'saved' && (
-          <div>
-            <div style={{ fontSize: 13, color: tv['--t3'], marginBottom: 12 }}>已保存 {savedContents.length} 条文案</div>
-            {savedContents.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: tv['--t4'] }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>📝</div>
-                <div style={{ fontSize: 13 }}>还没有保存的文案</div>
-                <div style={{ fontSize: 11, marginTop: 4 }}>在内容中心生成文案后点击保存</div>
-              </div>
-            ) : savedContents.map((c: SavedContent, i: number) => (
-              <div key={i} style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 14, padding: '12px 14px', marginBottom: 8 }}>
-                <div style={{ fontSize: 12, color: tv['--accent'], fontWeight: 600, marginBottom: 4 }}>{c.style}</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: tv['--t1'], marginBottom: 6 }}>{c.topic}</div>
-                <div style={{ fontSize: 12, color: tv['--t2'], lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{c.content}</div>
-                <div style={{ fontSize: 10, color: tv['--t4'], marginTop: 6 }}>{c.created_at ? new Date(c.created_at).toLocaleDateString('zh-CN') : ''}</div>
-              </div>
-            ))}
           </div>
         )}
       </div>
@@ -999,559 +527,101 @@ function Materials({ tv, acc, matTab, setMatTab, hotspots, aiTopics, topicsLoadi
   )
 }
 
-// ===== 内容中心 =====
-function Content({ tv, acc, step, setStep, topic, setTopic, style, setStyle, userInput, setUserInput, versions, loading, error, copiedIdx, expandedIdx, setExpandedIdx, tokens, generate, copy, save, showToast, quickTopics, setTab, styleTemplates }: any) {
-  const steps = ['选题', '风格', '生成']
-  const styles = ['犀利观点', '朋友聊天', '口播带货', '专业顾问']
+
+// ═══════════════════════════════════════════════════════════
+// CONTENT CENTER
+// ═══════════════════════════════════════════════════════════
+function ContentCenter({ acc, step, setStep, topic, setTopic, style, setStyle, userInput, setUserInput, versions, loading, error, copiedIdx, generate, copy, save, showToast, setTab, hotspots, savedContents }: any) {
+  const STYLES = ['犀利观点', '温情故事', '干货教程', '幽默搞笑', '励志正能量', '悬念钩子']
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: tv['--bg'] }}>
-      <div style={{ padding: '10px 16px 8px', flexShrink: 0 }}>
-        <div style={{ fontSize: 22, fontWeight: 800, color: tv['--t1'], marginBottom: 10 }}>内容中心</div>
-        <div style={{ display: 'flex', gap: 0 }}>
-          {steps.map((s, i) => (
-            <div key={s} style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
-              <div onClick={() => i < step && setStep(i+1)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: i < step ? 'pointer' : 'default' }}>
-                <div style={{ width: 24, height: 24, borderRadius: '50%', background: step > i ? tv['--accent'] : step === i+1 ? tv['--accent'] : tv['--inp'], display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: step >= i+1 ? '#fff' : tv['--t4'] }}>{i+1}</span>
-                </div>
-                <span style={{ fontSize: 10, color: step >= i+1 ? tv['--accent'] : tv['--t4'], marginTop: 3, fontWeight: step === i+1 ? 700 : 400 }}>{s}</span>
+    <div className="flex flex-col h-full bg-[#F2F2F7]">
+      <div className="px-5 pt-4 pb-3 flex-shrink-0">
+        <h1 className="text-xl font-black text-gray-900 mb-1">内容中心</h1>
+        <div className="flex gap-1">
+          {['选题', '配置', '文案'].map((s, i) => (
+            <div key={i} className="flex items-center gap-1">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${step > i + 1 ? 'bg-green-400 text-white' : step === i + 1 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                {step > i + 1 ? '✓' : i + 1}
               </div>
-              {i < 2 && <div style={{ flex: 1, height: 1, background: step > i+1 ? tv['--accent'] : tv['--b'], margin: '0 4px', marginBottom: 14 }} />}
+              <span className={`text-xs font-medium ${step === i + 1 ? 'text-blue-500' : 'text-gray-400'}`}>{s}</span>
+              {i < 2 && <div className={`w-6 h-px ${step > i + 1 ? 'bg-green-400' : 'bg-gray-200'}`} />}
             </div>
           ))}
         </div>
       </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
+      <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4">
         {step === 1 && (
-          <div>
-            <div style={{ fontSize: 13, color: tv['--t2'], marginBottom: 10 }}>选择或输入选题</div>
-            <input value={topic} onChange={(e: any) => setTopic(e.target.value)} placeholder="输入选题..." style={{ width: '100%', padding: '12px 14px', border: `.5px solid ${tv['--b']}`, borderRadius: 12, fontSize: 14, color: tv['--t1'], background: tv['--card'], marginBottom: 12, boxSizing: 'border-box', fontFamily: 'inherit' }} />
-            <div style={{ fontSize: 12, color: tv['--t3'], marginBottom: 8 }}>快速选题</div>
-            {quickTopics.map((t: string) => (
-              <div key={t} onClick={() => setTopic(t)} style={{ background: tv['--card'], border: `.5px solid ${topic === t ? tv['--accent'] : tv['--b']}`, borderRadius: 12, padding: '11px 14px', marginBottom: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 13, color: tv['--t1'], flex: 1 }}>{t}</span>
-                {topic === t && <span style={{ color: tv['--accent'], fontSize: 14 }}>✓</span>}
-              </div>
-            ))}
-            <div onClick={() => setTab('materials')} style={{ textAlign: 'center', padding: '10px', color: tv['--accent'], fontSize: 13, cursor: 'pointer' }}>📌 去选题库选更多 ›</div>
-            <button onClick={() => setStep(2)} disabled={!topic.trim()} style={{ width: '100%', padding: '13px', background: topic.trim() ? tv['--accent'] : tv['--inp'], border: 'none', borderRadius: 12, fontSize: 15, color: topic.trim() ? '#fff' : tv['--t4'], cursor: topic.trim() ? 'pointer' : 'default', fontWeight: 700, marginTop: 8 }}>
-              下一步：选择风格 →
-            </button>
-          </div>
-        )}
-        {step === 2 && (
-          <div>
-            <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 12, padding: '10px 14px', marginBottom: 14 }}>
-              <div style={{ fontSize: 11, color: tv['--t3'] }}>当前选题</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: tv['--t1'], marginTop: 2 }}>{topic}</div>
+          <div className="space-y-3">
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-2">✏️ 自定义选题</div>
+              <textarea value={topic} onChange={e => setTopic(e.target.value)} placeholder="输入你的选题..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20" />
+              <button onClick={() => setStep(2)} disabled={!topic.trim()} className="w-full mt-2 py-2.5 bg-blue-500 text-white text-sm font-bold rounded-xl disabled:opacity-50">
+                使用此选题 →
+              </button>
             </div>
-            <div style={{ fontSize: 13, color: tv['--t2'], marginBottom: 8 }}>选择文案风格</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 8, marginBottom: 12 }}>
-              {styles.map(s => (
-                <div key={s} onClick={() => setStyle(s)} style={{ background: tv['--card'], border: `1.5px solid ${style === s ? tv['--accent'] : tv['--b']}`, borderRadius: 12, padding: '12px', cursor: 'pointer', textAlign: 'center' }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: style === s ? tv['--accent'] : tv['--t1'] }}>{s}</div>
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">🔥 热点选题</div>
+              {hotspots.map((h: any, i: number) => (
+                <div key={i} onClick={() => { setTopic(h.title); setStep(2) }} className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0 cursor-pointer active:bg-gray-50 rounded-xl px-1 transition-colors">
+                  <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-orange-400 to-amber-400 flex items-center justify-center text-white font-black text-xs flex-shrink-0">{i + 1}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-800">{h.title}</div>
+                    <div className="text-xs text-gray-400">{h.tag}</div>
+                  </div>
+                  <span className="text-xs text-blue-500 font-semibold">选用</span>
                 </div>
               ))}
             </div>
-            {/* 风格模板 */}
-            {styleTemplates?.length > 0 && (
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 12, color: tv['--t3'], marginBottom: 6 }}>🎨 我的风格模板</div>
-                <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
-                  {styleTemplates.map((t: StyleTemplate) => (
-                    <div key={t.id} onClick={() => setStyle(t.name)} style={{ flexShrink: 0, padding: '6px 12px', borderRadius: 20, background: style === t.name ? tv['--purple'] : tv['--inp'], cursor: 'pointer', border: `1px solid ${style === t.name ? tv['--purple'] : 'transparent'}` }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: style === t.name ? '#fff' : tv['--t2'] }}>{t.name}</span>
-                    </div>
-                  ))}
-                </div>
+          </div>
+        )}
+        {step === 2 && (
+          <div className="space-y-3">
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-1">📌 当前选题</div>
+              <div className="text-sm text-blue-600 font-medium bg-blue-50 rounded-xl px-3 py-2">{topic}</div>
+              <button onClick={() => setStep(1)} className="text-xs text-gray-400 mt-1.5">← 重新选题</button>
+            </div>
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">🎨 文案风格</div>
+              <div className="grid grid-cols-3 gap-2">
+                {STYLES.map(s => (
+                  <button key={s} onClick={() => setStyle(s)} className={`py-2 rounded-xl text-xs font-semibold transition-all ${style === s ? 'bg-blue-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600'}`}>{s}</button>
+                ))}
               </div>
-            )}
-            <div style={{ fontSize: 12, color: tv['--t3'], marginBottom: 6 }}>补充说明（可选）</div>
-            <textarea value={userInput} onChange={(e: any) => setUserInput(e.target.value)} placeholder="如：重点强调性价比，结尾引导私信..." rows={3} style={{ width: '100%', padding: '10px 12px', border: `.5px solid ${tv['--b']}`, borderRadius: 10, fontSize: 13, color: tv['--t1'], background: tv['--card'], resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: 12 }} />
-            <button onClick={() => { setStep(3); generate() }} style={{ width: '100%', padding: '13px', background: 'linear-gradient(135deg,#007AFF,#30D5C8)', border: 'none', borderRadius: 12, fontSize: 15, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
-              ✨ AI 生成文案
+            </div>
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-2">💬 补充说明（可选）</div>
+              <textarea value={userInput} onChange={e => setUserInput(e.target.value)} placeholder="有什么特别要求？比如：突出价格优惠、强调食材新鲜..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20" />
+            </div>
+            {error && <div className="bg-red-50 rounded-2xl p-3 text-xs text-red-500">{error}</div>}
+            <button onClick={generate} disabled={loading} className="w-full py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm disabled:opacity-60 active:scale-[0.98] transition-all shadow-md">
+              {loading ? '✨ AI 生成中...' : '✨ 生成文案'}
             </button>
           </div>
         )}
         {step === 3 && (
-          <div>
-            <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 12, padding: '10px 14px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontSize: 11, color: tv['--t3'] }}>{topic}</div>
-                <div style={{ fontSize: 12, color: tv['--accent'], fontWeight: 600 }}>{style}</div>
-              </div>
-              <button onClick={() => { setStep(2) }} style={{ padding: '5px 10px', background: tv['--inp'], border: 'none', borderRadius: 8, fontSize: 11, color: tv['--t2'], cursor: 'pointer' }}>重新设置</button>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-bold text-gray-900">✅ 生成完成</div>
+              <button onClick={() => setStep(2)} className="text-xs text-blue-500 font-semibold">重新生成</button>
             </div>
-            {loading && (
-              <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <div style={{ fontSize: 32, marginBottom: 12 }}>✨</div>
-                <div style={{ fontSize: 14, color: tv['--t2'] }}>AI 正在创作中...</div>
-                <div style={{ fontSize: 12, color: tv['--t3'], marginTop: 6 }}>通常需要 5-10 秒</div>
-              </div>
-            )}
-            {error && <div style={{ background: '#FFF2F2', border: '1px solid #FFD0D0', borderRadius: 12, padding: 14, color: tv['--red'], fontSize: 13, marginBottom: 12 }}>{error}</div>}
-            {versions.map((v: CopyVersion, i: number) => (
-              <div key={i} style={{ background: tv['--card'], border: `1.5px solid ${expandedIdx === i ? tv['--accent'] : tv['--b']}`, borderRadius: 14, marginBottom: 10, overflow: 'hidden' }}>
-                <div onClick={() => setExpandedIdx(expandedIdx === i ? null : i)} style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
-                  <div>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: tv['--accent'], background: `${tv['--accent']}15`, padding: '2px 8px', borderRadius: 999 }}>{v.style}</span>
-                    <div style={{ fontSize: 12, color: tv['--t3'], marginTop: 4 }}>🎯 {v.hook}</div>
-                  </div>
-                  <span style={{ color: tv['--t3'], fontSize: 14 }}>{expandedIdx === i ? '▲' : '▼'}</span>
-                </div>
-                {expandedIdx === i && (
-                  <div style={{ padding: '0 14px 14px' }}>
-                    <div style={{ fontSize: 13, color: tv['--t1'], lineHeight: 1.7, background: tv['--inp'], borderRadius: 10, padding: '12px', marginBottom: 10 }}>{v.content}</div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button onClick={() => copy(v.content, i)} style={{ flex: 1, padding: '9px', background: copiedIdx === i ? tv['--green'] : tv['--inp'], border: 'none', borderRadius: 10, fontSize: 13, color: copiedIdx === i ? '#fff' : tv['--t2'], cursor: 'pointer', fontWeight: 600 }}>
-                        {copiedIdx === i ? '✓ 已复制' : '📋 复制'}
-                      </button>
-                      <button onClick={() => save(v)} style={{ flex: 1, padding: '9px', background: tv['--accent'], border: 'none', borderRadius: 10, fontSize: 13, color: '#fff', cursor: 'pointer', fontWeight: 600 }}>💾 保存</button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-            {versions.length > 0 && tokens && (
-              <div style={{ textAlign: 'center', fontSize: 11, color: tv['--t4'], marginTop: 8 }}>消耗 {tokens} tokens · <span onClick={generate} style={{ color: tv['--accent'], cursor: 'pointer' }}>重新生成</span></div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// ===== 账号定位 =====
-
-    // ===== 视频生成工作室 =====
-    function VideoStudio({ tv, acc, step, setStep, copy, setCopy, voiceId, setVoiceId, speed, setSpeed, avatarType, setAvatarType, avatarPreset, setAvatarPreset, bgType, setBgType, bgColor, setBgColor, loading, setLoading, audioB64, setAudioB64, result, setResult, error, setError, showToast, savedContents, setTab }: any) {
-      const VOICES = [
-        { id: 'female-shaonv', label: '少女音', desc: '清甜活泼', emoji: '👧' },
-        { id: 'female-yujie', label: '御姐音', desc: '成熟知性', emoji: '👩' },
-        { id: 'male-qn-qingse', label: '青涩男声', desc: '年轻有活力', emoji: '👦' },
-        { id: 'male-qn-jingying', label: '精英男声', desc: '专业沉稳', emoji: '👨' },
-        { id: 'presenter_male', label: '播音男声', desc: '标准普通话', emoji: '🎙️' },
-        { id: 'audiobook_female_1', label: '有声书女声', desc: '温柔叙事', emoji: '📖' },
-      ]
-      const AVATARS = [
-        { id: 'business-female', label: '职场女性', emoji: '👩‍💼', desc: '专业形象' },
-        { id: 'business-male', label: '职场男性', emoji: '👨‍💼', desc: '商务风格' },
-        { id: 'casual-female', label: '休闲女生', emoji: '👩', desc: '亲切自然' },
-        { id: 'casual-male', label: '休闲男生', emoji: '👨', desc: '轻松随意' },
-      ]
-      const BG_COLORS = ['#1a1a2e','#16213e','#0f3460','#1b4332','#2d1b69','#3d0000','#1a1a1a','#f8f9fa']
-      const STEPS = [
-        { id: 'input', label: '文案', icon: '✍️' },
-        { id: 'voice', label: '声音', icon: '🎙️' },
-        { id: 'avatar', label: '形象', icon: '🧑' },
-        { id: 'preview', label: '生成', icon: '🎬' },
-      ]
-
-      async function generateTTS() {
-        if (!copy.trim()) { showToast('请先输入文案'); return }
-        setLoading(true); setError(''); setAudioB64('')
-        try {
-          const res = await fetch('/api/tts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: copy, voiceId, speed }),
-          })
-          const data = await res.json()
-          if (!res.ok || data.error) {
-            if (data.configured === false) {
-              setError('⚙️ MiniMax API 未配置\n请在 Vercel 后台添加 MINIMAX_API_KEY 和 MINIMAX_GROUP_ID 环境变量')
-            } else {
-              setError(data.error || '生成失败')
-            }
-            return
-          }
-          setAudioB64(data.audio)
-          showToast('✅ 语音合成成功！')
-          setStep('avatar')
-        } catch (e: any) {
-          setError(e.message)
-        } finally {
-          setLoading(false)
-        }
-      }
-
-      const stepIdx = STEPS.findIndex(s => s.id === step)
-
-      return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: tv['--bg'] }}>
-          <div style={{ padding: '10px 16px 0', flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: tv['--t1'] }}>🎬 视频生成</div>
-                <div style={{ fontSize: 12, color: tv['--t3'] }}>文案 → 语音 → 数字人 → 成片</div>
-              </div>
-              <div style={{ background: 'linear-gradient(135deg,#007AFF,#AF52DE)', borderRadius: 10, padding: '4px 10px' }}>
-                <span style={{ fontSize: 11, color: '#fff', fontWeight: 600 }}>AI 驱动</span>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10, marginTop: 8 }}>
-              {STEPS.map((s, i) => (
-                <div key={s.id} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                  <div onClick={() => { if (i <= stepIdx) setStep(s.id) }}
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, cursor: 'pointer', flex: 1 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13,
-                      background: i < stepIdx ? tv['--green'] : i === stepIdx ? tv['--accent'] : tv['--inp'],
-                      color: i <= stepIdx ? '#fff' : tv['--t4'], fontWeight: 700, transition: 'all .2s' }}>
-                      {i < stepIdx ? '✓' : s.icon}
-                    </div>
-                    <span style={{ fontSize: 9, color: i === stepIdx ? tv['--accent'] : tv['--t4'], fontWeight: i === stepIdx ? 700 : 400 }}>{s.label}</span>
-                  </div>
-                  {i < STEPS.length - 1 && <div style={{ height: 2, flex: 0.3, background: i < stepIdx ? tv['--green'] : tv['--inp'], borderRadius: 1, marginBottom: 14 }} />}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
-
-            {step === 'input' && (
-              <div>
-                {savedContents.length > 0 && (
-                  <div style={{ marginBottom: 12 }}>
-                    <div style={{ fontSize: 12, color: tv['--t3'], marginBottom: 6 }}>📌 从已保存文案导入</div>
-                    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-                      {savedContents.slice(0, 5).map((c: any, i: number) => (
-                        <div key={i} onClick={() => { setCopy(c.content); showToast('✅ 已导入文案') }}
-                          style={{ flexShrink: 0, background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 10, padding: '8px 10px', cursor: 'pointer', maxWidth: 140 }}>
-                          <div style={{ fontSize: 11, color: tv['--t1'], fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.topic || '已保存文案'}</div>
-                          <div style={{ fontSize: 10, color: tv['--t3'], marginTop: 2 }}>{c.content?.slice(0, 20)}...</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, marginBottom: 12 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 8 }}>📝 口播文案</div>
-                  <textarea value={copy} onChange={e => setCopy(e.target.value)}
-                    placeholder="输入或粘贴口播文案，AI 将为你合成语音并生成视频..."
-                    style={{ width: '100%', minHeight: 140, background: tv['--inp'], border: 'none', borderRadius: 10, padding: 10, fontSize: 13, color: tv['--t1'], resize: 'none', outline: 'none', lineHeight: 1.6, boxSizing: 'border-box' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                    <span style={{ fontSize: 11, color: tv['--t3'] }}>{copy.length} 字 · 约 {Math.ceil(copy.length / 4)} 秒</span>
-                    <button onClick={() => setCopy('')} style={{ fontSize: 11, color: tv['--t3'], background: 'none', border: 'none', cursor: 'pointer' }}>清空</button>
+            {versions.map((v: any, i: number) => (
+              <div key={i} className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">版本 {i + 1} · {v.style}</span>
+                  <div className="flex gap-2">
+                    <button onClick={() => copy(v.content, i)} className={`text-xs font-semibold ${copiedIdx === i ? 'text-green-500' : 'text-gray-400'}`}>
+                      {copiedIdx === i ? '✅ 已复制' : '复制'}
+                    </button>
+                    <button onClick={() => save(v.content, v.style)} className="text-xs text-blue-500 font-semibold">保存</button>
                   </div>
                 </div>
-                {!copy.trim() && (
-                  <div onClick={() => setTab('content')} style={{ background: `linear-gradient(135deg,${tv['--accent']}15,${tv['--accent']}05)`, border: `1px dashed ${tv['--accent']}60`, borderRadius: 14, padding: 14, cursor: 'pointer', textAlign: 'center', marginBottom: 12 }}>
-                    <div style={{ fontSize: 20, marginBottom: 4 }}>✍️</div>
-                    <div style={{ fontSize: 13, color: tv['--accent'], fontWeight: 600 }}>去内容中心生成文案</div>
-                    <div style={{ fontSize: 11, color: tv['--t3'], marginTop: 2 }}>生成后保存，可在这里一键导入</div>
-                  </div>
-                )}
-                <button onClick={() => { if (!copy.trim()) { showToast('请先输入文案'); return }; setStep('voice') }}
-                  style={{ width: '100%', padding: '14px 0', background: copy.trim() ? tv['--accent'] : tv['--inp'], color: copy.trim() ? '#fff' : tv['--t4'], border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 700, cursor: copy.trim() ? 'pointer' : 'default', transition: 'all .2s' }}>
-                  下一步：选择声音 →
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{v.content}</p>
+                <button onClick={() => { setTab('video') }} className="w-full mt-3 py-2 bg-purple-50 text-purple-600 text-xs font-bold rounded-xl">
+                  🎬 用此文案生成视频
                 </button>
               </div>
-            )}
-
-            {step === 'voice' && (
-              <div>
-                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, marginBottom: 12 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>🎙️ 选择音色</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    {VOICES.map(v => (
-                      <div key={v.id} onClick={() => setVoiceId(v.id)}
-                        style={{ background: voiceId === v.id ? `${tv['--accent']}15` : tv['--inp'], border: `1.5px solid ${voiceId === v.id ? tv['--accent'] : 'transparent'}`, borderRadius: 12, padding: '10px 12px', cursor: 'pointer', transition: 'all .15s' }}>
-                        <div style={{ fontSize: 20, marginBottom: 4 }}>{v.emoji}</div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: tv['--t1'] }}>{v.label}</div>
-                        <div style={{ fontSize: 10, color: tv['--t3'] }}>{v.desc}</div>
-                        {voiceId === v.id && <div style={{ fontSize: 10, color: tv['--accent'], marginTop: 4, fontWeight: 600 }}>✓ 已选择</div>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, marginBottom: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'] }}>⚡ 语速</div>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: tv['--accent'] }}>{speed.toFixed(1)}x</span>
-                  </div>
-                  <input type="range" min="0.5" max="2.0" step="0.1" value={speed} onChange={e => setSpeed(parseFloat(e.target.value))}
-                    style={{ width: '100%', accentColor: tv['--accent'] }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: tv['--t4'], marginTop: 4 }}>
-                    <span>0.5x 慢</span><span>1.0x 正常</span><span>2.0x 快</span>
-                  </div>
-                </div>
-                <div style={{ background: `linear-gradient(135deg,#AF52DE15,#007AFF10)`, border: `1px solid #AF52DE30`, borderRadius: 14, padding: 14, marginBottom: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontSize: 18 }}>🔮</span>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'] }}>声音克隆</div>
-                      <div style={{ fontSize: 11, color: tv['--t3'] }}>上传3-10秒音频，克隆你的声音</div>
-                    </div>
-                    <div style={{ marginLeft: 'auto', background: '#AF52DE20', borderRadius: 8, padding: '3px 8px' }}>
-                      <span style={{ fontSize: 10, color: '#AF52DE', fontWeight: 600 }}>需配置 API</span>
-                    </div>
-                  </div>
-                  <div style={{ background: tv['--inp'], borderRadius: 10, padding: '10px 12px', textAlign: 'center', cursor: 'pointer' }}>
-                    <span style={{ fontSize: 12, color: tv['--t3'] }}>📎 点击上传音频文件（mp3/wav）</span>
-                  </div>
-                </div>
-                {error && (
-                  <div style={{ background: '#FF3B3015', border: '1px solid #FF3B3040', borderRadius: 12, padding: 12, marginBottom: 12 }}>
-                    <div style={{ fontSize: 12, color: '#FF3B30', whiteSpace: 'pre-line' }}>{error}</div>
-                    {error.includes('未配置') && (
-                      <div style={{ marginTop: 8, fontSize: 11, color: tv['--t3'] }}>
-                        📍 获取方式：登录 platform.minimaxi.com → 创建应用 → 获取 API Key 和 Group ID → 在 Vercel 环境变量中添加
-                      </div>
-                    )}
-                  </div>
-                )}
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => setStep('input')} style={{ flex: 1, padding: '12px 0', background: tv['--inp'], color: tv['--t2'], border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>← 返回</button>
-                  <button onClick={generateTTS} disabled={loading}
-                    style={{ flex: 2, padding: '12px 0', background: loading ? tv['--inp'] : tv['--accent'], color: loading ? tv['--t4'] : '#fff', border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: loading ? 'default' : 'pointer', transition: 'all .2s' }}>
-                    {loading ? '🎙️ 合成中...' : '🎙️ 合成语音'}
-                  </button>
-                </div>
-                {audioB64 && (
-                  <div style={{ marginTop: 10, background: '#34C75915', border: '1px solid #34C75940', borderRadius: 12, padding: 12 }}>
-                    <div style={{ fontSize: 12, color: tv['--green'], fontWeight: 600, marginBottom: 6 }}>✅ 语音已合成</div>
-                    <audio controls src={`data:audio/mp3;base64,${audioB64}`} style={{ width: '100%', height: 36 }} />
-                    <button onClick={() => setStep('avatar')} style={{ width: '100%', marginTop: 8, padding: '10px 0', background: tv['--green'], color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                      下一步：选择形象 →
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {step === 'avatar' && (
-              <div>
-                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, marginBottom: 12 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>🧑 数字人形象</div>
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                    {(['preset','upload'] as const).map(t => (
-                      <button key={t} onClick={() => setAvatarType(t)}
-                        style={{ flex: 1, padding: '8px 0', background: avatarType === t ? tv['--accent'] : tv['--inp'], color: avatarType === t ? '#fff' : tv['--t3'], border: 'none', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                        {t === 'preset' ? '🎭 预设形象' : '📷 上传照片'}
-                      </button>
-                    ))}
-                  </div>
-                  {avatarType === 'preset' ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                      {AVATARS.map(a => (
-                        <div key={a.id} onClick={() => setAvatarPreset(a.id)}
-                          style={{ background: avatarPreset === a.id ? `${tv['--accent']}15` : tv['--inp'], border: `1.5px solid ${avatarPreset === a.id ? tv['--accent'] : 'transparent'}`, borderRadius: 12, padding: '12px 10px', cursor: 'pointer', textAlign: 'center' }}>
-                          <div style={{ fontSize: 32, marginBottom: 4 }}>{a.emoji}</div>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: tv['--t1'] }}>{a.label}</div>
-                          <div style={{ fontSize: 10, color: tv['--t3'] }}>{a.desc}</div>
-                          {avatarPreset === a.id && <div style={{ fontSize: 10, color: tv['--accent'], marginTop: 4, fontWeight: 600 }}>✓ 已选</div>}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={{ background: tv['--inp'], borderRadius: 12, padding: 20, textAlign: 'center' }}>
-                      <div style={{ fontSize: 32, marginBottom: 8 }}>📷</div>
-                      <div style={{ fontSize: 13, color: tv['--t2'], fontWeight: 600, marginBottom: 4 }}>上传人物照片</div>
-                      <div style={{ fontSize: 11, color: tv['--t3'], marginBottom: 12 }}>正面清晰照片效果最佳</div>
-                      <div style={{ background: '#AF52DE20', borderRadius: 8, padding: '4px 10px', display: 'inline-block' }}>
-                        <span style={{ fontSize: 11, color: '#AF52DE', fontWeight: 600 }}>需配置 LatentSync API</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, marginBottom: 12 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>🖼️ 背景设置</div>
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                    {([['color','纯色'],['image','图片'],['blur','虚化']] as const).map(([t, l]) => (
-                      <button key={t} onClick={() => setBgType(t)}
-                        style={{ flex: 1, padding: '7px 0', background: bgType === t ? tv['--accent'] : tv['--inp'], color: bgType === t ? '#fff' : tv['--t3'], border: 'none', borderRadius: 10, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                        {l}
-                      </button>
-                    ))}
-                  </div>
-                  {bgType === 'color' && (
-                    <div>
-                      <div style={{ fontSize: 11, color: tv['--t3'], marginBottom: 8 }}>选择背景色</div>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        {BG_COLORS.map(c => (
-                          <div key={c} onClick={() => setBgColor(c)}
-                            style={{ width: 32, height: 32, borderRadius: 8, background: c, cursor: 'pointer', border: bgColor === c ? `3px solid ${tv['--accent']}` : '2px solid transparent', transition: 'border .15s' }} />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {bgType === 'image' && (
-                    <div style={{ background: tv['--inp'], borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                      <div style={{ fontSize: 11, color: tv['--t3'] }}>📎 上传背景图片</div>
-                      <div style={{ fontSize: 10, color: tv['--t4'], marginTop: 4 }}>rembg 自动抠图后合成</div>
-                    </div>
-                  )}
-                  {bgType === 'blur' && (
-                    <div style={{ background: tv['--inp'], borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                      <div style={{ fontSize: 11, color: tv['--t3'] }}>原视频背景虚化处理</div>
-                      <div style={{ fontSize: 10, color: tv['--t4'], marginTop: 4 }}>FFmpeg 高斯模糊滤镜</div>
-                    </div>
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => setStep('voice')} style={{ flex: 1, padding: '12px 0', background: tv['--inp'], color: tv['--t2'], border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>← 返回</button>
-                  <button onClick={() => setStep('preview')}
-                    style={{ flex: 2, padding: '12px 0', background: tv['--accent'], color: '#fff', border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-                    下一步：生成视频 →
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {step === 'preview' && (
-              <div>
-                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, marginBottom: 12 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>📋 生成配置</div>
-                  {[
-                    { label: '文案', value: copy.slice(0, 30) + (copy.length > 30 ? '...' : ''), icon: '📝' },
-                    { label: '音色', value: VOICES.find(v => v.id === voiceId)?.label || voiceId, icon: '🎙️' },
-                    { label: '语速', value: `${speed.toFixed(1)}x`, icon: '⚡' },
-                    { label: '形象', value: avatarType === 'preset' ? (AVATARS.find(a => a.id === avatarPreset)?.label || avatarPreset) : '自定义照片', icon: '🧑' },
-                    { label: '背景', value: bgType === 'color' ? '纯色背景' : bgType === 'image' ? '自定义图片' : '虚化背景', icon: '🖼️' },
-                  ].map(item => (
-                    <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      <span style={{ fontSize: 14 }}>{item.icon}</span>
-                      <span style={{ fontSize: 12, color: tv['--t3'], width: 36 }}>{item.label}</span>
-                      <span style={{ fontSize: 12, color: tv['--t1'], fontWeight: 600 }}>{item.value}</span>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ background: `linear-gradient(135deg,#007AFF10,#AF52DE10)`, border: `1px solid #007AFF20`, borderRadius: 14, padding: 14, marginBottom: 12 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: tv['--t1'], marginBottom: 8 }}>⚙️ 合成流程</div>
-                  {[
-                    { step: '1', label: 'MiniMax TTS', desc: '文案 → 语音', status: audioB64 ? 'done' : 'pending' },
-                    { step: '2', label: 'LatentSync', desc: '语音 → 对口型视频', status: 'pending' },
-                    { step: '3', label: 'rembg', desc: '人物抠图', status: 'pending' },
-                    { step: '4', label: 'FFmpeg', desc: '合成最终视频', status: 'pending' },
-                  ].map(item => (
-                    <div key={item.step} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                      <div style={{ width: 20, height: 20, borderRadius: '50%', background: item.status === 'done' ? tv['--green'] : tv['--inp'], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: item.status === 'done' ? '#fff' : tv['--t4'], fontWeight: 700, flexShrink: 0 }}>
-                        {item.status === 'done' ? '✓' : item.step}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: tv['--t1'] }}>{item.label}</span>
-                        <span style={{ fontSize: 11, color: tv['--t3'], marginLeft: 6 }}>{item.desc}</span>
-                      </div>
-                      <span style={{ fontSize: 10, color: item.status === 'done' ? tv['--green'] : '#FF9500', fontWeight: 600 }}>
-                        {item.status === 'done' ? '✅ 完成' : '⏳ 待配置'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ background: '#FF950015', border: '1px solid #FF950040', borderRadius: 14, padding: 14, marginBottom: 12 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#FF9500', marginBottom: 8 }}>🔧 需要配置的 API</div>
-                  {[
-                    { name: 'MiniMax TTS', key: 'MINIMAX_API_KEY + MINIMAX_GROUP_ID', where: 'platform.minimaxi.com', status: '⚠️ 未配置' },
-                    { name: 'LatentSync', key: '自部署 GPU 服务器', where: 'github.com/bytedance/LatentSync', status: '🔮 后期' },
-                    { name: 'rembg', key: '自部署 或 Remove.bg API', where: 'github.com/danielgatis/rembg', status: '🔮 后期' },
-                  ].map((item, idx) => (
-                    <div key={item.name} style={{ marginBottom: idx < 2 ? 8 : 0, paddingBottom: idx < 2 ? 8 : 0, borderBottom: idx < 2 ? `1px solid #FF950020` : 'none' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: tv['--t1'] }}>{item.name}</span>
-                        <span style={{ fontSize: 10, color: '#FF9500' }}>{item.status}</span>
-                      </div>
-                      <div style={{ fontSize: 10, color: tv['--t3'], marginTop: 2 }}>Key: {item.key}</div>
-                      <div style={{ fontSize: 10, color: tv['--accent'], marginTop: 1 }}>📍 {item.where}</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => setStep('avatar')} style={{ flex: 1, padding: '12px 0', background: tv['--inp'], color: tv['--t2'], border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>← 返回</button>
-                  <button onClick={() => showToast('🔧 视频合成 API 配置后即可使用')}
-                    style={{ flex: 2, padding: '12px 0', background: 'linear-gradient(135deg,#007AFF,#AF52DE)', color: '#fff', border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-                    🎬 生成视频
-                  </button>
-                </div>
-                {audioB64 && (
-                  <div style={{ marginTop: 12, background: '#34C75910', border: '1px solid #34C75930', borderRadius: 12, padding: 12 }}>
-                    <div style={{ fontSize: 12, color: tv['--green'], fontWeight: 600, marginBottom: 6 }}>🎙️ 语音预览（已合成）</div>
-                    <audio controls src={`data:audio/mp3;base64,${audioB64}`} style={{ width: '100%', height: 36 }} />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )
-    }
-
-    
-function Positioning({ tv, step, setStep, form, setForm, result, loading, generate, showToast, useTopic }: any) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: tv['--bg'] }}>
-      <div style={{ padding: '10px 16px 8px', flexShrink: 0 }}>
-        <div style={{ fontSize: 22, fontWeight: 800, color: tv['--t1'] }}>账号定位</div>
-        <div style={{ fontSize: 12, color: tv['--t3'] }}>AI 为你生成专属定位方案</div>
-      </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
-        {step === 0 && (
-          <div>
-            {[
-              { key: 'industry', label: '行业/品类', placeholder: '如：餐饮、美业、教育...' },
-              { key: 'product', label: '产品/服务', placeholder: '如：面馆、美容院、英语培训...' },
-              { key: 'targetCustomer', label: '目标客户', placeholder: '如：周边上班族、宝妈、学生...' },
-              { key: 'city', label: '城市（可选）', placeholder: '如：上海、北京...' },
-              { key: 'advantage', label: '你的优势（可选）', placeholder: '如：10年经验、价格实惠...' },
-            ].map(field => (
-              <div key={field.key} style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: tv['--t2'], marginBottom: 6 }}>{field.label}</div>
-                <input value={form[field.key]} onChange={(e: any) => setForm({ ...form, [field.key]: e.target.value })} placeholder={field.placeholder} style={{ width: '100%', padding: '12px 14px', border: `.5px solid ${tv['--b']}`, borderRadius: 12, fontSize: 14, color: tv['--t1'], background: tv['--card'], boxSizing: 'border-box', fontFamily: 'inherit' }} />
-              </div>
             ))}
-            <button onClick={() => { if (!form.industry || !form.product || !form.targetCustomer) { showToast('请填写行业、产品和目标客户'); return } setStep(1); generate() }} style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg,#007AFF,#30D5C8)', border: 'none', borderRadius: 12, fontSize: 15, color: '#fff', cursor: 'pointer', fontWeight: 700, marginTop: 8 }}>
-              🎯 AI 生成定位方案
-            </button>
-          </div>
-        )}
-        {step === 1 && (
-          <div style={{ textAlign: 'center', padding: '60px 0' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🎯</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: tv['--t1'], marginBottom: 8 }}>AI 正在分析...</div>
-            <div style={{ fontSize: 13, color: tv['--t3'] }}>为你生成专属账号定位方案</div>
-          </div>
-        )}
-        {step === 2 && result && (
-          <div>
-            <div style={{ background: 'linear-gradient(135deg,#007AFF,#30D5C8)', borderRadius: 20, padding: 16, marginBottom: 16, color: '#fff' }}>
-              <div style={{ fontSize: 12, opacity: .8, marginBottom: 4 }}>账号定位</div>
-              <div style={{ fontSize: 17, fontWeight: 800, lineHeight: 1.4 }}>{result.positioning}</div>
-            </div>
-            <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, marginBottom: 12 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>📌 内容方向</div>
-              {result.directions?.map((d: string, i: number) => (
-                <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                  <span style={{ color: tv['--accent'], fontWeight: 700 }}>{i+1}.</span>
-                  <span style={{ fontSize: 13, color: tv['--t2'] }}>{d}</span>
-                </div>
-              ))}
-            </div>
-            <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, marginBottom: 12 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>💡 推荐账号名</div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {result.names?.map((n: string) => (
-                  <span key={n} style={{ background: `${tv['--accent']}15`, color: tv['--accent'], padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600 }}>{n}</span>
-                ))}
-              </div>
-            </div>
-            {result.plan?.length > 0 && (
-              <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, marginBottom: 12 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>📅 30天内容规划</div>
-                {result.plan.map((week: any) => (
-                  <div key={week.week} style={{ marginBottom: 12 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: tv['--accent'], marginBottom: 6 }}>第{week.week}周：{week.theme}</div>
-                    {week.topics?.map((t: string, i: number) => (
-                      <div key={i} onClick={() => useTopic(t)} style={{ fontSize: 12, color: tv['--t2'], padding: '6px 10px', background: tv['--inp'], borderRadius: 8, marginBottom: 4, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>{t}</span>
-                        <span style={{ color: tv['--accent'], fontSize: 11 }}>用 ›</span>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            )}
-            <button onClick={() => setStep(0)} style={{ width: '100%', padding: '12px', background: tv['--inp'], border: 'none', borderRadius: 12, fontSize: 14, color: tv['--t2'], cursor: 'pointer', fontWeight: 600 }}>重新生成</button>
           </div>
         )}
       </div>
@@ -1559,188 +629,317 @@ function Positioning({ tv, step, setStep, form, setForm, result, loading, genera
   )
 }
 
-    // ===== 运营中心 =====
-    function Operations({ tv, acc, showToast, schedule, setSchedule, opsTab, setOpsTab, savedContents }: any) {
-      const statusColor: Record<string, string> = { '待发布': tv['--orange'], '草稿': tv['--t4'], '计划中': tv['--t4'], '已发布': tv['--green'] }
-      const platformIcon: Record<string, string> = { '抖音': '🎵', '小红书': '📕', '视频号': '📹', '快手': '⚡' }
+// ═══════════════════════════════════════════════════════════
+// VIDEO STUDIO
+// ═══════════════════════════════════════════════════════════
+function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCopy, voiceId, setVoiceId, speed, setSpeed, avatarType, setAvatarType, avatarPreset, setAvatarPreset, bgType, setBgType, bgColor, setBgColor, loading, audioB64, error, generateTTS, showToast, savedContents, setTab }: any) {
+  const VOICES = [
+    { id: 'female-shaonv', label: '少女音', emoji: '👧' },
+    { id: 'female-yujie', label: '御姐音', emoji: '👩' },
+    { id: 'male-qingxin', label: '清新男声', emoji: '👦' },
+    { id: 'male-chunhou', label: '醇厚男声', emoji: '🧔' },
+    { id: 'audiobook-male-1', label: '播音腔', emoji: '🎙️' },
+  ]
+  const AVATARS = [
+    { id: 'business-female', label: '职场女性', emoji: '👩‍💼' },
+    { id: 'business-male', label: '职场男性', emoji: '👨‍💼' },
+    { id: 'casual-female', label: '休闲女生', emoji: '👩' },
+    { id: 'casual-male', label: '休闲男生', emoji: '👨' },
+  ]
+  const STEPS = ['文案', '声音', '形象', '生成']
+  const stepIdx = ['input', 'voice', 'avatar', 'preview'].indexOf(step)
 
-      return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: tv['--bg'] }}>
-          <div style={{ padding: '10px 16px 8px', flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: tv['--t1'] }}>运营中心</div>
-                <div style={{ fontSize: 12, color: tv['--t3'] }}>{acc.name}</div>
+  return (
+    <div className="flex flex-col h-full bg-[#F2F2F7]">
+      <div className="px-5 pt-4 pb-3 flex-shrink-0">
+        <h1 className="text-xl font-black text-gray-900 mb-1">视频生成</h1>
+        <div className="flex gap-1">
+          {STEPS.map((s, i) => (
+            <div key={i} className="flex items-center gap-1">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${stepIdx > i ? 'bg-green-400 text-white' : stepIdx === i ? 'bg-purple-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                {stepIdx > i ? '✓' : i + 1}
               </div>
+              <span className={`text-xs font-medium ${stepIdx === i ? 'text-purple-500' : 'text-gray-400'}`}>{s}</span>
+              {i < 3 && <div className={`w-4 h-px ${stepIdx > i ? 'bg-green-400' : 'bg-gray-200'}`} />}
             </div>
-            <div style={{ display: 'flex', background: tv['--inp'], borderRadius: 12, padding: 2, gap: 2 }}>
-              {[['schedule','📅 排期'],['stats','📊 数据'],['goals','🎯 目标']].map(([id, label]) => (
-                <div key={id} onClick={() => setOpsTab(id)} style={{ flex: 1, padding: '7px 4px', borderRadius: 10, background: opsTab === id ? tv['--card'] : 'transparent', textAlign: 'center', cursor: 'pointer', boxShadow: opsTab === id ? '0 1px 4px rgba(0,0,0,.08)' : 'none' }}>
-                  <span style={{ fontSize: 12, fontWeight: opsTab === id ? 700 : 500, color: opsTab === id ? tv['--t1'] : tv['--t3'] }}>{label}</span>
-                </div>
-              ))}
+          ))}
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4 space-y-3">
+        {step === 'input' && (
+          <>
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-2">📝 口播文案</div>
+              <textarea value={videoCopy} onChange={e => setVideoCopy(e.target.value)} placeholder="输入视频口播文案，或从内容中心导入..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-32" />
+              <div className="text-xs text-gray-400 mt-1">{videoCopy.length} 字 · 预计 {Math.ceil(videoCopy.length / 4)} 秒</div>
             </div>
-          </div>
-
-          <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
-
-            {/* 发布排期 */}
-            {opsTab === 'schedule' && (
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <div style={{ fontSize: 13, color: tv['--t2'] }}>近期发布计划</div>
-                  <button onClick={() => showToast('添加排期即将上线')} style={{ padding: '5px 12px', background: 'linear-gradient(135deg,#007AFF,#30D5C8)', border: 'none', borderRadius: 20, fontSize: 11, color: '#fff', cursor: 'pointer', fontWeight: 600 }}>＋ 添加</button>
-                </div>
-                {/* 本周日历视图 */}
-                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, marginBottom: 12 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>本周概览</div>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    {['一','二','三','四','五','六','日'].map((d, i) => {
-                      const hasContent = [0, 2, 4].includes(i)
-                      const isToday = i === new Date().getDay() - 1
-                      return (
-                        <div key={d} style={{ flex: 1, textAlign: 'center' }}>
-                          <div style={{ fontSize: 10, color: isToday ? tv['--accent'] : tv['--t3'], marginBottom: 4, fontWeight: isToday ? 700 : 400 }}>{d}</div>
-                          <div style={{ width: '100%', aspectRatio: '1', borderRadius: 8, background: hasContent ? (isToday ? tv['--accent'] : `${tv['--accent']}30`) : tv['--inp'], display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {hasContent && <span style={{ fontSize: 14 }}>{isToday ? '📍' : '✓'}</span>}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-                {/* 排期列表 */}
-                {schedule.map((item: any, i: number) => (
-                  <div key={i} style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: statusColor[item.status] || tv['--t4'], flexShrink: 0 }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: tv['--t1'] }}>{item.title}</div>
-                      <div style={{ fontSize: 11, color: tv['--t3'], marginTop: 2 }}>{platformIcon[item.platform] || '📱'} {item.platform} · {item.time}</div>
-                    </div>
-                    <span style={{ background: `${statusColor[item.status] || tv['--t4']}20`, color: statusColor[item.status] || tv['--t4'], padding: '3px 9px', borderRadius: 999, fontSize: 11, fontWeight: 600 }}>{item.status}</span>
+            {savedContents.length > 0 && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="font-bold text-gray-900 text-sm mb-2">💾 从已保存文案导入</div>
+                {savedContents.slice(0, 3).map((c: any) => (
+                  <div key={c.id} onClick={() => setVideoCopy(c.content)} className="py-2 border-b border-gray-50 last:border-0 cursor-pointer active:bg-gray-50 rounded-lg px-1">
+                    <div className="text-xs font-medium text-gray-700 truncate">{c.topic}</div>
+                    <div className="text-[10px] text-gray-400 line-clamp-1 mt-0.5">{c.content}</div>
                   </div>
                 ))}
-                {/* 已保存文案快速添加 */}
-                {savedContents?.length > 0 && (
-                  <div style={{ marginTop: 12 }}>
-                    <div style={{ fontSize: 12, color: tv['--t3'], marginBottom: 8 }}>💡 从已保存文案快速排期</div>
-                    {savedContents.slice(0, 3).map((c: any, i: number) => (
-                      <div key={i} onClick={() => { setSchedule([...schedule, { time: '待定', title: c.topic, status: '草稿', platform: '抖音' }]); showToast('已加入排期') }} style={{ background: tv['--inp'], borderRadius: 10, padding: '8px 12px', marginBottom: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 12, color: tv['--t2'], flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.topic}</span>
-                        <span style={{ fontSize: 11, color: tv['--accent'], flexShrink: 0, marginLeft: 8 }}>＋排期</span>
-                      </div>
+              </div>
+            )}
+            <button onClick={() => setStep('voice')} disabled={!videoCopy.trim()} className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-400 text-white font-bold rounded-2xl text-sm disabled:opacity-60 active:scale-[0.98] transition-all shadow-md">
+              下一步：选择声音 →
+            </button>
+          </>
+        )}
+        {step === 'voice' && (
+          <>
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">🎙️ 选择声音</div>
+              <div className="space-y-2">
+                {VOICES.map(v => (
+                  <button key={v.id} onClick={() => setVoiceId(v.id)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${voiceId === v.id ? 'bg-purple-50 border-2 border-purple-400' : 'bg-gray-50 border-2 border-transparent'}`}>
+                    <span className="text-xl">{v.emoji}</span>
+                    <span className={`text-sm font-semibold ${voiceId === v.id ? 'text-purple-600' : 'text-gray-700'}`}>{v.label}</span>
+                    {voiceId === v.id && <span className="ml-auto text-purple-500 text-xs font-bold">✓ 已选</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-bold text-gray-900 text-sm">⚡ 语速</div>
+                <span className="text-sm font-bold text-purple-500">{speed}x</span>
+              </div>
+              <input type="range" min="0.5" max="2.0" step="0.1" value={speed} onChange={e => setSpeed(parseFloat(e.target.value))} className="w-full accent-purple-500" />
+              <div className="flex justify-between text-xs text-gray-400 mt-1"><span>慢 0.5x</span><span>正常 1.0x</span><span>快 2.0x</span></div>
+            </div>
+            {error && <div className="bg-red-50 rounded-2xl p-3 text-xs text-red-500">{error}</div>}
+            <button onClick={generateTTS} disabled={loading} className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-400 text-white font-bold rounded-2xl text-sm disabled:opacity-60 active:scale-[0.98] transition-all shadow-md">
+              {loading ? '🎙️ 合成中...' : '🎙️ 合成语音 →'}
+            </button>
+            <button onClick={() => setStep('input')} className="w-full py-2 text-sm text-gray-400">← 返回</button>
+          </>
+        )}
+        {step === 'avatar' && (
+          <>
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">🎭 选择形象</div>
+              <div className="flex gap-2 mb-3">
+                <button onClick={() => setAvatarType('preset')} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${avatarType === 'preset' ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'}`}>预设形象</button>
+                <button onClick={() => setAvatarType('upload')} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${avatarType === 'upload' ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'}`}>上传照片</button>
+              </div>
+              {avatarType === 'preset' ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {AVATARS.map(a => (
+                    <button key={a.id} onClick={() => setAvatarPreset(a.id)} className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-all ${avatarPreset === a.id ? 'bg-purple-50 border-2 border-purple-400' : 'bg-gray-50 border-2 border-transparent'}`}>
+                      <span className="text-3xl">{a.emoji}</span>
+                      <span className={`text-xs font-semibold ${avatarPreset === a.id ? 'text-purple-600' : 'text-gray-600'}`}>{a.label}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center">
+                  <div className="text-3xl mb-2">📸</div>
+                  <div className="text-sm text-gray-500 font-medium">上传你的照片</div>
+                  <div className="text-xs text-gray-400 mt-1">AI 将生成你的数字形象</div>
+                  <button onClick={() => showToast('上传功能开发中')} className="mt-3 px-4 py-2 bg-purple-100 text-purple-600 text-xs font-bold rounded-xl">选择照片</button>
+                </div>
+              )}
+            </div>
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">🖼️ 背景设置</div>
+              <div className="flex gap-2 mb-3">
+                {[['color', '纯色'], ['blur', '模糊'], ['image', '图片']].map(([t, l]) => (
+                  <button key={t} onClick={() => setBgType(t)} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${bgType === t ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'}`}>{l}</button>
+                ))}
+              </div>
+              {bgType === 'color' && (
+                <div className="flex items-center gap-3">
+                  <input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-10 h-10 rounded-xl border-0 cursor-pointer" />
+                  <span className="text-sm text-gray-600 font-mono">{bgColor}</span>
+                  <div className="flex gap-2 ml-auto">
+                    {['#1a1a2e', '#0f3460', '#16213e', '#ffffff', '#f8f9fa'].map(c => (
+                      <button key={c} onClick={() => setBgColor(c)} className="w-7 h-7 rounded-lg border-2 border-white shadow-sm" style={{ backgroundColor: c }} />
                     ))}
+                  </div>
+                </div>
+              )}
+              {bgType === 'blur' && <div className="text-xs text-gray-400 py-2">将使用模糊背景效果（需上传背景图）</div>}
+              {bgType === 'image' && <div className="text-xs text-gray-400 py-2">图片背景功能开发中</div>}
+            </div>
+            <button onClick={() => setStep('preview')} className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md">
+              下一步：生成预览 →
+            </button>
+            <button onClick={() => setStep('voice')} className="w-full py-2 text-sm text-gray-400">← 返回</button>
+          </>
+        )}
+        {step === 'preview' && (
+          <>
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">🎬 视频预览</div>
+              <div className="rounded-2xl overflow-hidden aspect-[9/16] bg-gray-900 flex flex-col items-center justify-center relative" style={{ backgroundColor: bgColor }}>
+                <div className="text-6xl mb-4">{AVATARS.find(a => a.id === avatarPreset)?.emoji || '👤'}</div>
+                <div className="text-white/80 text-xs text-center px-4 leading-relaxed">{videoCopy.slice(0, 60)}...</div>
+                {audioB64 && (
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <div className="bg-white/20 rounded-xl p-2 flex items-center gap-2">
+                      <span className="text-white text-xs">🎙️ 语音已合成</span>
+                      <div className="flex-1 h-1 bg-white/30 rounded-full"><div className="h-full w-1/3 bg-white rounded-full" /></div>
+                    </div>
                   </div>
                 )}
               </div>
-            )}
-
-            {/* 数据统计 */}
-            {opsTab === 'stats' && (
-              <div>
-                {/* 核心数据 */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10, marginBottom: 14 }}>
-                  {[
-                    { label: '新增粉丝', value: '＋234', change: '↑18%', color: tv['--green'], icon: '👥' },
-                    { label: '视频播放', value: '12.3万', change: '↑24%', color: tv['--accent'], icon: '▶️' },
-                    { label: '互动总量', value: '1,892', change: '↑11%', color: tv['--orange'], icon: '❤️' },
-                    { label: '主页访问', value: '3,421', change: '↑32%', color: tv['--purple'], icon: '👁️' },
-                  ].map(item => (
-                    <div key={item.label} style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 14, padding: 14 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                        <span style={{ fontSize: 18 }}>{item.icon}</span>
-                        <span style={{ fontSize: 11, color: tv['--t3'] }}>{item.label}</span>
-                      </div>
-                      <div style={{ fontSize: 20, fontWeight: 800, color: item.color }}>{item.value}</div>
-                      <div style={{ fontSize: 11, color: tv['--green'], marginTop: 2 }}>{item.change} 较上周</div>
-                    </div>
-                  ))}
-                </div>
-                {/* 完播率趋势 */}
-                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, marginBottom: 12 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 12 }}>📈 近7天完播率</div>
-                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 60 }}>
-                    {[28, 34, 31, 42, 38, 45, 34].map((v, i) => (
-                      <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                        <div style={{ width: '100%', background: i === 6 ? tv['--accent'] : `${tv['--accent']}40`, borderRadius: '4px 4px 0 0', height: `${v * 1.2}px` }} />
-                        <span style={{ fontSize: 9, color: tv['--t4'] }}>{['一','二','三','四','五','六','日'][i]}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-                    <span style={{ fontSize: 11, color: tv['--t3'] }}>平均完播率</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: tv['--accent'] }}>36.0%</span>
-                  </div>
-                </div>
-                {/* 内容类型分布 */}
-                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>🎬 内容类型表现</div>
-                  {[['干货分享','45%',tv['--accent']],['情感故事','28%',tv['--orange']],['产品展示','18%',tv['--green']],['日常vlog','9%',tv['--purple']]].map(([type, pct, color]) => (
-                    <div key={type as string} style={{ marginBottom: 10 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                        <span style={{ fontSize: 12, color: tv['--t2'] }}>{type}</span>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: color as string }}>{pct}</span>
-                      </div>
-                      <div style={{ height: 5, background: tv['--inp'], borderRadius: 3 }}>
-                        <div style={{ height: '100%', width: pct as string, background: color as string, borderRadius: 3 }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <div className="mt-3 space-y-1.5 text-xs text-gray-500">
+                <div className="flex justify-between"><span>声音</span><span className="font-medium text-gray-700">{VOICES.find(v => v.id === voiceId)?.label}</span></div>
+                <div className="flex justify-between"><span>语速</span><span className="font-medium text-gray-700">{speed}x</span></div>
+                <div className="flex justify-between"><span>形象</span><span className="font-medium text-gray-700">{avatarType === 'preset' ? AVATARS.find(a => a.id === avatarPreset)?.label : '自定义'}</span></div>
               </div>
-            )}
+            </div>
+            <div className="bg-amber-50 rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-amber-700 text-sm mb-1">🚧 视频合成开发中</div>
+              <div className="text-xs text-amber-600 leading-relaxed">完整视频合成（LatentSync 对口型 + FFmpeg 合成）正在开发中。当前已完成语音合成，视频合成功能即将上线。</div>
+            </div>
+            <button onClick={() => showToast('🚀 视频合成任务已提交')} className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md opacity-60">
+              🎬 生成视频（开发中）
+            </button>
+            <button onClick={() => setStep('input')} className="w-full py-2 text-sm text-gray-400">← 重新开始</button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
 
-            {/* 目标管理 */}
-            {opsTab === 'goals' && (
-              <div>
-                <div style={{ background: 'linear-gradient(135deg,#007AFF,#30D5C8)', borderRadius: 20, padding: 16, marginBottom: 14, color: '#fff' }}>
-                  <div style={{ fontSize: 12, opacity: .8, marginBottom: 4 }}>本月阶段目标</div>
-                  <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 8 }}>突破 2000 粉丝</div>
-                  <div style={{ background: 'rgba(255,255,255,.2)', borderRadius: 10, height: 8, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: '60%', background: '#fff', borderRadius: 10 }} />
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, opacity: .85 }}>
-                    <span>当前：1,200</span><span>目标：2,000</span>
-                  </div>
-                </div>
-                {[
-                  { label: '发布视频', current: 12, target: 20, unit: '条', color: tv['--accent'] },
-                  { label: '涨粉', current: 1200, target: 2000, unit: '人', color: tv['--green'] },
-                  { label: '私信线索', current: 24, target: 50, unit: '条', color: tv['--orange'] },
-                  { label: '主页访问', current: 8400, target: 15000, unit: '次', color: tv['--purple'] },
-                ].map(goal => {
-                  const pct = Math.round(goal.current / goal.target * 100)
-                  return (
-                    <div key={goal.label} style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 14, padding: 14, marginBottom: 10 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: tv['--t1'] }}>{goal.label}</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: goal.color }}>{goal.current.toLocaleString()}/{goal.target.toLocaleString()}{goal.unit}</span>
-                      </div>
-                      <div style={{ height: 6, background: tv['--inp'], borderRadius: 3, overflow: 'hidden', marginBottom: 4 }}>
-                        <div style={{ height: '100%', width: `${pct}%`, background: goal.color, borderRadius: 3, transition: 'width .3s' }} />
-                      </div>
-                      <div style={{ fontSize: 11, color: tv['--t3'] }}>完成 {pct}%</div>
-                    </div>
-                  )
-                })}
-                {/* AI 优化建议 */}
-                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>💡 AI 运营建议</div>
-                  {[
-                    { icon: '⏰', tip: '你的粉丝活跃时间在 18:00-20:00，建议把发布时间调整到 18:30' },
-                    { icon: '🎯', tip: '干货分享类内容完播率最高，本周可多发 2 条干货' },
-                    { icon: '💬', tip: '评论区有 12 条未回复，及时互动可提升账号权重' },
-                  ].map((item, i) => (
-                    <div key={i} style={{ display: 'flex', gap: 10, marginBottom: i < 2 ? 10 : 0 }}>
-                      <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
-                      <span style={{ fontSize: 12, color: tv['--t2'], lineHeight: 1.5 }}>{item.tip}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+// ═══════════════════════════════════════════════════════════
+// OPERATIONS
+// ═══════════════════════════════════════════════════════════
+function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedContents, showToast }: any) {
+  const TABS = [{ id: 'schedule', label: '排期' }, { id: 'stats', label: '数据' }, { id: 'goals', label: '目标' }]
+  const STATS = [
+    { label: '本周发布', value: '3', unit: '条', trend: '+1', up: true },
+    { label: '总播放量', value: '2.4万', unit: '', trend: '+18%', up: true },
+    { label: '平均完播率', value: '68%', unit: '', trend: '+5%', up: true },
+    { label: '新增粉丝', value: '234', unit: '', trend: '-12', up: false },
+  ]
+  return (
+    <div className="flex flex-col h-full bg-[#F2F2F7]">
+      <div className="px-5 pt-4 pb-0 flex-shrink-0">
+        <h1 className="text-xl font-black text-gray-900 mb-3">运营中心</h1>
+        <div className="flex gap-2 pb-3">
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setOpsTab(t.id)} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${opsTab === t.id ? 'bg-blue-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>{t.label}</button>
+          ))}
         </div>
-      )
-    }
-    
+      </div>
+      <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4 space-y-3">
+        {opsTab === 'schedule' && (
+          <>
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-bold text-gray-900 text-sm">📅 发布排期</div>
+                <button onClick={() => showToast('添加排期')} className="w-7 h-7 rounded-full bg-blue-500 text-white text-lg flex items-center justify-center leading-none">+</button>
+              </div>
+              {schedule.map((s: any, i: number) => (
+                <div key={i} className="flex items-center gap-3 py-3 border-b border-gray-50 last:border-0">
+                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${s.status === '待发布' ? 'bg-orange-400' : s.status === '已发布' ? 'bg-green-400' : 'bg-gray-300'}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-gray-800 truncate">{s.title}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">{s.time} · {s.platform}</div>
+                  </div>
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-semibold flex-shrink-0 ${s.status === '待发布' ? 'bg-orange-50 text-orange-500' : s.status === '已发布' ? 'bg-green-50 text-green-500' : 'bg-gray-100 text-gray-400'}`}>{s.status}</span>
+                </div>
+              ))}
+            </div>
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">💡 AI 运营建议</div>
+              {[
+                '📈 本周发布频率偏低，建议增加到每周5条',
+                '⏰ 晚上7-9点是你的粉丝最活跃时段',
+                '🎯 干货教程类内容完播率最高，建议多做',
+              ].map((tip, i) => (
+                <div key={i} className="text-xs text-gray-600 py-2 border-b border-gray-50 last:border-0 leading-relaxed">{tip}</div>
+              ))}
+            </div>
+          </>
+        )}
+        {opsTab === 'stats' && (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              {STATS.map((s, i) => (
+                <div key={i} className="bg-white rounded-2xl p-4 shadow-sm">
+                  <div className="text-xs text-gray-400 mb-1">{s.label}</div>
+                  <div className="text-2xl font-black text-gray-900">{s.value}<span className="text-sm font-medium text-gray-400 ml-0.5">{s.unit}</span></div>
+                  <div className={`text-xs font-semibold mt-1 ${s.up ? 'text-green-500' : 'text-red-400'}`}>{s.up ? '↑' : '↓'} {s.trend}</div>
+                </div>
+              ))}
+            </div>
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">📊 近7天发布</div>
+              <div className="flex items-end gap-1.5 h-20">
+                {[2, 0, 1, 3, 1, 0, 2].map((v, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                    <div className="w-full rounded-t-lg bg-blue-400 transition-all" style={{ height: `${v * 20}px`, minHeight: v > 0 ? '8px' : '0' }} />
+                    <span className="text-[9px] text-gray-400">{['一', '二', '三', '四', '五', '六', '日'][i]}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">🏆 最佳内容</div>
+              {savedContents.slice(0, 3).map((c: any, i: number) => (
+                <div key={c.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-yellow-400 to-orange-400 flex items-center justify-center text-white text-xs font-black">{i + 1}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium text-gray-800 truncate">{c.topic}</div>
+                    <div className="text-[10px] text-gray-400">{c.style}</div>
+                  </div>
+                </div>
+              ))}
+              {savedContents.length === 0 && <div className="text-xs text-gray-400 text-center py-4">暂无数据，先去生成文案吧</div>}
+            </div>
+          </>
+        )}
+        {opsTab === 'goals' && (
+          <>
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">🎯 本月目标</div>
+              {[
+                { label: '粉丝增长', current: 234, target: 500, unit: '人' },
+                { label: '视频发布', current: 8, target: 20, unit: '条' },
+                { label: '总播放量', current: 24000, target: 50000, unit: '' },
+              ].map((g, i) => (
+                <div key={i} className="mb-4 last:mb-0">
+                  <div className="flex justify-between text-xs mb-1.5">
+                    <span className="font-medium text-gray-700">{g.label}</span>
+                    <span className="text-gray-400">{g.current.toLocaleString()}{g.unit} / {g.target.toLocaleString()}{g.unit}</span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full transition-all" style={{ width: `${Math.min(100, (g.current / g.target) * 100)}%` }} />
+                  </div>
+                  <div className="text-[10px] text-gray-400 mt-1">{Math.round((g.current / g.target) * 100)}% 完成</div>
+                </div>
+              ))}
+            </div>
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">📋 阶段计划</div>
+              {[
+                { phase: '第一阶段', desc: '建立账号基础，每周发布3-5条内容', status: '进行中', color: 'bg-blue-400' },
+                { phase: '第二阶段', desc: '打造爆款内容，粉丝突破1万', status: '未开始', color: 'bg-gray-300' },
+                { phase: '第三阶段', desc: '商业变现，开通橱窗/接广告', status: '未开始', color: 'bg-gray-300' },
+              ].map((p, i) => (
+                <div key={i} className="flex gap-3 py-2.5 border-b border-gray-50 last:border-0">
+                  <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${p.color}`} />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-gray-800">{p.phase}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${p.status === '进行中' ? 'bg-blue-50 text-blue-500' : 'bg-gray-100 text-gray-400'}`}>{p.status}</span>
+                    </div>
+                    <div className="text-xs text-gray-400 mt-0.5">{p.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
