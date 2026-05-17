@@ -694,10 +694,3 @@ function Operations({ tv, acc, showToast }: any) {
     </div>
   )
 }
-
-const QUICK_TOPICS = [
-  '开店3年，我踩过的5个最贵的坑',
-  '为什么我的店午餐时间总是排队？',
-  '顾客说了一句话，让我感动了好久',
-  '上班族午餐选择困难？30元吃好吃饱',
-]
