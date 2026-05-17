@@ -13,6 +13,7 @@ interface SavedContent { id?: string; topic: string; style: string; content: str
 interface StyleTemplate { id: string; name: string; summary: string; traits: string[]; structure: any; vocabulary: any; examples: any; bestFor: string[]; score: number }
 interface CreatorVideo { rank: number; title: string; script: string; likes: number; comments: number; collects: number; shares: number; publishDate: string; duration: string; tags: string[]; hook: string; type: string }
 interface RadarData { date: string; mediaHotspots: any[]; industryTrends: any[]; viralFormats: any[]; keywords: any[]; todayAction: any }
+interface ScheduleItem { time: string; title: string; status: string; platform: string }
 
 // ===== 默认数据 =====
 const DEFAULT_ACCOUNTS: Account[] = [
@@ -90,6 +91,17 @@ export default function ContentOSApp() {
   const [styleName, setStyleName] = useState('')
   const [styleLoading, setStyleLoading] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<StyleTemplate | null>(null)
+      // 多账号管理
+      const [showAccountManager, setShowAccountManager] = useState(false)
+      const [editingIdx, setEditingIdx] = useState<number | null>(null)
+      const [accountForm, setAccountForm] = useState({ name: '', emoji: '🏪', industry: '', positioning: '', targetAudience: '', color: 'linear-gradient(135deg,#007AFF,#30D5C8)' })
+      // 运营中心
+      const [schedule, setSchedule] = useState<ScheduleItem[]>([
+        { time: '今天 18:30', title: '端午节限定套餐来了！', status: '待发布', platform: '抖音' },
+        { time: '明天 12:00', title: '开面馆3年踩过的坑', status: '草稿', platform: '抖音' },
+        { time: '后天 19:00', title: '顾客感动故事', status: '计划中', platform: '小红书' },
+      ])
+      const [opsTab, setOpsTab] = useState<'schedule'|'stats'|'goals'>('schedule')
 
   const acc = accounts[account] || accounts[0]
 
@@ -325,7 +337,42 @@ export default function ContentOSApp() {
     showToast(`已应用风格：${template.name}`)
   }
 
-  if (!user) return (
+
+      // ===== 多账号管理 =====
+      function saveAccount() {
+        if (!accountForm.name.trim() || !accountForm.industry.trim()) { showToast('请填写账号名称和行业'); return }
+        const newAcc: Account = { ...accountForm }
+        let updated: Account[]
+        if (editingIdx !== null) {
+          updated = accounts.map((a, i) => i === editingIdx ? newAcc : a)
+          showToast('✅ 账号已更新')
+        } else {
+          updated = [...accounts, newAcc]; setAccount(updated.length - 1); showToast('✅ 账号已添加')
+        }
+        setAccounts(updated)
+        try { localStorage.setItem('contentos_accounts', JSON.stringify(updated)) } catch {}
+        setShowAccountManager(false); setEditingIdx(null)
+        setAccountForm({ name: '', emoji: '🏪', industry: '', positioning: '', targetAudience: '', color: 'linear-gradient(135deg,#007AFF,#30D5C8)' })
+      }
+      function deleteAccount(idx: number) {
+        if (accounts.length <= 1) { showToast('至少保留一个账号'); return }
+        const updated = accounts.filter((_, i) => i !== idx)
+        setAccounts(updated); setAccount(0)
+        try { localStorage.setItem('contentos_accounts', JSON.stringify(updated)) } catch {}
+        showToast('已删除账号')
+      }
+      function startEditAccount(idx: number) {
+        const a = accounts[idx]; setEditingIdx(idx)
+        setAccountForm({ name: a.name, emoji: a.emoji, industry: a.industry, positioning: a.positioning, targetAudience: a.targetAudience, color: a.color })
+        setShowAccountManager(true)
+      }
+      function startAddAccount() {
+        setEditingIdx(null)
+        setAccountForm({ name: '', emoji: '🏪', industry: '', positioning: '', targetAudience: '', color: 'linear-gradient(135deg,#007AFF,#30D5C8)' })
+        setShowAccountManager(true)
+      }
+
+      if (!user) return (
     <div style={{ width: 390, height: 844, borderRadius: 50, overflow: 'hidden', background: 'linear-gradient(160deg,#0a0a14,#1a1a2e,#16213e)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 28px', boxShadow: '0 0 0 10px #111,0 40px 100px rgba(0,0,0,.7)' }}>
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
         <div style={{ width: 64, height: 64, background: 'linear-gradient(135deg,#007AFF,#30D5C8)', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, margin: '0 auto 16px', boxShadow: '0 8px 24px rgba(0,122,255,.4)' }}>✦</div>
@@ -356,7 +403,7 @@ export default function ContentOSApp() {
   return (
     <div style={{ width: 390, height: 844, borderRadius: 50, overflow: 'hidden', background: TV['--bg'], display: 'flex', flexDirection: 'column', boxShadow: '0 0 0 10px #111,0 40px 100px rgba(0,0,0,.7)', position: 'relative' }}>
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        {tab === 'dashboard' && <Dashboard tv={TV} acc={acc} accounts={accounts} account={account} setAccount={setAccount} setTab={setTab} showToast={showToast} insights={insights} insightsLoading={insightsLoading} showInsights={showInsights} generateInsights={generateInsights} user={user} onLogout={handleLogout} />}
+        {tab === 'dashboard' && <Dashboard tv={TV} acc={acc} accounts={accounts} account={account} setAccount={setAccount} setTab={setTab} showToast={showToast} insights={insights} insightsLoading={insightsLoading} showInsights={showInsights} generateInsights={generateInsights} user={user} onLogout={handleLogout} onAddAccount={startAddAccount} onEditAccount={startEditAccount} onDeleteAccount={deleteAccount} />}
         {tab === 'materials' && <Materials tv={TV} acc={acc} matTab={matTab} setMatTab={setMatTab} hotspots={HOTSPOTS} aiTopics={aiTopics} topicsLoading={topicsLoading} generateTopics={generateTopics} useTopic={useTopic} showToast={showToast} savedContents={savedContents}
           creatorUrl={creatorUrl} setCreatorUrl={setCreatorUrl} creatorCount={creatorCount} setCreatorCount={setCreatorCount} creatorSort={creatorSort} setCreatorSort={setCreatorSort} creatorLoading={creatorLoading} creatorData={creatorData} trackedCreators={trackedCreators} creatorView={creatorView} setCreatorView={setCreatorView} scrapeCreator={scrapeCreator} setCreatorData={setCreatorData}
           radarData={radarData} radarLoading={radarLoading} radarTab={radarTab} setRadarTab={setRadarTab} fetchRadar={fetchRadar}
@@ -364,7 +411,7 @@ export default function ContentOSApp() {
         />}
         {tab === 'content' && <Content tv={TV} acc={acc} step={contentStep} setStep={setContentStep} topic={selectedTopic} setTopic={setSelectedTopic} style={copyStyle} setStyle={setCopyStyle} userInput={userInput} setUserInput={setUserInput} versions={copyVersions} loading={copyLoading} error={copyError} copiedIdx={copiedIdx} expandedIdx={expandedIdx} setExpandedIdx={setExpandedIdx} tokens={copyTokens} generate={generateCopy} copy={copyText} save={saveCopy} showToast={showToast} quickTopics={QUICK_TOPICS} setTab={setTab} styleTemplates={styleTemplates} />}
         {tab === 'positioning' && <Positioning tv={TV} step={posStep} setStep={setPosStep} form={posForm} setForm={setPosForm} result={posResult} loading={posLoading} generate={generatePositioning} showToast={showToast} useTopic={useTopic} />}
-        {tab === 'operations' && <Operations tv={TV} acc={acc} showToast={showToast} />}
+        {tab === 'operations' && <Operations tv={TV} acc={acc} showToast={showToast} schedule={schedule} setSchedule={setSchedule} opsTab={opsTab} setOpsTab={setOpsTab} savedContents={savedContents} />}
       </div>
 
       {/* 底部导航 */}
@@ -378,13 +425,49 @@ export default function ContentOSApp() {
         ))}
       </div>
 
-      {toast && <div style={{ position: 'absolute', bottom: 96, left: '50%', transform: 'translateX(-50%)', background: 'rgba(28,28,30,.92)', backdropFilter: 'blur(20px)', color: '#fff', padding: '10px 20px', borderRadius: 999, fontSize: 13, fontWeight: 500, zIndex: 9999, whiteSpace: 'nowrap' }}>{toast}</div>}
+      {/* 账号管理弹窗 */}
+          {showAccountManager && (
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'flex-end', borderRadius: 50, overflow: 'hidden' }}>
+              <div style={{ width: '100%', background: TV['--card'], borderRadius: '24px 24px 0 0', padding: '20px 20px 32px', maxHeight: '85%', overflowY: 'auto' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div style={{ fontSize: 17, fontWeight: 800, color: TV['--t1'] }}>{editingIdx !== null ? '编辑账号' : '添加账号'}</div>
+                  <button onClick={() => setShowAccountManager(false)} style={{ width: 28, height: 28, borderRadius: '50%', background: TV['--inp'], border: 'none', fontSize: 14, cursor: 'pointer', color: TV['--t3'] }}>✕</button>
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, color: TV['--t3'], marginBottom: 6 }}>账号头像</div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {['🍜','🍕','💆','💪','📚','🏪','🎨','🎵','🌿','💄','🏋️','🍰','☕','🛍️','🏠','🎯'].map(e => (
+                      <div key={e} onClick={() => setAccountForm({...accountForm, emoji: e})} style={{ width: 36, height: 36, borderRadius: 10, background: accountForm.emoji === e ? `${TV['--accent']}20` : TV['--inp'], border: `1.5px solid ${accountForm.emoji === e ? TV['--accent'] : 'transparent'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, cursor: 'pointer' }}>{e}</div>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, color: TV['--t3'], marginBottom: 6 }}>主题色</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {['linear-gradient(135deg,#007AFF,#30D5C8)','linear-gradient(135deg,#FF6B6B,#FF8E53)','linear-gradient(135deg,#4ECDC4,#44A08D)','linear-gradient(135deg,#AF52DE,#007AFF)','linear-gradient(135deg,#34C759,#30D5C8)','linear-gradient(135deg,#FF9500,#FF6B6B)'].map(c => (
+                      <div key={c} onClick={() => setAccountForm({...accountForm, color: c})} style={{ width: 32, height: 32, borderRadius: '50%', background: c, border: `2.5px solid ${accountForm.color === c ? TV['--t1'] : 'transparent'}`, cursor: 'pointer' }} />
+                    ))}
+                  </div>
+                </div>
+                {[{key:'name',label:'账号名称 *',ph:'如：老李面馆...'},{key:'industry',label:'行业 *',ph:'如：餐饮、美业...'},{key:'positioning',label:'账号定位',ph:'如：本地餐饮·老板IP流...'},{key:'targetAudience',label:'目标受众',ph:'如：周边上班族，25-45岁...'}].map(f => (
+                  <div key={f.key} style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 12, color: TV['--t3'], marginBottom: 4 }}>{f.label}</div>
+                    <input value={(accountForm as any)[f.key]} onChange={(e: any) => setAccountForm({...accountForm, [f.key]: e.target.value})} placeholder={f.ph} style={{ width: '100%', padding: '10px 12px', border: `.5px solid ${TV['--b']}`, borderRadius: 10, fontSize: 13, color: TV['--t1'], background: TV['--inp'], boxSizing: 'border-box', fontFamily: 'inherit' }} />
+                  </div>
+                ))}
+                <button onClick={saveAccount} style={{ width: '100%', padding: '13px', background: 'linear-gradient(135deg,#007AFF,#30D5C8)', border: 'none', borderRadius: 12, fontSize: 15, color: '#fff', cursor: 'pointer', fontWeight: 700, marginTop: 8 }}>
+                  {editingIdx !== null ? '保存修改' : '添加账号'}
+                </button>
+              </div>
+            </div>
+          )}
+                {toast && <div style={{ position: 'absolute', bottom: 96, left: '50%', transform: 'translateX(-50%)', background: 'rgba(28,28,30,.92)', backdropFilter: 'blur(20px)', color: '#fff', padding: '10px 20px', borderRadius: 999, fontSize: 13, fontWeight: 500, zIndex: 9999, whiteSpace: 'nowrap' }}>{toast}</div>}
     </div>
   )
 }
 
 // ===== 工作台 =====
-function Dashboard({ tv, acc, accounts, account, setAccount, setTab, showToast, insights, insightsLoading, showInsights, generateInsights, user, onLogout }: any) {
+function Dashboard({ tv, acc, accounts, account, setAccount, setTab, showToast, insights, insightsLoading, showInsights, generateInsights, user, onLogout, onAddAccount, onEditAccount, onDeleteAccount }: any) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: tv['--bg'] }}>
       <div style={{ padding: '14px 16px 10px', flexShrink: 0 }}>
@@ -1108,57 +1191,188 @@ function Positioning({ tv, step, setStep, form, setForm, result, loading, genera
   )
 }
 
-// ===== 运营中心 =====
-function Operations({ tv, acc, showToast }: any) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: tv['--bg'] }}>
-      <div style={{ padding: '10px 16px 8px', flexShrink: 0 }}>
-        <div style={{ fontSize: 22, fontWeight: 800, color: tv['--t1'] }}>运营中心</div>
-        <div style={{ fontSize: 12, color: tv['--t3'] }}>{acc.name}</div>
-      </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>发布排期</div>
-          {[{time:'今天 18:30',title:'端午节限定套餐来了！',status:'待发布',color:tv['--orange']},{time:'明天 12:00',title:'开面馆3年踩过的坑',status:'草稿',color:tv['--t4']},{time:'后天 19:00',title:'顾客感动故事',status:'计划中',color:tv['--t4']}].map((item,i) => (
-            <div key={i} style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.color, flexShrink: 0 }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: tv['--t1'] }}>{item.title}</div>
-                <div style={{ fontSize: 11, color: tv['--t3'], marginTop: 2 }}>{item.time}</div>
+    // ===== 运营中心 =====
+    function Operations({ tv, acc, showToast, schedule, setSchedule, opsTab, setOpsTab, savedContents }: any) {
+      const statusColor: Record<string, string> = { '待发布': tv['--orange'], '草稿': tv['--t4'], '计划中': tv['--t4'], '已发布': tv['--green'] }
+      const platformIcon: Record<string, string> = { '抖音': '🎵', '小红书': '📕', '视频号': '📹', '快手': '⚡' }
+
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: tv['--bg'] }}>
+          <div style={{ padding: '10px 16px 8px', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: tv['--t1'] }}>运营中心</div>
+                <div style={{ fontSize: 12, color: tv['--t3'] }}>{acc.name}</div>
               </div>
-              <span style={{ background: `${item.color}20`, color: item.color, padding: '3px 9px', borderRadius: 999, fontSize: 11, fontWeight: 600 }}>{item.status}</span>
             </div>
-          ))}
-        </div>
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>本月目标</div>
-          <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 16 }}>
-            {[['发布视频','12/20条','60%'],['涨粉目标','1.2k/2k','60%'],['私信线索','24/50条','48%']].map(([l,v,p]) => (
-              <div key={l} style={{ marginBottom: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ fontSize: 13, color: tv['--t2'] }}>{l}</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: tv['--t1'] }}>{v}</span>
+            <div style={{ display: 'flex', background: tv['--inp'], borderRadius: 12, padding: 2, gap: 2 }}>
+              {[['schedule','📅 排期'],['stats','📊 数据'],['goals','🎯 目标']].map(([id, label]) => (
+                <div key={id} onClick={() => setOpsTab(id)} style={{ flex: 1, padding: '7px 4px', borderRadius: 10, background: opsTab === id ? tv['--card'] : 'transparent', textAlign: 'center', cursor: 'pointer', boxShadow: opsTab === id ? '0 1px 4px rgba(0,0,0,.08)' : 'none' }}>
+                  <span style={{ fontSize: 12, fontWeight: opsTab === id ? 700 : 500, color: opsTab === id ? tv['--t1'] : tv['--t3'] }}>{label}</span>
                 </div>
-                <div style={{ height: 6, background: tv['--inp'], borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: p, background: 'linear-gradient(90deg,#007AFF,#30D5C8)', borderRadius: 3 }} />
+              ))}
+            </div>
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
+
+            {/* 发布排期 */}
+            {opsTab === 'schedule' && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div style={{ fontSize: 13, color: tv['--t2'] }}>近期发布计划</div>
+                  <button onClick={() => showToast('添加排期即将上线')} style={{ padding: '5px 12px', background: 'linear-gradient(135deg,#007AFF,#30D5C8)', border: 'none', borderRadius: 20, fontSize: 11, color: '#fff', cursor: 'pointer', fontWeight: 600 }}>＋ 添加</button>
+                </div>
+                {/* 本周日历视图 */}
+                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, marginBottom: 12 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>本周概览</div>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {['一','二','三','四','五','六','日'].map((d, i) => {
+                      const hasContent = [0, 2, 4].includes(i)
+                      const isToday = i === new Date().getDay() - 1
+                      return (
+                        <div key={d} style={{ flex: 1, textAlign: 'center' }}>
+                          <div style={{ fontSize: 10, color: isToday ? tv['--accent'] : tv['--t3'], marginBottom: 4, fontWeight: isToday ? 700 : 400 }}>{d}</div>
+                          <div style={{ width: '100%', aspectRatio: '1', borderRadius: 8, background: hasContent ? (isToday ? tv['--accent'] : `${tv['--accent']}30`) : tv['--inp'], display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {hasContent && <span style={{ fontSize: 14 }}>{isToday ? '📍' : '✓'}</span>}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+                {/* 排期列表 */}
+                {schedule.map((item: any, i: number) => (
+                  <div key={i} style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: statusColor[item.status] || tv['--t4'], flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: tv['--t1'] }}>{item.title}</div>
+                      <div style={{ fontSize: 11, color: tv['--t3'], marginTop: 2 }}>{platformIcon[item.platform] || '📱'} {item.platform} · {item.time}</div>
+                    </div>
+                    <span style={{ background: `${statusColor[item.status] || tv['--t4']}20`, color: statusColor[item.status] || tv['--t4'], padding: '3px 9px', borderRadius: 999, fontSize: 11, fontWeight: 600 }}>{item.status}</span>
+                  </div>
+                ))}
+                {/* 已保存文案快速添加 */}
+                {savedContents?.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 12, color: tv['--t3'], marginBottom: 8 }}>💡 从已保存文案快速排期</div>
+                    {savedContents.slice(0, 3).map((c: any, i: number) => (
+                      <div key={i} onClick={() => { setSchedule([...schedule, { time: '待定', title: c.topic, status: '草稿', platform: '抖音' }]); showToast('已加入排期') }} style={{ background: tv['--inp'], borderRadius: 10, padding: '8px 12px', marginBottom: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 12, color: tv['--t2'], flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.topic}</span>
+                        <span style={{ fontSize: 11, color: tv['--accent'], flexShrink: 0, marginLeft: 8 }}>＋排期</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 数据统计 */}
+            {opsTab === 'stats' && (
+              <div>
+                {/* 核心数据 */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10, marginBottom: 14 }}>
+                  {[
+                    { label: '新增粉丝', value: '＋234', change: '↑18%', color: tv['--green'], icon: '👥' },
+                    { label: '视频播放', value: '12.3万', change: '↑24%', color: tv['--accent'], icon: '▶️' },
+                    { label: '互动总量', value: '1,892', change: '↑11%', color: tv['--orange'], icon: '❤️' },
+                    { label: '主页访问', value: '3,421', change: '↑32%', color: tv['--purple'], icon: '👁️' },
+                  ].map(item => (
+                    <div key={item.label} style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 14, padding: 14 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                        <span style={{ fontSize: 18 }}>{item.icon}</span>
+                        <span style={{ fontSize: 11, color: tv['--t3'] }}>{item.label}</span>
+                      </div>
+                      <div style={{ fontSize: 20, fontWeight: 800, color: item.color }}>{item.value}</div>
+                      <div style={{ fontSize: 11, color: tv['--green'], marginTop: 2 }}>{item.change} 较上周</div>
+                    </div>
+                  ))}
+                </div>
+                {/* 完播率趋势 */}
+                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, marginBottom: 12 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 12 }}>📈 近7天完播率</div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 60 }}>
+                    {[28, 34, 31, 42, 38, 45, 34].map((v, i) => (
+                      <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                        <div style={{ width: '100%', background: i === 6 ? tv['--accent'] : `${tv['--accent']}40`, borderRadius: '4px 4px 0 0', height: `${v * 1.2}px` }} />
+                        <span style={{ fontSize: 9, color: tv['--t4'] }}>{['一','二','三','四','五','六','日'][i]}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+                    <span style={{ fontSize: 11, color: tv['--t3'] }}>平均完播率</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: tv['--accent'] }}>36.0%</span>
+                  </div>
+                </div>
+                {/* 内容类型分布 */}
+                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>🎬 内容类型表现</div>
+                  {[['干货分享','45%',tv['--accent']],['情感故事','28%',tv['--orange']],['产品展示','18%',tv['--green']],['日常vlog','9%',tv['--purple']]].map(([type, pct, color]) => (
+                    <div key={type as string} style={{ marginBottom: 10 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ fontSize: 12, color: tv['--t2'] }}>{type}</span>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: color as string }}>{pct}</span>
+                      </div>
+                      <div style={{ height: 5, background: tv['--inp'], borderRadius: 3 }}>
+                        <div style={{ height: '100%', width: pct as string, background: color as string, borderRadius: 3 }} />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-        <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>📊 本周数据</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10 }}>
-            {[['新增粉丝','＋234','↑18%',tv['--green']],['视频播放','12.3万','↑24%',tv['--accent']],['互动总量','1,892','↑11%',tv['--orange']],['主页访问','3,421','↑32%',tv['--purple']]].map(([l,v,c,color]) => (
-              <div key={l} style={{ background: tv['--inp'], borderRadius: 12, padding: 12 }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: color as string }}>{v}</div>
-                <div style={{ fontSize: 11, color: tv['--t3'], marginTop: 2 }}>{l}</div>
-                <div style={{ fontSize: 11, color: tv['--green'], marginTop: 2 }}>{c}</div>
+            )}
+
+            {/* 目标管理 */}
+            {opsTab === 'goals' && (
+              <div>
+                <div style={{ background: 'linear-gradient(135deg,#007AFF,#30D5C8)', borderRadius: 20, padding: 16, marginBottom: 14, color: '#fff' }}>
+                  <div style={{ fontSize: 12, opacity: .8, marginBottom: 4 }}>本月阶段目标</div>
+                  <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 8 }}>突破 2000 粉丝</div>
+                  <div style={{ background: 'rgba(255,255,255,.2)', borderRadius: 10, height: 8, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: '60%', background: '#fff', borderRadius: 10 }} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, opacity: .85 }}>
+                    <span>当前：1,200</span><span>目标：2,000</span>
+                  </div>
+                </div>
+                {[
+                  { label: '发布视频', current: 12, target: 20, unit: '条', color: tv['--accent'] },
+                  { label: '涨粉', current: 1200, target: 2000, unit: '人', color: tv['--green'] },
+                  { label: '私信线索', current: 24, target: 50, unit: '条', color: tv['--orange'] },
+                  { label: '主页访问', current: 8400, target: 15000, unit: '次', color: tv['--purple'] },
+                ].map(goal => {
+                  const pct = Math.round(goal.current / goal.target * 100)
+                  return (
+                    <div key={goal.label} style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 14, padding: 14, marginBottom: 10 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: tv['--t1'] }}>{goal.label}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: goal.color }}>{goal.current.toLocaleString()}/{goal.target.toLocaleString()}{goal.unit}</span>
+                      </div>
+                      <div style={{ height: 6, background: tv['--inp'], borderRadius: 3, overflow: 'hidden', marginBottom: 4 }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: goal.color, borderRadius: 3, transition: 'width .3s' }} />
+                      </div>
+                      <div style={{ fontSize: 11, color: tv['--t3'] }}>完成 {pct}%</div>
+                    </div>
+                  )
+                })}
+                {/* AI 优化建议 */}
+                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>💡 AI 运营建议</div>
+                  {[
+                    { icon: '⏰', tip: '你的粉丝活跃时间在 18:00-20:00，建议把发布时间调整到 18:30' },
+                    { icon: '🎯', tip: '干货分享类内容完播率最高，本周可多发 2 条干货' },
+                    { icon: '💬', tip: '评论区有 12 条未回复，及时互动可提升账号权重' },
+                  ].map((item, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 10, marginBottom: i < 2 ? 10 : 0 }}>
+                      <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
+                      <span style={{ fontSize: 12, color: tv['--t2'], lineHeight: 1.5 }}>{item.tip}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
+            )}
           </div>
         </div>
-      </div>
-    </div>
-  )
-}
+      )
+    }
+    
