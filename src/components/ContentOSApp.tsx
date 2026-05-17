@@ -137,17 +137,31 @@ export default function ContentOSApp() {
   }
 
   async function saveCopy(version: CopyVersion) {
-    if (!user) { showToast('请先登录后保存'); return }
-    const { error } = await supabase.from('contents').insert({
-      user_id: user.id, topic: selectedTopic, style: version.style, content: version.content, account_name: acc.name
-    })
-    if (!error) { showToast('✅ 文案已保存'); loadSavedContents() }
-    else { 
-      if (error.code === '42P01') showToast('⚠️ 数据库未初始化，请联系管理员')
-      else showToast('保存失败: ' + error.message)
-    }
-  }
-
+        const newItem = {
+          id: Date.now().toString(),
+          topic: selectedTopic, style: version.style, content: version.content,
+          account_name: acc.name, created_at: new Date().toISOString()
+        }
+        // 先尝试保存到数据库
+        if (user) {
+          try {
+            const { error } = await supabase.from('contents').insert({
+              user_id: user.id, topic: selectedTopic, style: version.style, content: version.content, account_name: acc.name
+            })
+            if (!error) { showToast('✅ 文案已保存'); loadSavedContents(); return }
+          } catch {}
+        }
+        // 降级到 localStorage（无需登录也可保存）
+        try {
+          const local = localStorage.getItem('contentos_saved')
+          const existing: SavedContent[] = local ? JSON.parse(local) : []
+          const updated = [newItem, ...existing].slice(0, 50)
+          localStorage.setItem('contentos_saved', JSON.stringify(updated))
+          setSavedContents(updated)
+          showToast('✅ 文案已保存（本地）')
+        } catch { showToast('保存失败') }
+      }
+    
   async function generateTopics() {
     setTopicsLoading(true); setAiTopics([])
     try {
