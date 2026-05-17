@@ -88,8 +88,11 @@ export default function ContentOSApp() {
   }, [user])
 
   async function loadSavedContents() {
-    const { data } = await supabase.from('contents').select('*').order('created_at', { ascending: false }).limit(20)
-    if (data) setSavedContents(data)
+    try {
+      const { data, error } = await supabase.from('contents').select('*').order('created_at', { ascending: false }).limit(20)
+      if (data) setSavedContents(data)
+      // 如果表不存在，静默失败（不影响其他功能）
+    } catch { /* 数据库未初始化时静默失败 */ }
   }
 
   function showToast(msg: string) {
@@ -139,7 +142,10 @@ export default function ContentOSApp() {
       user_id: user.id, topic: selectedTopic, style: version.style, content: version.content, account_name: acc.name
     })
     if (!error) { showToast('✅ 文案已保存'); loadSavedContents() }
-    else showToast('保存失败')
+    else { 
+      if (error.code === '42P01') showToast('⚠️ 数据库未初始化，请联系管理员')
+      else showToast('保存失败: ' + error.message)
+    }
   }
 
   async function generateTopics() {
