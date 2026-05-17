@@ -45,7 +45,7 @@ export default function ContentOSApp() {
   const [authPassword, setAuthPassword] = useState('')
   const [authLoading, setAuthLoading] = useState(false)
   const [authError, setAuthError] = useState('')
-  const [tab, setTab] = useState<'dashboard' | 'materials' | 'content' | 'positioning' | 'operations'>('dashboard')
+  const [tab, setTab] = useState<'dashboard' | 'materials' | 'content' | 'video' | 'operations'>('dashboard')
   const [accounts, setAccounts] = useState<Account[]>(DEFAULT_ACCOUNTS)
   const [account, setAccount] = useState(0)
   const [toast, setToast] = useState('')
@@ -102,6 +102,19 @@ export default function ContentOSApp() {
         { time: '后天 19:00', title: '顾客感动故事', status: '计划中', platform: '小红书' },
       ])
       const [opsTab, setOpsTab] = useState<'schedule'|'stats'|'goals'>('schedule')
+  // 视频生成
+  const [videoStep, setVideoStep] = useState<'input'|'voice'|'avatar'|'preview'>('input')
+  const [videoCopy, setVideoCopy] = useState('')
+  const [videoVoiceId, setVideoVoiceId] = useState('female-shaonv')
+  const [videoSpeed, setVideoSpeed] = useState(1.0)
+  const [videoAvatarType, setVideoAvatarType] = useState<'upload'|'preset'>('preset')
+  const [videoAvatarPreset, setVideoAvatarPreset] = useState('business-female')
+  const [videoBgType, setVideoBgType] = useState<'color'|'image'|'blur'>('color')
+  const [videoBgColor, setVideoBgColor] = useState('#1a1a2e')
+  const [videoLoading, setVideoLoading] = useState(false)
+  const [videoAudioB64, setVideoAudioB64] = useState('')
+  const [videoResult, setVideoResult] = useState<any>(null)
+  const [videoError, setVideoError] = useState('')
 
   const acc = accounts[account] || accounts[0]
 
@@ -410,13 +423,13 @@ export default function ContentOSApp() {
           styleTemplates={styleTemplates} styleMode={styleMode} setStyleMode={setStyleMode} styleInput={styleInput} setStyleInput={setStyleInput} styleUrl={styleUrl} setStyleUrl={setStyleUrl} styleName={styleName} setStyleName={setStyleName} styleLoading={styleLoading} selectedTemplate={selectedTemplate} setSelectedTemplate={setSelectedTemplate} analyzeStyle={analyzeStyle} deleteTemplate={deleteTemplate} applyTemplate={applyTemplate}
         />}
         {tab === 'content' && <Content tv={TV} acc={acc} step={contentStep} setStep={setContentStep} topic={selectedTopic} setTopic={setSelectedTopic} style={copyStyle} setStyle={setCopyStyle} userInput={userInput} setUserInput={setUserInput} versions={copyVersions} loading={copyLoading} error={copyError} copiedIdx={copiedIdx} expandedIdx={expandedIdx} setExpandedIdx={setExpandedIdx} tokens={copyTokens} generate={generateCopy} copy={copyText} save={saveCopy} showToast={showToast} quickTopics={QUICK_TOPICS} setTab={setTab} styleTemplates={styleTemplates} />}
-        {tab === 'positioning' && <Positioning tv={TV} step={posStep} setStep={setPosStep} form={posForm} setForm={setPosForm} result={posResult} loading={posLoading} generate={generatePositioning} showToast={showToast} useTopic={useTopic} />}
+        {tab === 'video' && <VideoStudio tv={TV} acc={acc} step={videoStep} setStep={setVideoStep} copy={videoCopy} setCopy={setVideoCopy} voiceId={videoVoiceId} setVoiceId={setVideoVoiceId} speed={videoSpeed} setSpeed={setVideoSpeed} avatarType={videoAvatarType} setAvatarType={setVideoAvatarType} avatarPreset={videoAvatarPreset} setAvatarPreset={setVideoAvatarPreset} bgType={videoBgType} setBgType={setVideoBgType} bgColor={videoBgColor} setBgColor={setVideoBgColor} loading={videoLoading} setLoading={setVideoLoading} audioB64={videoAudioB64} setAudioB64={setVideoAudioB64} result={videoResult} setResult={setVideoResult} error={videoError} setError={setVideoError} showToast={showToast} savedContents={savedContents} setTab={setTab} />}
         {tab === 'operations' && <Operations tv={TV} acc={acc} showToast={showToast} schedule={schedule} setSchedule={setSchedule} opsTab={opsTab} setOpsTab={setOpsTab} savedContents={savedContents} />}
       </div>
 
       {/* 底部导航 */}
       <div style={{ height: 90, background: TV['--tab-bg'], backdropFilter: 'blur(28px)', borderTop: `.5px solid ${TV['--b']}`, display: 'flex', alignItems: 'flex-start', paddingTop: 8, paddingBottom: 20, flexShrink: 0, zIndex: 60 }}>
-        {[{id:'dashboard',icon:'🏠',label:'工作台'},{id:'materials',icon:'📦',label:'素材中心'},{id:'content',icon:'✍️',label:'内容中心'},{id:'positioning',icon:'🎯',label:'账号定位'},{id:'operations',icon:'📊',label:'运营中心'}].map(t => (
+        {[{id:'dashboard',icon:'🏠',label:'工作台'},{id:'materials',icon:'📦',label:'素材中心'},{id:'content',icon:'✍️',label:'内容中心'},{id:'video',icon:'🎬',label:'视频生成'},{id:'operations',icon:'📊',label:'运营中心'}].map(t => (
           <div key={t.id} onClick={() => setTab(t.id as any)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '4px 2px', cursor: 'pointer' }}>
             <span style={{ fontSize: 21, transform: tab === t.id ? 'scale(1.1)' : 'scale(1)', display: 'block', transition: 'transform .2s' }}>{t.icon}</span>
             <span style={{ fontSize: 10, fontWeight: tab === t.id ? 700 : 500, color: tab === t.id ? TV['--accent'] : TV['--t3'] }}>{t.label}</span>
@@ -1110,6 +1123,361 @@ function Content({ tv, acc, step, setStep, topic, setTopic, style, setStyle, use
 }
 
 // ===== 账号定位 =====
+
+    // ===== 视频生成工作室 =====
+    function VideoStudio({ tv, acc, step, setStep, copy, setCopy, voiceId, setVoiceId, speed, setSpeed, avatarType, setAvatarType, avatarPreset, setAvatarPreset, bgType, setBgType, bgColor, setBgColor, loading, setLoading, audioB64, setAudioB64, result, setResult, error, setError, showToast, savedContents, setTab }: any) {
+      const VOICES = [
+        { id: 'female-shaonv', label: '少女音', desc: '清甜活泼', emoji: '👧' },
+        { id: 'female-yujie', label: '御姐音', desc: '成熟知性', emoji: '👩' },
+        { id: 'male-qn-qingse', label: '青涩男声', desc: '年轻有活力', emoji: '👦' },
+        { id: 'male-qn-jingying', label: '精英男声', desc: '专业沉稳', emoji: '👨' },
+        { id: 'presenter_male', label: '播音男声', desc: '标准普通话', emoji: '🎙️' },
+        { id: 'audiobook_female_1', label: '有声书女声', desc: '温柔叙事', emoji: '📖' },
+      ]
+      const AVATARS = [
+        { id: 'business-female', label: '职场女性', emoji: '👩‍💼', desc: '专业形象' },
+        { id: 'business-male', label: '职场男性', emoji: '👨‍💼', desc: '商务风格' },
+        { id: 'casual-female', label: '休闲女生', emoji: '👩', desc: '亲切自然' },
+        { id: 'casual-male', label: '休闲男生', emoji: '👨', desc: '轻松随意' },
+      ]
+      const BG_COLORS = ['#1a1a2e','#16213e','#0f3460','#1b4332','#2d1b69','#3d0000','#1a1a1a','#f8f9fa']
+      const STEPS = [
+        { id: 'input', label: '文案', icon: '✍️' },
+        { id: 'voice', label: '声音', icon: '🎙️' },
+        { id: 'avatar', label: '形象', icon: '🧑' },
+        { id: 'preview', label: '生成', icon: '🎬' },
+      ]
+
+      async function generateTTS() {
+        if (!copy.trim()) { showToast('请先输入文案'); return }
+        setLoading(true); setError(''); setAudioB64('')
+        try {
+          const res = await fetch('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: copy, voiceId, speed }),
+          })
+          const data = await res.json()
+          if (!res.ok || data.error) {
+            if (data.configured === false) {
+              setError('⚙️ MiniMax API 未配置\n请在 Vercel 后台添加 MINIMAX_API_KEY 和 MINIMAX_GROUP_ID 环境变量')
+            } else {
+              setError(data.error || '生成失败')
+            }
+            return
+          }
+          setAudioB64(data.audio)
+          showToast('✅ 语音合成成功！')
+          setStep('avatar')
+        } catch (e: any) {
+          setError(e.message)
+        } finally {
+          setLoading(false)
+        }
+      }
+
+      const stepIdx = STEPS.findIndex(s => s.id === step)
+
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: tv['--bg'] }}>
+          <div style={{ padding: '10px 16px 0', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: tv['--t1'] }}>🎬 视频生成</div>
+                <div style={{ fontSize: 12, color: tv['--t3'] }}>文案 → 语音 → 数字人 → 成片</div>
+              </div>
+              <div style={{ background: 'linear-gradient(135deg,#007AFF,#AF52DE)', borderRadius: 10, padding: '4px 10px' }}>
+                <span style={{ fontSize: 11, color: '#fff', fontWeight: 600 }}>AI 驱动</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10, marginTop: 8 }}>
+              {STEPS.map((s, i) => (
+                <div key={s.id} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                  <div onClick={() => { if (i <= stepIdx) setStep(s.id) }}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, cursor: 'pointer', flex: 1 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13,
+                      background: i < stepIdx ? tv['--green'] : i === stepIdx ? tv['--accent'] : tv['--inp'],
+                      color: i <= stepIdx ? '#fff' : tv['--t4'], fontWeight: 700, transition: 'all .2s' }}>
+                      {i < stepIdx ? '✓' : s.icon}
+                    </div>
+                    <span style={{ fontSize: 9, color: i === stepIdx ? tv['--accent'] : tv['--t4'], fontWeight: i === stepIdx ? 700 : 400 }}>{s.label}</span>
+                  </div>
+                  {i < STEPS.length - 1 && <div style={{ height: 2, flex: 0.3, background: i < stepIdx ? tv['--green'] : tv['--inp'], borderRadius: 1, marginBottom: 14 }} />}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
+
+            {step === 'input' && (
+              <div>
+                {savedContents.length > 0 && (
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 12, color: tv['--t3'], marginBottom: 6 }}>📌 从已保存文案导入</div>
+                    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                      {savedContents.slice(0, 5).map((c: any, i: number) => (
+                        <div key={i} onClick={() => { setCopy(c.content); showToast('✅ 已导入文案') }}
+                          style={{ flexShrink: 0, background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 10, padding: '8px 10px', cursor: 'pointer', maxWidth: 140 }}>
+                          <div style={{ fontSize: 11, color: tv['--t1'], fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.topic || '已保存文案'}</div>
+                          <div style={{ fontSize: 10, color: tv['--t3'], marginTop: 2 }}>{c.content?.slice(0, 20)}...</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, marginBottom: 12 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 8 }}>📝 口播文案</div>
+                  <textarea value={copy} onChange={e => setCopy(e.target.value)}
+                    placeholder="输入或粘贴口播文案，AI 将为你合成语音并生成视频..."
+                    style={{ width: '100%', minHeight: 140, background: tv['--inp'], border: 'none', borderRadius: 10, padding: 10, fontSize: 13, color: tv['--t1'], resize: 'none', outline: 'none', lineHeight: 1.6, boxSizing: 'border-box' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                    <span style={{ fontSize: 11, color: tv['--t3'] }}>{copy.length} 字 · 约 {Math.ceil(copy.length / 4)} 秒</span>
+                    <button onClick={() => setCopy('')} style={{ fontSize: 11, color: tv['--t3'], background: 'none', border: 'none', cursor: 'pointer' }}>清空</button>
+                  </div>
+                </div>
+                {!copy.trim() && (
+                  <div onClick={() => setTab('content')} style={{ background: `linear-gradient(135deg,${tv['--accent']}15,${tv['--accent']}05)`, border: `1px dashed ${tv['--accent']}60`, borderRadius: 14, padding: 14, cursor: 'pointer', textAlign: 'center', marginBottom: 12 }}>
+                    <div style={{ fontSize: 20, marginBottom: 4 }}>✍️</div>
+                    <div style={{ fontSize: 13, color: tv['--accent'], fontWeight: 600 }}>去内容中心生成文案</div>
+                    <div style={{ fontSize: 11, color: tv['--t3'], marginTop: 2 }}>生成后保存，可在这里一键导入</div>
+                  </div>
+                )}
+                <button onClick={() => { if (!copy.trim()) { showToast('请先输入文案'); return }; setStep('voice') }}
+                  style={{ width: '100%', padding: '14px 0', background: copy.trim() ? tv['--accent'] : tv['--inp'], color: copy.trim() ? '#fff' : tv['--t4'], border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 700, cursor: copy.trim() ? 'pointer' : 'default', transition: 'all .2s' }}>
+                  下一步：选择声音 →
+                </button>
+              </div>
+            )}
+
+            {step === 'voice' && (
+              <div>
+                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, marginBottom: 12 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>🎙️ 选择音色</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    {VOICES.map(v => (
+                      <div key={v.id} onClick={() => setVoiceId(v.id)}
+                        style={{ background: voiceId === v.id ? `${tv['--accent']}15` : tv['--inp'], border: `1.5px solid ${voiceId === v.id ? tv['--accent'] : 'transparent'}`, borderRadius: 12, padding: '10px 12px', cursor: 'pointer', transition: 'all .15s' }}>
+                        <div style={{ fontSize: 20, marginBottom: 4 }}>{v.emoji}</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: tv['--t1'] }}>{v.label}</div>
+                        <div style={{ fontSize: 10, color: tv['--t3'] }}>{v.desc}</div>
+                        {voiceId === v.id && <div style={{ fontSize: 10, color: tv['--accent'], marginTop: 4, fontWeight: 600 }}>✓ 已选择</div>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, marginBottom: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'] }}>⚡ 语速</div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: tv['--accent'] }}>{speed.toFixed(1)}x</span>
+                  </div>
+                  <input type="range" min="0.5" max="2.0" step="0.1" value={speed} onChange={e => setSpeed(parseFloat(e.target.value))}
+                    style={{ width: '100%', accentColor: tv['--accent'] }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: tv['--t4'], marginTop: 4 }}>
+                    <span>0.5x 慢</span><span>1.0x 正常</span><span>2.0x 快</span>
+                  </div>
+                </div>
+                <div style={{ background: `linear-gradient(135deg,#AF52DE15,#007AFF10)`, border: `1px solid #AF52DE30`, borderRadius: 14, padding: 14, marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontSize: 18 }}>🔮</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'] }}>声音克隆</div>
+                      <div style={{ fontSize: 11, color: tv['--t3'] }}>上传3-10秒音频，克隆你的声音</div>
+                    </div>
+                    <div style={{ marginLeft: 'auto', background: '#AF52DE20', borderRadius: 8, padding: '3px 8px' }}>
+                      <span style={{ fontSize: 10, color: '#AF52DE', fontWeight: 600 }}>需配置 API</span>
+                    </div>
+                  </div>
+                  <div style={{ background: tv['--inp'], borderRadius: 10, padding: '10px 12px', textAlign: 'center', cursor: 'pointer' }}>
+                    <span style={{ fontSize: 12, color: tv['--t3'] }}>📎 点击上传音频文件（mp3/wav）</span>
+                  </div>
+                </div>
+                {error && (
+                  <div style={{ background: '#FF3B3015', border: '1px solid #FF3B3040', borderRadius: 12, padding: 12, marginBottom: 12 }}>
+                    <div style={{ fontSize: 12, color: '#FF3B30', whiteSpace: 'pre-line' }}>{error}</div>
+                    {error.includes('未配置') && (
+                      <div style={{ marginTop: 8, fontSize: 11, color: tv['--t3'] }}>
+                        📍 获取方式：登录 platform.minimaxi.com → 创建应用 → 获取 API Key 和 Group ID → 在 Vercel 环境变量中添加
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => setStep('input')} style={{ flex: 1, padding: '12px 0', background: tv['--inp'], color: tv['--t2'], border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>← 返回</button>
+                  <button onClick={generateTTS} disabled={loading}
+                    style={{ flex: 2, padding: '12px 0', background: loading ? tv['--inp'] : tv['--accent'], color: loading ? tv['--t4'] : '#fff', border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: loading ? 'default' : 'pointer', transition: 'all .2s' }}>
+                    {loading ? '🎙️ 合成中...' : '🎙️ 合成语音'}
+                  </button>
+                </div>
+                {audioB64 && (
+                  <div style={{ marginTop: 10, background: '#34C75915', border: '1px solid #34C75940', borderRadius: 12, padding: 12 }}>
+                    <div style={{ fontSize: 12, color: tv['--green'], fontWeight: 600, marginBottom: 6 }}>✅ 语音已合成</div>
+                    <audio controls src={`data:audio/mp3;base64,${audioB64}`} style={{ width: '100%', height: 36 }} />
+                    <button onClick={() => setStep('avatar')} style={{ width: '100%', marginTop: 8, padding: '10px 0', background: tv['--green'], color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                      下一步：选择形象 →
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {step === 'avatar' && (
+              <div>
+                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, marginBottom: 12 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>🧑 数字人形象</div>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                    {(['preset','upload'] as const).map(t => (
+                      <button key={t} onClick={() => setAvatarType(t)}
+                        style={{ flex: 1, padding: '8px 0', background: avatarType === t ? tv['--accent'] : tv['--inp'], color: avatarType === t ? '#fff' : tv['--t3'], border: 'none', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                        {t === 'preset' ? '🎭 预设形象' : '📷 上传照片'}
+                      </button>
+                    ))}
+                  </div>
+                  {avatarType === 'preset' ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      {AVATARS.map(a => (
+                        <div key={a.id} onClick={() => setAvatarPreset(a.id)}
+                          style={{ background: avatarPreset === a.id ? `${tv['--accent']}15` : tv['--inp'], border: `1.5px solid ${avatarPreset === a.id ? tv['--accent'] : 'transparent'}`, borderRadius: 12, padding: '12px 10px', cursor: 'pointer', textAlign: 'center' }}>
+                          <div style={{ fontSize: 32, marginBottom: 4 }}>{a.emoji}</div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: tv['--t1'] }}>{a.label}</div>
+                          <div style={{ fontSize: 10, color: tv['--t3'] }}>{a.desc}</div>
+                          {avatarPreset === a.id && <div style={{ fontSize: 10, color: tv['--accent'], marginTop: 4, fontWeight: 600 }}>✓ 已选</div>}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ background: tv['--inp'], borderRadius: 12, padding: 20, textAlign: 'center' }}>
+                      <div style={{ fontSize: 32, marginBottom: 8 }}>📷</div>
+                      <div style={{ fontSize: 13, color: tv['--t2'], fontWeight: 600, marginBottom: 4 }}>上传人物照片</div>
+                      <div style={{ fontSize: 11, color: tv['--t3'], marginBottom: 12 }}>正面清晰照片效果最佳</div>
+                      <div style={{ background: '#AF52DE20', borderRadius: 8, padding: '4px 10px', display: 'inline-block' }}>
+                        <span style={{ fontSize: 11, color: '#AF52DE', fontWeight: 600 }}>需配置 LatentSync API</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, marginBottom: 12 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>🖼️ 背景设置</div>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                    {([['color','纯色'],['image','图片'],['blur','虚化']] as const).map(([t, l]) => (
+                      <button key={t} onClick={() => setBgType(t)}
+                        style={{ flex: 1, padding: '7px 0', background: bgType === t ? tv['--accent'] : tv['--inp'], color: bgType === t ? '#fff' : tv['--t3'], border: 'none', borderRadius: 10, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                  {bgType === 'color' && (
+                    <div>
+                      <div style={{ fontSize: 11, color: tv['--t3'], marginBottom: 8 }}>选择背景色</div>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {BG_COLORS.map(c => (
+                          <div key={c} onClick={() => setBgColor(c)}
+                            style={{ width: 32, height: 32, borderRadius: 8, background: c, cursor: 'pointer', border: bgColor === c ? `3px solid ${tv['--accent']}` : '2px solid transparent', transition: 'border .15s' }} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {bgType === 'image' && (
+                    <div style={{ background: tv['--inp'], borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                      <div style={{ fontSize: 11, color: tv['--t3'] }}>📎 上传背景图片</div>
+                      <div style={{ fontSize: 10, color: tv['--t4'], marginTop: 4 }}>rembg 自动抠图后合成</div>
+                    </div>
+                  )}
+                  {bgType === 'blur' && (
+                    <div style={{ background: tv['--inp'], borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                      <div style={{ fontSize: 11, color: tv['--t3'] }}>原视频背景虚化处理</div>
+                      <div style={{ fontSize: 10, color: tv['--t4'], marginTop: 4 }}>FFmpeg 高斯模糊滤镜</div>
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => setStep('voice')} style={{ flex: 1, padding: '12px 0', background: tv['--inp'], color: tv['--t2'], border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>← 返回</button>
+                  <button onClick={() => setStep('preview')}
+                    style={{ flex: 2, padding: '12px 0', background: tv['--accent'], color: '#fff', border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                    下一步：生成视频 →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {step === 'preview' && (
+              <div>
+                <div style={{ background: tv['--card'], border: `.5px solid ${tv['--b']}`, borderRadius: 16, padding: 14, marginBottom: 12 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: tv['--t1'], marginBottom: 10 }}>📋 生成配置</div>
+                  {[
+                    { label: '文案', value: copy.slice(0, 30) + (copy.length > 30 ? '...' : ''), icon: '📝' },
+                    { label: '音色', value: VOICES.find(v => v.id === voiceId)?.label || voiceId, icon: '🎙️' },
+                    { label: '语速', value: `${speed.toFixed(1)}x`, icon: '⚡' },
+                    { label: '形象', value: avatarType === 'preset' ? (AVATARS.find(a => a.id === avatarPreset)?.label || avatarPreset) : '自定义照片', icon: '🧑' },
+                    { label: '背景', value: bgType === 'color' ? '纯色背景' : bgType === 'image' ? '自定义图片' : '虚化背景', icon: '🖼️' },
+                  ].map(item => (
+                    <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <span style={{ fontSize: 14 }}>{item.icon}</span>
+                      <span style={{ fontSize: 12, color: tv['--t3'], width: 36 }}>{item.label}</span>
+                      <span style={{ fontSize: 12, color: tv['--t1'], fontWeight: 600 }}>{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ background: `linear-gradient(135deg,#007AFF10,#AF52DE10)`, border: `1px solid #007AFF20`, borderRadius: 14, padding: 14, marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: tv['--t1'], marginBottom: 8 }}>⚙️ 合成流程</div>
+                  {[
+                    { step: '1', label: 'MiniMax TTS', desc: '文案 → 语音', status: audioB64 ? 'done' : 'pending' },
+                    { step: '2', label: 'LatentSync', desc: '语音 → 对口型视频', status: 'pending' },
+                    { step: '3', label: 'rembg', desc: '人物抠图', status: 'pending' },
+                    { step: '4', label: 'FFmpeg', desc: '合成最终视频', status: 'pending' },
+                  ].map(item => (
+                    <div key={item.step} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <div style={{ width: 20, height: 20, borderRadius: '50%', background: item.status === 'done' ? tv['--green'] : tv['--inp'], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: item.status === 'done' ? '#fff' : tv['--t4'], fontWeight: 700, flexShrink: 0 }}>
+                        {item.status === 'done' ? '✓' : item.step}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: tv['--t1'] }}>{item.label}</span>
+                        <span style={{ fontSize: 11, color: tv['--t3'], marginLeft: 6 }}>{item.desc}</span>
+                      </div>
+                      <span style={{ fontSize: 10, color: item.status === 'done' ? tv['--green'] : '#FF9500', fontWeight: 600 }}>
+                        {item.status === 'done' ? '✅ 完成' : '⏳ 待配置'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ background: '#FF950015', border: '1px solid #FF950040', borderRadius: 14, padding: 14, marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#FF9500', marginBottom: 8 }}>🔧 需要配置的 API</div>
+                  {[
+                    { name: 'MiniMax TTS', key: 'MINIMAX_API_KEY + MINIMAX_GROUP_ID', where: 'platform.minimaxi.com', status: '⚠️ 未配置' },
+                    { name: 'LatentSync', key: '自部署 GPU 服务器', where: 'github.com/bytedance/LatentSync', status: '🔮 后期' },
+                    { name: 'rembg', key: '自部署 或 Remove.bg API', where: 'github.com/danielgatis/rembg', status: '🔮 后期' },
+                  ].map((item, idx) => (
+                    <div key={item.name} style={{ marginBottom: idx < 2 ? 8 : 0, paddingBottom: idx < 2 ? 8 : 0, borderBottom: idx < 2 ? `1px solid #FF950020` : 'none' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: tv['--t1'] }}>{item.name}</span>
+                        <span style={{ fontSize: 10, color: '#FF9500' }}>{item.status}</span>
+                      </div>
+                      <div style={{ fontSize: 10, color: tv['--t3'], marginTop: 2 }}>Key: {item.key}</div>
+                      <div style={{ fontSize: 10, color: tv['--accent'], marginTop: 1 }}>📍 {item.where}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => setStep('avatar')} style={{ flex: 1, padding: '12px 0', background: tv['--inp'], color: tv['--t2'], border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>← 返回</button>
+                  <button onClick={() => showToast('🔧 视频合成 API 配置后即可使用')}
+                    style={{ flex: 2, padding: '12px 0', background: 'linear-gradient(135deg,#007AFF,#AF52DE)', color: '#fff', border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                    🎬 生成视频
+                  </button>
+                </div>
+                {audioB64 && (
+                  <div style={{ marginTop: 12, background: '#34C75910', border: '1px solid #34C75930', borderRadius: 12, padding: 12 }}>
+                    <div style={{ fontSize: 12, color: tv['--green'], fontWeight: 600, marginBottom: 6 }}>🎙️ 语音预览（已合成）</div>
+                    <audio controls src={`data:audio/mp3;base64,${audioB64}`} style={{ width: '100%', height: 36 }} />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    }
+
+    
 function Positioning({ tv, step, setStep, form, setForm, result, loading, generate, showToast, useTopic }: any) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: tv['--bg'] }}>
