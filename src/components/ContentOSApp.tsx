@@ -47,6 +47,276 @@ const HOTSPOTS = [
 
 const COPY_STYLES = ['犀利观点', '温情故事', '干货教程', '幽默搞笑', '励志正能量', '悬念钩子']
 
+// ─── Global AI Quick Panel ────────────────────────────────
+// 各模块的 AI 配置说明
+const MODULE_AI_CONFIG: Record<string, { label: string; icon: string; color: string; promptPlaceholder: string; promptTip: string }> = {
+  dashboard: { label: '工作台', icon: '🏠', color: 'from-blue-500 to-cyan-400', promptPlaceholder: '工作台 AI 助手提示词...', promptTip: '影响每日任务建议和快捷操作的 AI 行为' },
+  topics: { label: '选题生成', icon: '💡', color: 'from-orange-400 to-amber-400', promptPlaceholder: '如：专注本地餐饮，选题要结合节假日热点，突出性价比...', promptTip: '影响 AI 生成选题的方向、风格和侧重点' },
+  copy: { label: '文案生成', icon: '✍️', color: 'from-purple-500 to-pink-400', promptPlaceholder: '如：文案要口语化，多用疑问句开头，结尾加行动号召...', promptTip: '影响 AI 生成文案的语气、结构和风格' },
+  video: { label: '视频脚本', icon: '🎬', color: 'from-red-400 to-rose-500', promptPlaceholder: '如：口播要简洁有力，每句不超过15字，节奏感强...', promptTip: '影响 AI 生成视频口播文案的节奏和风格' },
+  radar: { label: '情报雷达', icon: '📡', color: 'from-green-400 to-emerald-500', promptPlaceholder: '如：重点关注餐饮行业，过滤娱乐类热点...', promptTip: '影响 AI 分析热点和行业情报的侧重方向' },
+  positioning: { label: '账号定位', icon: '🎯', color: 'from-indigo-500 to-blue-400', promptPlaceholder: '如：定位要突出差异化，结合本地特色...', promptTip: '影响 AI 生成账号定位报告的分析角度' },
+  materials: { label: '素材分析', icon: '📚', color: 'from-teal-400 to-cyan-500', promptPlaceholder: '如：重点分析爆款原因，提取可复用的内容结构...', promptTip: '影响 AI 分析博主内容和素材的维度' },
+  operations: { label: '运营分析', icon: '📊', color: 'from-violet-500 to-purple-400', promptPlaceholder: '如：运营建议要具体可执行，结合账号当前阶段...', promptTip: '影响 AI 生成运营洞察和优化建议的方向' },
+}
+
+const AI_MODELS_LIST = [
+  { id: 'deepseek-chat', label: 'DeepSeek Chat', short: 'DS Chat', badge: '推荐', badgeColor: 'bg-green-100 text-green-600' },
+  { id: 'deepseek-reasoner', label: 'DeepSeek R1', short: 'DS R1', badge: '推理', badgeColor: 'bg-blue-100 text-blue-600' },
+  { id: 'gpt-4o-mini', label: 'GPT-4o Mini', short: '4o Mini', badge: 'OpenAI', badgeColor: 'bg-purple-100 text-purple-600' },
+  { id: 'gpt-4o', label: 'GPT-4o', short: '4o', badge: '高级', badgeColor: 'bg-orange-100 text-orange-600' },
+  { id: 'custom', label: '自定义', short: '自定义', badge: '自定义', badgeColor: 'bg-gray-100 text-gray-500' },
+]
+
+function AiQuickPanel({
+  tab, show, onClose,
+  aiModel, setAiModel,
+  aiApiKey, setAiApiKey,
+  aiApiBase, setAiApiBase,
+  aiTemperature, setAiTemperature,
+  modulePrompts, setModulePrompts,
+  saveToLocal, showToast,
+}: any) {
+  const [panelTab, setPanelTab] = React.useState<'model' | 'prompt' | 'api'>('prompt')
+  // tab 到模块配置的映射
+  const TAB_TO_MODULE: Record<string, string> = {
+    dashboard: 'dashboard',
+    materials: 'materials',
+    content: 'copy',
+    video: 'video',
+    operations: 'operations',
+    profile: 'dashboard',
+  }
+  const moduleKey = TAB_TO_MODULE[tab] || tab
+  const cfg = MODULE_AI_CONFIG[moduleKey] || MODULE_AI_CONFIG['dashboard']
+  const currentPrompt = modulePrompts[moduleKey] || ''
+
+  // 快捷模板也用 moduleKey
+  const tplKey = moduleKey''
+
+  function saveAll() {
+    saveToLocal('contentos_ai_settings', { model: aiModel, apiKey: aiApiKey, apiBase: aiApiBase, temperature: aiTemperature })
+    saveToLocal('contentos_module_prompts', modulePrompts)
+    showToast('✅ AI 设置已保存')
+    onClose()
+  }
+
+  if (!show) return null
+
+  return (
+    <div className="absolute inset-0 z-50 flex flex-col" onClick={onClose}>
+      {/* 半透明遮罩 */}
+      <div className="flex-1 bg-black/20 backdrop-blur-[2px]" />
+      {/* 面板从底部滑入 */}
+      <div
+        className="bg-white rounded-t-3xl shadow-2xl flex flex-col animate-slide-bottom"
+        style={{ maxHeight: '82%' }}
+        onClick={(e: any) => e.stopPropagation()}
+      >
+        {/* 拖拽条 */}
+        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+          <div className="w-10 h-1 rounded-full bg-gray-200" />
+        </div>
+
+        {/* 标题栏 */}
+        <div className="px-5 pb-3 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className={`w-9 h-9 rounded-2xl bg-gradient-to-br ${cfg.color} flex items-center justify-center text-lg shadow-sm`}>
+              {cfg.icon}
+            </div>
+            <div>
+              <div className="font-black text-gray-900 text-base leading-tight">{cfg.label} · AI 设置</div>
+              <div className="text-[10px] text-gray-400 mt-0.5">当前模型：{AI_MODELS_LIST.find(m => m.id === aiModel)?.short || aiModel}</div>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 text-sm active:scale-90 transition-transform">✕</button>
+        </div>
+
+        {/* 子 Tab */}
+        <div className="px-5 mb-3 flex-shrink-0">
+          <div className="flex bg-gray-100 rounded-2xl p-1 gap-1">
+            {([
+              { id: 'prompt', label: '提示词' },
+              { id: 'model', label: '模型' },
+              { id: 'api', label: 'API' },
+            ] as const).map(t => (
+              <button
+                key={t.id}
+                onClick={() => setPanelTab(t.id)}
+                className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${panelTab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400'}`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 内容区 */}
+        <div className="flex-1 overflow-y-auto px-5 pb-4 space-y-3">
+
+          {/* ── 提示词 Tab ── */}
+          {panelTab === 'prompt' && (
+            <>
+              <div className="bg-blue-50 rounded-2xl p-3.5">
+                <div className="text-xs font-bold text-blue-700 mb-1">💡 {cfg.label}专属提示词</div>
+                <div className="text-[11px] text-blue-500 leading-relaxed">{cfg.promptTip}</div>
+              </div>
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <label className="text-xs font-bold text-gray-500 mb-2 block">模块提示词</label>
+                <textarea
+                  value={currentPrompt}
+                  onChange={(e: any) => setModulePrompts((prev: any) => ({ ...prev, [moduleKey]: e.target.value }))}
+                  placeholder={cfg.promptPlaceholder}
+                  className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-28 leading-relaxed"
+                />
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-[10px] text-gray-400">{currentPrompt.length} 字</span>
+                  {currentPrompt && (
+                    <button
+                      onClick={() => setModulePrompts((prev: any) => ({ ...prev, [moduleKey]: '' }))}
+                      className="text-[10px] text-red-400 font-medium"
+                    >清空</button>
+                  )}
+                </div>
+              </div>
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <label className="text-xs font-bold text-gray-500 mb-2 block">全局系统提示词（所有模块共用）</label>
+                <div className="text-[10px] text-gray-400 mb-2">在个人中心 → AI 设置中配置</div>
+                <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
+                  <span className="text-xs text-gray-500 flex-1 truncate">{aiApiKey ? '已配置 API Key ✓' : '未配置 API Key'}</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${AI_MODELS_LIST.find(m => m.id === aiModel)?.badgeColor || 'bg-gray-100 text-gray-500'}`}>
+                    {AI_MODELS_LIST.find(m => m.id === aiModel)?.short || aiModel}
+                  </span>
+                </div>
+              </div>
+              {/* 快捷模板 */}
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="text-xs font-bold text-gray-500 mb-2.5">⚡ 快捷模板</div>
+                <div className="space-y-2">
+                  {(tplKey === 'topics' ? [
+                    { label: '本地生活', text: '专注本地生活服务，选题结合节假日和本地热点，突出性价比和便民属性' },
+                    { label: '知识干货', text: '以干货知识为主，选题要有实用价值，标题用数字和问句吸引点击' },
+                    { label: '情感共鸣', text: '选题要触动情感，引发共鸣，适合宝妈、职场人群，多用故事化角度' },
+                  ] : tplKey === 'copy' ? [
+                    { label: '口播风格', text: '文案要口语化，节奏感强，每句话简短有力，适合直接对着镜头说' },
+                    { label: '种草风格', text: '文案要真实自然，像朋友推荐，多用感受描述，结尾引导互动' },
+                    { label: '干货风格', text: '文案结构清晰，用数字和列表，开头抛问题，结尾给解决方案' },
+                  ] : tplKey === 'video' ? [
+                    { label: '15秒短视频', text: '口播文案控制在100字以内，开头3秒必须有钩子，节奏快' },
+                    { label: '1分钟视频', text: '口播文案300-400字，有起承转合，结尾有行动号召' },
+                    { label: '教程类', text: '步骤清晰，每步一句话，语气亲切，多用"你"来拉近距离' },
+                  ] : [
+                    { label: '专业分析', text: '分析要专业深入，给出具体数据和可执行建议' },
+                    { label: '简洁实用', text: '分析要简洁，重点突出，每条建议都要可立即执行' },
+                  ]).map((tpl, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setModulePrompts((prev: any) => ({ ...prev, [moduleKey]: tpl.text }))}
+                      className="w-full text-left px-3 py-2.5 bg-gray-50 rounded-xl active:bg-gray-100 transition-colors"
+                    >
+                      <div className="text-xs font-semibold text-gray-700 mb-0.5">{tpl.label}</div>
+                      <div className="text-[10px] text-gray-400 leading-relaxed line-clamp-2">{tpl.text}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── 模型 Tab ── */}
+          {panelTab === 'model' && (
+            <>
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="font-bold text-gray-900 text-sm mb-3">🤖 选择 AI 模型</div>
+                <div className="space-y-2">
+                  {AI_MODELS_LIST.map(m => (
+                    <button
+                      key={m.id}
+                      onClick={() => setAiModel(m.id)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all active:scale-[0.98] ${aiModel === m.id ? 'bg-blue-50 border-2 border-blue-400' : 'bg-gray-50 border-2 border-transparent'}`}
+                    >
+                      <div className="flex-1 text-left">
+                        <div className={`text-sm font-semibold ${aiModel === m.id ? 'text-blue-700' : 'text-gray-800'}`}>{m.label}</div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${m.badgeColor}`}>{m.badge}</span>
+                        {aiModel === m.id && <span className="text-blue-500 font-bold text-sm">✓</span>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-xs font-bold text-gray-500">创意度（Temperature）</label>
+                  <span className="text-sm font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-lg">{aiTemperature}</span>
+                </div>
+                <input
+                  type="range" min="0.1" max="1.5" step="0.05"
+                  value={aiTemperature}
+                  onChange={(e: any) => setAiTemperature(parseFloat(e.target.value))}
+                  className="w-full accent-blue-500"
+                />
+                <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+                  <span>保守 0.1</span><span>均衡 0.85</span><span>创意 1.5</span>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── API Tab ── */}
+          {panelTab === 'api' && (
+            <>
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="font-bold text-gray-900 text-sm mb-3">🔑 API 配置</div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-gray-400 font-medium mb-1.5 block">API Key</label>
+                    <input
+                      type="password"
+                      value={aiApiKey}
+                      onChange={(e: any) => setAiApiKey(e.target.value)}
+                      placeholder="sk-xxxxxxxxxxxxxxxx"
+                      className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 font-medium mb-1.5 block">API Base URL（可选）</label>
+                    <input
+                      value={aiApiBase}
+                      onChange={(e: any) => setAiApiBase(e.target.value)}
+                      placeholder="https://api.deepseek.com/v1"
+                      className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none font-mono text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="bg-amber-50 rounded-2xl p-3.5">
+                <div className="text-xs font-bold text-amber-700 mb-1.5">🔒 安全说明</div>
+                <div className="space-y-1 text-[11px] text-amber-600 leading-relaxed">
+                  <div>• API Key 仅存储在本地浏览器，不上传服务器</div>
+                  <div>• 支持 DeepSeek、OpenAI 及兼容接口</div>
+                  <div>• 自定义 Base URL 可接入中转 API</div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* 底部保存按钮 */}
+        <div className="px-5 pb-6 pt-2 flex-shrink-0 border-t border-gray-100">
+          <button
+            onClick={saveAll}
+            className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-black rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md"
+          >
+            💾 保存设置
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Toast ───────────────────────────────────────────────
 function Toast({ msg }: { msg: string }) {
   if (!msg) return null
@@ -191,6 +461,16 @@ export default function ContentOSApp() {
   const [aiApiBase, setAiApiBase] = useState('')
   const [aiSystemPrompt, setAiSystemPrompt] = useState('')
   const [aiTemperature, setAiTemperature] = useState(0.85)
+  // 全局 AI 快捷面板
+  const [showAiPanel, setShowAiPanel] = useState(false)
+  // 各模块专属提示词
+  const [modulePrompts, setModulePrompts] = useState<Record<string, string>>({
+    topics: '',
+    copy: '',
+    video: '',
+    radar: '',
+    positioning: '',
+  })
   const [credits, setCredits] = useState(1000)
   const [profileTab, setProfileTab] = useState<'ai' | 'accounts' | 'credits' | 'about'>('ai')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
@@ -236,6 +516,7 @@ export default function ContentOSApp() {
         if (s.systemPrompt) setAiSystemPrompt(s.systemPrompt)
         if (s.temperature) setAiTemperature(s.temperature)
       }
+      const mp = localStorage.getItem('contentos_module_prompts'); if (mp) setModulePrompts(JSON.parse(mp))
       const cr = localStorage.getItem('contentos_credits'); if (cr) setCredits(parseInt(cr) || 1000)
     } catch {}
   }, [])
@@ -836,6 +1117,18 @@ export default function ContentOSApp() {
   return (
     <div className="w-[390px] h-[844px] rounded-[50px] overflow-hidden bg-[#F2F2F7] flex flex-col shadow-[0_0_0_10px_#111,0_40px_100px_rgba(0,0,0,.7)] relative">
       <Toast msg={toast} />
+      {/* 全局 AI 快捷面板 */}
+      <AiQuickPanel
+        tab={tab}
+        show={showAiPanel}
+        onClose={() => setShowAiPanel(false)}
+        aiModel={aiModel} setAiModel={setAiModel}
+        aiApiKey={aiApiKey} setAiApiKey={setAiApiKey}
+        aiApiBase={aiApiBase} setAiApiBase={setAiApiBase}
+        aiTemperature={aiTemperature} setAiTemperature={setAiTemperature}
+        modulePrompts={modulePrompts} setModulePrompts={setModulePrompts}
+        saveToLocal={saveToLocal} showToast={showToast}
+      />
       <div key={tab} className="flex-1 overflow-hidden flex flex-col page-enter">
         {tab === 'dashboard' && (
           <Dashboard
@@ -851,6 +1144,7 @@ export default function ContentOSApp() {
                 hotspots={HOTSPOTS}
                 radarData={radarData} fetchRadar={fetchRadar} radarLoading={radarLoading}
                 savedTopics={savedTopics}
+                setShowAiPanel={setShowAiPanel}
               />
             )}
         {tab === 'materials' && (
@@ -881,6 +1175,7 @@ export default function ContentOSApp() {
                 saveToLocal={saveToLocal}
                 setTab={setTab}
                 setVideoCopy={setVideoCopy}
+                setShowAiPanel={setShowAiPanel}
               />
             )}
         {tab === 'content' && (
@@ -896,6 +1191,7 @@ export default function ContentOSApp() {
             savedContents={savedContents} setVideoCopy={setVideoCopy}
             copyHistory={copyHistory} compareMode={compareMode} setCompareMode={setCompareMode}
             showHistory={showHistory} setShowHistory={setShowHistory}
+            setShowAiPanel={setShowAiPanel}
           />
         )}
         {tab === 'video' && (
@@ -911,6 +1207,7 @@ export default function ContentOSApp() {
             loading={videoLoading} audioB64={videoAudioB64} error={videoError}
             generateTTS={generateTTS} showToast={showToast}
             savedContents={savedContents} setTab={setTab}
+            setShowAiPanel={setShowAiPanel}
           />
         )}
         {tab === 'operations' && (
@@ -933,6 +1230,7 @@ export default function ContentOSApp() {
             newScheduleTitle={newScheduleTitle} setNewScheduleTitle={setNewScheduleTitle}
             newSchedulePlatform={newSchedulePlatform} setNewSchedulePlatform={setNewSchedulePlatform}
             addScheduleItem={addScheduleItem}
+            setShowAiPanel={setShowAiPanel}
           />
         )}
         {tab === 'profile' && (
@@ -974,7 +1272,7 @@ export default function ContentOSApp() {
 // ═══════════════════════════════════════════════════════════
 // DASHBOARD v2 — 工作台首页（每日任务+快捷入口+数据概览）
 // ═══════════════════════════════════════════════════════════
-function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab, showToast, user, onLogout, savedContents, schedule, onPositioning, showAddAccount, setShowAddAccount, newAccName, setNewAccName, newAccIndustry, setNewAccIndustry, newAccEmoji, setNewAccEmoji, addAccount, hotspots, radarData, fetchRadar, radarLoading, savedTopics }: any) {
+function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab, showToast, user, onLogout, savedContents, schedule, onPositioning, showAddAccount, setShowAddAccount, newAccName, setNewAccName, newAccIndustry, setNewAccIndustry, newAccEmoji, setNewAccEmoji, addAccount, hotspots, radarData, fetchRadar, radarLoading, savedTopics, setShowAiPanel }: any) {
   const EMOJIS = ['🏪', '🍜', '💪', '💄', '📚', '🏠', '🚗', '🎵', '🌿', '☕']
 
   // 今日任务清单（基于账号状态动态生成）
@@ -1080,12 +1378,22 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
               {new Date().getHours() < 12 ? '早上好 ☀️' : new Date().getHours() < 18 ? '下午好 🌤️' : '晚上好 🌙'}
             </h1>
           </div>
-          <button
-            onClick={onLogout}
-            className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-lg active:scale-95 transition-transform"
-          >
-            {user?.id === 'guest' ? '👤' : (user?.email?.[0]?.toUpperCase() || '👋')}
-          </button>
+          <div className="flex items-center gap-2">
+            {/* AI 快捷设置按钮 */}
+            <button
+              onClick={() => setShowAiPanel(true)}
+              className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 shadow-sm flex items-center justify-center text-base active:scale-95 transition-transform relative"
+            >
+              🤖
+              <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white" />
+            </button>
+            <button
+              onClick={onLogout}
+              className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-lg active:scale-95 transition-transform"
+            >
+              {user?.id === 'guest' ? '👤' : (user?.email?.[0]?.toUpperCase() || '👋')}
+            </button>
+          </div>
         </div>
 
         {/* 账号切换 */}
@@ -1269,7 +1577,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
 }
 
 
-function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy }: any) {
+function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy, setShowAiPanel }: any) {
   const TABS = [
     { id: 'hotspot', label: '🔥 热点' },
     { id: 'topics', label: '💡 选题库' },
@@ -1332,7 +1640,16 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
   return (
     <div className="flex flex-col h-full bg-[#F2F2F7]">
       <div className="px-5 pt-12 pb-0 flex-shrink-0">
-        <h1 className="text-xl font-black text-gray-900 mb-3">素材中心</h1>
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="text-xl font-black text-gray-900">素材中心</h1>
+          <button
+            onClick={() => setShowAiPanel(true)}
+            className="w-9 h-9 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 shadow-sm flex items-center justify-center text-base active:scale-95 transition-transform relative"
+          >
+            🤖
+            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white" />
+          </button>
+        </div>
         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-3">
           {TABS.map(t => (
             <button
@@ -2026,7 +2343,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
 }
 
 
-function ContentCenter({ acc, step, setStep, topic, setTopic, style, setStyle, userInput, setUserInput, versions, loading, error, copiedIdx, expandedCopy, setExpandedCopy, generate, copy, save, showToast, setTab, hotspots, savedContents, setVideoCopy, copyHistory, compareMode, setCompareMode, showHistory, setShowHistory }: any) {
+function ContentCenter({ acc, step, setStep, topic, setTopic, style, setStyle, userInput, setUserInput, versions, loading, error, copiedIdx, expandedCopy, setExpandedCopy, generate, copy, save, showToast, setTab, hotspots, savedContents, setVideoCopy, copyHistory, compareMode, setCompareMode, showHistory, setShowHistory, setShowAiPanel }: any) {
   const STYLES = ['犀利观点', '温情故事', '干货教程', '幽默搞笑', '励志正能量', '悬念钩子']
   const STYLE_COLORS: Record<string, string> = {
     '犀利观点': 'from-red-400 to-orange-400',
@@ -2050,10 +2367,19 @@ function ContentCenter({ acc, step, setStep, topic, setTopic, style, setStyle, u
       <div className="px-5 pt-12 pb-3 flex-shrink-0">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-black text-gray-900">内容中心</h1>
-          <button onClick={() => setShowHistory(!showHistory)} className={`relative flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-xl transition-all ${showHistory ? 'bg-blue-500 text-white' : 'bg-white text-gray-500 shadow-sm'}`}>
-            🕐 历史
-            {copyHistory.length > 0 && <span className={`absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center ${showHistory ? 'bg-white text-blue-500' : 'bg-red-400 text-white'}`}>{copyHistory.length > 9 ? '9+' : copyHistory.length}</span>}
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowHistory(!showHistory)} className={`relative flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-xl transition-all ${showHistory ? 'bg-blue-500 text-white' : 'bg-white text-gray-500 shadow-sm'}`}>
+              🕐 历史
+              {copyHistory.length > 0 && <span className={`absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center ${showHistory ? 'bg-white text-blue-500' : 'bg-red-400 text-white'}`}>{copyHistory.length > 9 ? '9+' : copyHistory.length}</span>}
+            </button>
+            <button
+              onClick={() => setShowAiPanel(true)}
+              className="w-9 h-9 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-400 shadow-sm flex items-center justify-center text-base active:scale-95 transition-transform relative"
+            >
+              🤖
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white" />
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-1">
           {['选题', '配置', '文案'].map((s, i) => (
@@ -2268,7 +2594,7 @@ function ContentCenter({ acc, step, setStep, topic, setTopic, style, setStyle, u
 // ═══════════════════════════════════════════════════════════
 // VIDEO STUDIO v2 — 视频生成（TTS 实际可用 + 音频播放）
 // ═══════════════════════════════════════════════════════════
-function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCopy, voiceId, setVoiceId, speed, setSpeed, avatarType, setAvatarType, avatarPreset, setAvatarPreset, bgType, setBgType, bgColor, setBgColor, loading, audioB64, error, generateTTS, showToast, savedContents, setTab }: any) {
+function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCopy, voiceId, setVoiceId, speed, setSpeed, avatarType, setAvatarType, avatarPreset, setAvatarPreset, bgType, setBgType, bgColor, setBgColor, loading, audioB64, error, generateTTS, showToast, savedContents, setTab, setShowAiPanel }: any) {
   const VOICES = [
     { id: 'female-shaonv', label: '少女音', emoji: '👧', desc: '清甜活泼，适合生活类' },
     { id: 'female-yujie', label: '御姐音', emoji: '👩', desc: '成熟知性，适合职场类' },
@@ -2342,7 +2668,16 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
   return (
     <div className="flex flex-col h-full bg-[#F2F2F7]">
       <div className="px-5 pt-12 pb-3 flex-shrink-0">
-        <h1 className="text-xl font-black text-gray-900 mb-3">视频生成</h1>
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="text-xl font-black text-gray-900">视频生成</h1>
+          <button
+            onClick={() => setShowAiPanel(true)}
+            className="w-9 h-9 rounded-2xl bg-gradient-to-br from-red-400 to-rose-500 shadow-sm flex items-center justify-center text-base active:scale-95 transition-transform relative"
+          >
+            🤖
+            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white" />
+          </button>
+        </div>
         {/* 步骤条 */}
         <div className="flex items-center gap-1">
           {STEPS.map((s, i) => (
@@ -3189,7 +3524,7 @@ function BestTimePanel({ acc }: any) {
 
 
 
-function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedContents, showToast, insights, insightsLoading, fetchInsights, showAddSchedule, setShowAddSchedule, newScheduleTitle, setNewScheduleTitle, newSchedulePlatform, setNewSchedulePlatform, addScheduleItem, platformStats, setPlatformStats, statsRange, setStatsRange, showDataBind, setShowDataBind, dataBindTab, setDataBindTab, manualFans, setManualFans, manualPlays, setManualPlays, manualLikes, setManualLikes, statsLoading, fetchPlatformStats, updateManualStats }: any) {
+function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedContents, showToast, insights, insightsLoading, fetchInsights, showAddSchedule, setShowAddSchedule, newScheduleTitle, setNewScheduleTitle, newSchedulePlatform, setNewSchedulePlatform, addScheduleItem, platformStats, setPlatformStats, statsRange, setStatsRange, showDataBind, setShowDataBind, dataBindTab, setDataBindTab, manualFans, setManualFans, manualPlays, setManualPlays, manualLikes, setManualLikes, statsLoading, fetchPlatformStats, updateManualStats, setShowAiPanel }: any) {
   const TABS = [{ id: 'schedule', label: '📅 排期' }, { id: 'stats', label: '📊 数据' }, { id: 'goals', label: '🎯 目标' }]
   const STATS = [
     { label: '本周发布', value: '3', unit: '条', trend: '+1', up: true },
@@ -3238,7 +3573,16 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
       )}
 
       <div className="px-5 pt-12 pb-0 flex-shrink-0">
-        <h1 className="text-xl font-black text-gray-900 mb-3">运营中心</h1>
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="text-xl font-black text-gray-900">运营中心</h1>
+          <button
+            onClick={() => setShowAiPanel(true)}
+            className="w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-400 shadow-sm flex items-center justify-center text-base active:scale-95 transition-transform relative"
+          >
+            🤖
+            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white" />
+          </button>
+        </div>
         <div className="flex gap-2 pb-3">
           {TABS.map(t => (
             <button
