@@ -453,6 +453,15 @@ export default function ContentOSApp() {
   const [showAddSchedule, setShowAddSchedule] = useState(false)
   const [newScheduleTitle, setNewScheduleTitle] = useState('')
   const [newSchedulePlatform, setNewSchedulePlatform] = useState('抖音')
+  // 内容日历升级状态
+  const [showWeekPlan, setShowWeekPlan] = useState(false)
+  const [weekPlanLoading, setWeekPlanLoading] = useState(false)
+  const [dragItem, setDragItem] = useState<any>(null)
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null)
+  // 博主追踪升级状态
+  const [creatorAnalysisTab, setCreatorAnalysisTab] = useState<'overview' | 'pattern' | 'scripts' | 'copy'>('overview')
+  const [selectedScript, setSelectedScript] = useState<any>(null)
+  const [showScriptDetail, setShowScriptDetail] = useState(false)
 
   // Video Studio
   const [videoStep, setVideoStep] = useState<VideoStep>('input')
@@ -953,6 +962,58 @@ export default function ContentOSApp() {
     showToast('✅ 已添加到排期')
   }
 
+  // 批量生成一周内容计划
+  async function generateWeekPlan() {
+    setWeekPlanLoading(true)
+    setShowWeekPlan(true)
+    try {
+      const today = new Date()
+      const weekDays = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(today)
+        d.setDate(today.getDate() + i)
+        return d.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric', weekday: 'short' })
+      })
+      const res = await fetch('/api/generate-topics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          positioning: acc.positioning, industry: acc.industry, accountName: acc.name,
+          count: 7,
+          modulePrompt: (modulePrompts['topics'] || '') + '\n请为每个选题指定发布平台（抖音/小红书/B站/视频号之一）和最佳发布时间（如18:30）',
+          aiModel, aiApiKey, aiApiBase, aiTemperature
+        })
+      })
+      const data = await res.json()
+      if (data.topics && data.topics.length > 0) {
+        const PLATFORMS = ['抖音', '小红书', 'B站', '视频号', '抖音', '小红书', '抖音']
+        const TIMES = ['18:30', '12:00', '20:00', '19:00', '18:30', '21:00', '17:00']
+        const newItems: ScheduleItem[] = data.topics.slice(0, 7).map((t: any, i: number) => ({
+          id: (Date.now() + i).toString(),
+          time: `${weekDays[i]} ${TIMES[i]}`,
+          title: t.title || t,
+          status: '计划中',
+          platform: PLATFORMS[i],
+        }))
+        setSchedule(prev => [...prev, ...newItems])
+        showToast(`✅ 已生成 ${newItems.length} 条一周计划`)
+      } else {
+        showToast('生成失败，请重试')
+      }
+    } catch {
+      showToast('网络错误，请重试')
+    } finally {
+      setWeekPlanLoading(false)
+    }
+  }
+
+  // 拖拽排期：更新排期时间
+  function handleDragDrop(itemId: string, newDate: string) {
+    setSchedule(prev => prev.map(s => s.id === itemId ? { ...s, time: newDate + ' ' + (s.time.split(' ')[1] || '18:30') } : s))
+    setDragItem(null)
+    setDragOverDate(null)
+    showToast('✅ 排期已更新')
+  }
+
   // ─── Auth Screen ──────────────────────────────────────────
   if (!user) {
     return (
@@ -1263,6 +1324,9 @@ export default function ContentOSApp() {
                 setTab={setTab}
                 setVideoCopy={setVideoCopy}
                 setShowAiPanel={setShowAiPanel}
+                creatorAnalysisTab={creatorAnalysisTab} setCreatorAnalysisTab={setCreatorAnalysisTab}
+                selectedScript={selectedScript} setSelectedScript={setSelectedScript}
+                showScriptDetail={showScriptDetail} setShowScriptDetail={setShowScriptDetail}
               />
             )}
         {tab === 'content' && (
@@ -1327,6 +1391,12 @@ export default function ContentOSApp() {
             newScheduleTitle={newScheduleTitle} setNewScheduleTitle={setNewScheduleTitle}
             newSchedulePlatform={newSchedulePlatform} setNewSchedulePlatform={setNewSchedulePlatform}
             addScheduleItem={addScheduleItem}
+            generateWeekPlan={generateWeekPlan}
+            weekPlanLoading={weekPlanLoading}
+            showWeekPlan={showWeekPlan} setShowWeekPlan={setShowWeekPlan}
+            dragItem={dragItem} setDragItem={setDragItem}
+            dragOverDate={dragOverDate} setDragOverDate={setDragOverDate}
+            handleDragDrop={handleDragDrop}
             setShowAiPanel={setShowAiPanel}
             videoRecords={videoRecords}
             showVideoRecord={showVideoRecord} setShowVideoRecord={setShowVideoRecord}
@@ -1679,7 +1749,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
 }
 
 
-function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, topicFilter, setTopicFilter, topicSearch, setTopicSearch, batchCount, setBatchCount, topicCategories, selectedCategory, setSelectedCategory, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy, setShowAiPanel }: any) {
+function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, topicFilter, setTopicFilter, topicSearch, setTopicSearch, batchCount, setBatchCount, topicCategories, selectedCategory, setSelectedCategory, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy, setShowAiPanel, creatorAnalysisTab, setCreatorAnalysisTab, selectedScript, setSelectedScript, showScriptDetail, setShowScriptDetail }: any) {
   const TABS = [
     { id: 'hotspot', label: '🔥 热点' },
     { id: 'topics', label: '💡 选题库' },
@@ -2336,52 +2406,181 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                 </div>
 
                 {/* 分析报告 */}
+                {/* 分析 Tab 切换 */}
                 {creatorData.analysis && (
-                  <div className="bg-white rounded-2xl p-4 shadow-sm">
-                    <div className="font-bold text-gray-900 text-sm mb-3">📊 爆款规律分析</div>
-                    <div className="space-y-2 mb-3">
-                      {creatorData.analysis.topPatterns?.map((p: string, i: number) => (
-                        <div key={i} className="flex gap-2 items-start">
-                          <span className={`w-5 h-5 rounded-lg flex items-center justify-center text-white text-[10px] font-black flex-shrink-0 ${i === 0 ? 'bg-red-400' : i === 1 ? 'bg-orange-400' : 'bg-blue-400'}`}>{i + 1}</span>
-                          <span className="text-xs text-gray-700 leading-relaxed">{p}</span>
-                        </div>
+                  <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                    <div className="flex border-b border-gray-100">
+                      {[
+                        {id:'overview', label:'📊 概览'},
+                        {id:'pattern', label:'🔥 规律'},
+                        {id:'scripts', label:'📝 文案库'},
+                        {id:'copy', label:'✍️ 复用'},
+                      ].map((t: any) => (
+                        <button
+                          key={t.id}
+                          onClick={() => setCreatorAnalysisTab(t.id)}
+                          className={`flex-1 py-2.5 text-[11px] font-bold transition-all ${creatorAnalysisTab === t.id ? 'text-blue-500 border-b-2 border-blue-500 bg-blue-50/50' : 'text-gray-400'}`}
+                        >{t.label}</button>
                       ))}
                     </div>
-                    {/* 内容类型分布 */}
-                    {creatorData.analysis.contentRatio && (
-                      <div className="bg-gray-50 rounded-xl p-3 mb-3">
-                        <div className="text-xs text-gray-500 font-medium mb-2">内容类型分布</div>
-                        <div className="space-y-1.5">
-                          {Object.entries(creatorData.analysis.contentRatio).map(([type, pct]: [string, any]) => (
-                            <div key={type} className="flex items-center gap-2">
-                              <span className="text-xs text-gray-500 w-16 flex-shrink-0">{type}</span>
-                              <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                <div className="h-full bg-gradient-to-r from-blue-400 to-cyan-300 rounded-full" style={{ width: `${pct}%` }} />
+
+                    <div className="p-4">
+                      {/* 概览 Tab */}
+                      {creatorAnalysisTab === 'overview' && (
+                        <div className="space-y-3">
+                          {/* 核心数据 */}
+                          <div className="grid grid-cols-3 gap-2">
+                            {[
+                              {label:'视频数', val: creatorData.videos?.length || 0, unit:'条'},
+                              {label:'平均点赞', val: Math.round((creatorData.videos?.reduce((a: number, v: any) => a + (v.likes||0), 0) || 0) / (creatorData.videos?.length || 1)), unit:''},
+                              {label:'爆款率', val: Math.round(((creatorData.videos?.filter((v: any) => (v.likes||0) > 1000).length || 0) / (creatorData.videos?.length || 1)) * 100), unit:'%'},
+                            ].map((s: any) => (
+                              <div key={s.label} className="bg-gray-50 rounded-xl p-2.5 text-center">
+                                <div className="text-base font-black text-gray-900">{s.val >= 10000 ? (s.val/10000).toFixed(1)+'w' : s.val}{s.unit}</div>
+                                <div className="text-[10px] text-gray-400 mt-0.5">{s.label}</div>
                               </div>
-                              <span className="text-xs font-bold text-gray-500 w-8 text-right">{pct}%</span>
+                            ))}
+                          </div>
+                          {/* 内容类型分布 */}
+                          {creatorData.analysis.contentRatio && (
+                            <div>
+                              <div className="text-xs font-semibold text-gray-600 mb-2">内容类型分布</div>
+                              <div className="space-y-1.5">
+                                {Object.entries(creatorData.analysis.contentRatio).map(([type, pct]: [string, any]) => (
+                                  <div key={type} className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-500 w-16 flex-shrink-0">{type}</span>
+                                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                      <div className="h-full bg-gradient-to-r from-blue-400 to-cyan-300 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                                    </div>
+                                    <span className="text-xs font-bold text-gray-500 w-8 text-right">{pct}%</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {/* 借鉴建议 */}
+                          {creatorData.analysis.recommendation && (
+                            <div className="bg-blue-50 rounded-xl p-3">
+                              <div className="text-xs text-blue-500 font-semibold mb-1">💡 借鉴建议</div>
+                              <div className="text-xs text-blue-700 leading-relaxed">{creatorData.analysis.recommendation}</div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* 规律 Tab */}
+                      {creatorAnalysisTab === 'pattern' && (
+                        <div className="space-y-3">
+                          {/* 爆款规律 */}
+                          {creatorData.analysis.topPatterns && (
+                            <div>
+                              <div className="text-xs font-semibold text-gray-600 mb-2">🔥 爆款内容规律</div>
+                              <div className="space-y-2">
+                                {creatorData.analysis.topPatterns.map((p: string, i: number) => (
+                                  <div key={i} className="flex gap-2.5 items-start bg-gray-50 rounded-xl p-2.5">
+                                    <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-white text-[10px] font-black flex-shrink-0 ${i === 0 ? 'bg-red-400' : i === 1 ? 'bg-orange-400' : 'bg-blue-400'}`}>{i + 1}</span>
+                                    <span className="text-xs text-gray-700 leading-relaxed">{p}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {/* 常用钩子 */}
+                          {creatorData.analysis.hookTypes && (
+                            <div>
+                              <div className="text-xs font-semibold text-gray-600 mb-2">🎣 常用开场钩子</div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {creatorData.analysis.hookTypes.map((h: string, i: number) => (
+                                  <span key={i} className="text-xs bg-orange-50 text-orange-500 px-2.5 py-1 rounded-full font-medium">{h}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {/* 发布规律 */}
+                          <div className="bg-purple-50 rounded-xl p-3">
+                            <div className="text-xs text-purple-600 font-semibold mb-1.5">📅 发布规律</div>
+                            <div className="grid grid-cols-2 gap-2 text-xs text-purple-700">
+                              <div>📊 平均每周 {Math.round((creatorData.videos?.length || 0) / 4)} 条</div>
+                              <div>⏱️ 平均时长 {creatorData.analysis.avgDuration || '1-3分钟'}</div>
+                              <div>🏆 最佳类型 {creatorData.analysis.bestType || '干货分享'}</div>
+                              <div>🎯 核心受众 {creatorData.analysis.audience || '职场人群'}</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 文案库 Tab */}
+                      {creatorAnalysisTab === 'scripts' && (
+                        <div className="space-y-2">
+                          <div className="text-xs text-gray-400 mb-2">点击视频查看完整口播文案</div>
+                          {creatorData.videos?.filter((v: any) => v.script).map((v: any, i: number) => (
+                            <div
+                              key={i}
+                              onClick={() => { setSelectedScript(v); setShowScriptDetail(true) }}
+                              className="border border-gray-100 rounded-xl p-3 cursor-pointer active:bg-gray-50 transition-colors"
+                            >
+                              <div className="flex items-start justify-between gap-2 mb-1.5">
+                                <div className="text-xs font-semibold text-gray-800 flex-1 line-clamp-1">{v.title}</div>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${v.type === '干货分享' ? 'bg-blue-50 text-blue-400' : v.type === '情感共鸣' ? 'bg-pink-50 text-pink-400' : 'bg-green-50 text-green-400'}`}>{v.type}</span>
+                              </div>
+                              <div className="text-[10px] text-gray-400 mb-1.5">
+                                👍 {(v.likes||0).toLocaleString()} · 💬 {(v.comments||0).toLocaleString()} · ⭐ {(v.collects||0).toLocaleString()}
+                              </div>
+                              <div className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{v.script}</div>
+                              <div className="text-[10px] text-blue-400 mt-1.5 font-medium">点击查看完整文案 →</div>
+                            </div>
+                          ))}
+                          {!creatorData.videos?.some((v: any) => v.script) && (
+                            <div className="text-center py-6">
+                              <div className="text-2xl mb-2">📝</div>
+                              <p className="text-xs text-gray-400">暂无提取到口播文案</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* 复用 Tab */}
+                      {creatorAnalysisTab === 'copy' && (
+                        <div className="space-y-3">
+                          <div className="bg-amber-50 rounded-xl p-3">
+                            <div className="text-xs text-amber-700 font-semibold mb-1">✍️ 文案结构复用</div>
+                            <div className="text-xs text-amber-600 leading-relaxed">选择一个爆款视频的文案结构，AI 将帮你套用到自己的内容上</div>
+                          </div>
+                          {creatorData.videos?.slice(0, 5).map((v: any, i: number) => (
+                            <div key={i} className="border border-gray-100 rounded-xl p-3">
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <div className="text-xs font-semibold text-gray-800 flex-1 line-clamp-1">{v.title}</div>
+                                <span className="text-[10px] text-red-500 font-bold flex-shrink-0">👍{(v.likes||0) >= 10000 ? ((v.likes||0)/10000).toFixed(1)+'w' : (v.likes||0)}</span>
+                              </div>
+                              {v.hook && (
+                                <div className="text-[10px] text-orange-500 bg-orange-50 px-2 py-1 rounded-lg mb-2">
+                                  🎣 开场钩子：{v.hook}
+                                </div>
+                              )}
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <button
+                                  onClick={() => {
+                                    const text = v.script || v.title
+                                    navigator.clipboard?.writeText(text)
+                                    showToast('✅ 文案已复制')
+                                  }}
+                                  className="py-1.5 bg-gray-100 text-gray-600 text-xs font-semibold rounded-xl active:scale-[0.97] transition-transform"
+                                >📋 复制文案</button>
+                                <button
+                                  onClick={() => {
+                                    const text = v.script || v.title
+                                    setVideoCopy(text)
+                                    setTab('content')
+                                    showToast('✅ 已导入文案生成页')
+                                  }}
+                                  className="py-1.5 bg-blue-500 text-white text-xs font-semibold rounded-xl active:scale-[0.97] transition-transform"
+                                >✍️ 仿写文案</button>
+                              </div>
                             </div>
                           ))}
                         </div>
-                      </div>
-                    )}
-                    {/* 钩子类型 */}
-                    {creatorData.analysis.hookTypes && (
-                      <div className="mb-3">
-                        <div className="text-xs text-gray-500 font-medium mb-1.5">常用钩子类型</div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {creatorData.analysis.hookTypes.map((h: string, i: number) => (
-                            <span key={i} className="text-xs bg-orange-50 text-orange-500 px-2 py-0.5 rounded-full font-medium">{h}</span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {/* 核心建议 */}
-                    {creatorData.analysis.recommendation && (
-                      <div className="bg-blue-50 rounded-xl p-3">
-                        <div className="text-xs text-blue-500 font-medium mb-1">💡 借鉴建议</div>
-                        <div className="text-xs text-blue-700 leading-relaxed">{creatorData.analysis.recommendation}</div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -2419,10 +2618,8 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                             <span className="text-gray-300 text-xs">{expandedVideo === i ? '▲' : '▼'}</span>
                           </div>
                         </div>
-                        {/* 展开内容 */}
                         {expandedVideo === i && (
                           <div className="px-3 pb-3 border-t border-gray-50">
-                            {/* 标签 */}
                             {v.tags && (
                               <div className="flex flex-wrap gap-1 py-2">
                                 {v.tags.map((tag: string, ti: number) => (
@@ -2431,7 +2628,6 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                                 <span className="text-[10px] text-gray-400 ml-1">{v.publishDate}</span>
                               </div>
                             )}
-                            {/* 完整文案 */}
                             {v.script && (
                               <div className="bg-gray-50 rounded-xl p-3 mb-2">
                                 <div className="flex items-center justify-between mb-1.5">
@@ -2450,7 +2646,6 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                                 <div className="text-xs text-gray-700 leading-relaxed">{v.script}</div>
                               </div>
                             )}
-                            {/* 爆款亮点 */}
                             {v.highlight && (
                               <div className="text-[10px] text-orange-600 bg-orange-50 px-2.5 py-1.5 rounded-xl">
                                 ⭐ 爆款亮点：{v.highlight}
@@ -2481,6 +2676,65 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* 文案详情弹窗 */}
+        {showScriptDetail && selectedScript && (
+          <div className="absolute inset-0 bg-black/40 z-50 flex flex-col rounded-[50px] overflow-hidden" onClick={() => setShowScriptDetail(false)}>
+            <div className="flex-1" />
+            <div className="bg-white rounded-t-3xl p-5 pb-8 max-h-[85%] flex flex-col" onClick={(e: any) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-3 flex-shrink-0">
+                <div>
+                  <h3 className="font-black text-gray-900 text-sm">📝 口播文案详情</h3>
+                  <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{selectedScript.title}</p>
+                </div>
+                <button onClick={() => setShowScriptDetail(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
+              </div>
+              {/* 数据 */}
+              <div className="flex gap-3 mb-3 flex-shrink-0">
+                {[
+                  {label:'点赞', val: selectedScript.likes, icon:'👍'},
+                  {label:'评论', val: selectedScript.comments, icon:'💬'},
+                  {label:'收藏', val: selectedScript.collects, icon:'⭐'},
+                ].map((d: any) => (
+                  <div key={d.label} className="flex-1 bg-gray-50 rounded-xl p-2 text-center">
+                    <div className="text-sm font-black text-gray-800">{(d.val||0) >= 10000 ? ((d.val||0)/10000).toFixed(1)+'w' : (d.val||0)}</div>
+                    <div className="text-[10px] text-gray-400">{d.icon} {d.label}</div>
+                  </div>
+                ))}
+              </div>
+              {/* 开场钩子 */}
+              {selectedScript.hook && (
+                <div className="bg-orange-50 rounded-xl p-3 mb-3 flex-shrink-0">
+                  <div className="text-[10px] text-orange-500 font-semibold mb-1">🎣 开场钩子</div>
+                  <div className="text-xs text-orange-700 font-medium">{selectedScript.hook}</div>
+                </div>
+              )}
+              {/* 完整文案 */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <div className="text-[10px] text-gray-400 font-medium mb-2">完整口播文案 ({selectedScript.script?.length || 0} 字)</div>
+                  <div className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedScript.script || '暂无文案'}</div>
+                </div>
+              </div>
+              {/* 操作按钮 */}
+              <div className="grid grid-cols-2 gap-2 mt-4 flex-shrink-0">
+                <button
+                  onClick={() => { navigator.clipboard?.writeText(selectedScript.script || ''); showToast('✅ 文案已复制') }}
+                  className="py-3 bg-gray-100 text-gray-700 font-bold rounded-2xl text-sm active:scale-[0.98] transition-transform"
+                >📋 复制文案</button>
+                <button
+                  onClick={() => {
+                    setVideoCopy(selectedScript.script || selectedScript.title)
+                    setTab('content')
+                    setShowScriptDetail(false)
+                    showToast('✅ 已导入，开始仿写')
+                  }}
+                  className="py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-transform"
+                >✍️ 仿写文案</button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -3959,7 +4213,7 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle }:
 // ═══════════════════════════════════════════════════════════
 // CONTENT CALENDAR — 内容日历视图
 // ═══════════════════════════════════════════════════════════
-function ContentCalendar({ schedule, setSchedule, showToast, setShowAddSchedule, setShowVideoRecord, setQuickRecordData }: any) {
+function ContentCalendar({ schedule, setSchedule, showToast, setShowAddSchedule, setShowVideoRecord, setQuickRecordData, generateWeekPlan, weekPlanLoading, dragItem, setDragItem, dragOverDate, setDragOverDate, handleDragDrop }: any) {
   const today = new Date()
   const [viewMonth, setViewMonth] = React.useState(today.getMonth())
   const [viewYear, setViewYear] = React.useState(today.getFullYear())
@@ -4024,6 +4278,18 @@ function ContentCalendar({ schedule, setSchedule, showToast, setShowAddSchedule,
               ))}
             </div>
             <button onClick={() => setShowAddSchedule(true)} className="w-7 h-7 rounded-full bg-blue-500 text-white text-lg flex items-center justify-center leading-none active:scale-90 transition-transform">+</button>
+            {generateWeekPlan && (
+              <button
+                onClick={generateWeekPlan}
+                disabled={weekPlanLoading}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white text-[10px] font-bold rounded-xl active:scale-95 transition-transform disabled:opacity-60"
+              >
+                {weekPlanLoading ? (
+                  <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : '✨'}
+                {weekPlanLoading ? '生成中...' : '一周计划'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -4046,9 +4312,18 @@ function ContentCalendar({ schedule, setSchedule, showToast, setShowAddSchedule,
                   <button
                     key={i}
                     onClick={() => day && setSelectedDay(day === selectedDay ? null : day)}
-                    className={`relative flex flex-col items-center py-1 rounded-xl transition-all active:scale-90 ${!day ? 'pointer-events-none' : ''} ${isSelected ? 'bg-blue-500' : isToday ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                    onDragOver={(e: any) => {
+                      if (day && dragItem) { e.preventDefault(); setDragOverDate && setDragOverDate(`${viewMonth+1}月${day}日`) }
+                    }}
+                    onDrop={(e: any) => {
+                      if (day && dragItem && handleDragDrop) {
+                        handleDragDrop(dragItem.id, `${viewMonth+1}月${day}日`)
+                      }
+                    }}
+                    onDragLeave={() => setDragOverDate && setDragOverDate(null)}
+                    className={`relative flex flex-col items-center py-1 rounded-xl transition-all active:scale-90 ${!day ? 'pointer-events-none' : ''} ${dragOverDate === `${viewMonth+1}月${day}日` ? 'bg-purple-100 ring-2 ring-purple-400' : isSelected ? 'bg-blue-500' : isToday ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
                   >
-                    <span className={`text-xs font-semibold leading-tight ${!day ? 'invisible' : isSelected ? 'text-white' : isToday ? 'text-blue-500' : isWeekend ? 'text-red-400' : 'text-gray-700'}`}>
+                    <span className={`text-xs font-semibold leading-tight ${!day ? 'invisible' : dragOverDate === `${viewMonth+1}月${day}日` ? 'text-purple-600' : isSelected ? 'text-white' : isToday ? 'text-blue-500' : isWeekend ? 'text-red-400' : 'text-gray-700'}`}>
                       {day || '·'}
                     </span>
                     {/* 排期点 */}
@@ -4074,7 +4349,15 @@ function ContentCalendar({ schedule, setSchedule, showToast, setShowAddSchedule,
                 <p className="text-xs text-gray-400">暂无排期</p>
               </div>
             ) : schedule.map((s: any, i: number) => (
-              <div key={s.id} className={`flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 animate-fade-in-up`} style={{animationDelay:`${i*50}ms`}}>
+              <div
+                key={s.id}
+                draggable={!!handleDragDrop}
+                onDragStart={() => setDragItem && setDragItem(s)}
+                onDragEnd={() => { setDragItem && setDragItem(null); setDragOverDate && setDragOverDate(null) }}
+                className={`flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 animate-fade-in-up cursor-grab active:cursor-grabbing ${dragItem?.id === s.id ? 'opacity-50 ring-2 ring-purple-300' : ''}`}
+                style={{animationDelay:`${i*50}ms`}}
+              >
+                <div className="text-gray-300 text-xs flex-shrink-0 select-none">⠿</div>
                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${STATUS_COLOR[s.status] || 'bg-gray-300'}`}/>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-semibold text-gray-800 truncate">{s.title}</div>
@@ -4127,14 +4410,22 @@ function ContentCalendar({ schedule, setSchedule, showToast, setShowAddSchedule,
         </div>
       )}
 
-      {/* 图例 */}
-      <div className="px-4 pb-3 flex items-center gap-3">
-        {Object.entries(STATUS_COLOR).map(([label, color]) => (
-          <div key={label} className="flex items-center gap-1">
-            <div className={`w-2 h-2 rounded-full ${color}`}/>
-            <span className="text-[10px] text-gray-400">{label}</span>
+      {/* 图例 + 拖拽提示 */}
+      <div className="px-4 pb-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {Object.entries(STATUS_COLOR).map(([label, color]) => (
+            <div key={label} className="flex items-center gap-1">
+              <div className={`w-2 h-2 rounded-full ${color}`}/>
+              <span className="text-[10px] text-gray-400">{label}</span>
+            </div>
+          ))}
+        </div>
+        {handleDragDrop && (
+          <div className="flex items-center gap-1 text-[10px] text-gray-300">
+            <span>⠿</span>
+            <span>拖拽可改期</span>
           </div>
-        ))}
+        )}
       </div>
     </div>
   )
@@ -4418,7 +4709,7 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
   )
 }
 
-function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedContents, showToast, insights, insightsLoading, fetchInsights, showAddSchedule, setShowAddSchedule, newScheduleTitle, setNewScheduleTitle, newSchedulePlatform, setNewSchedulePlatform, addScheduleItem, platformStats, setPlatformStats, statsRange, setStatsRange, showDataBind, setShowDataBind, dataBindTab, setDataBindTab, manualFans, setManualFans, manualPlays, setManualPlays, manualLikes, setManualLikes, statsLoading, fetchPlatformStats, updateManualStats, setShowAiPanel, videoRecords, showVideoRecord, setShowVideoRecord, recordingVideo, setRecordingVideo, quickRecordData, setQuickRecordData, saveVideoRecord }: any) {
+function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedContents, showToast, insights, insightsLoading, fetchInsights, showAddSchedule, setShowAddSchedule, newScheduleTitle, setNewScheduleTitle, newSchedulePlatform, setNewSchedulePlatform, addScheduleItem, generateWeekPlan, weekPlanLoading, showWeekPlan, setShowWeekPlan, dragItem, setDragItem, dragOverDate, setDragOverDate, handleDragDrop, platformStats, setPlatformStats, statsRange, setStatsRange, showDataBind, setShowDataBind, dataBindTab, setDataBindTab, manualFans, setManualFans, manualPlays, setManualPlays, manualLikes, setManualLikes, statsLoading, fetchPlatformStats, updateManualStats, setShowAiPanel, videoRecords, showVideoRecord, setShowVideoRecord, recordingVideo, setRecordingVideo, quickRecordData, setQuickRecordData, saveVideoRecord }: any) {
   const TABS = [{ id: 'schedule', label: '📅 排期' }, { id: 'stats', label: '📊 数据' }, { id: 'goals', label: '🎯 目标' }]
   const STATS = [
     { label: '本周发布', value: '3', unit: '条', trend: '+1', up: true },
@@ -4503,7 +4794,7 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
         {opsTab === 'schedule' && (
           <>
             {/* 内容日历 */}
-            <ContentCalendar schedule={schedule} setSchedule={setSchedule} showToast={showToast} setShowAddSchedule={setShowAddSchedule} setShowVideoRecord={setShowVideoRecord} setQuickRecordData={setQuickRecordData} />
+            <ContentCalendar schedule={schedule} setSchedule={setSchedule} showToast={showToast} setShowAddSchedule={setShowAddSchedule} setShowVideoRecord={setShowVideoRecord} setQuickRecordData={setQuickRecordData} generateWeekPlan={generateWeekPlan} weekPlanLoading={weekPlanLoading} dragItem={dragItem} setDragItem={setDragItem} dragOverDate={dragOverDate} setDragOverDate={setDragOverDate} handleDragDrop={handleDragDrop} />
 
             {/* 最佳发布时间 */}
             <BestTimePanel acc={acc} />
