@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -307,20 +307,20 @@ export default function ContentOSApp() {
     }
   }
 
-  async function scrapeCreator() {
+  async function scrapeCreator(sort = 'likes', count = 20) {
     if (!creatorUrl.trim()) { showToast('请输入博主链接'); return }
     setCreatorLoading(true)
     try {
       const res = await fetch('/api/scrape-creator', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: creatorUrl, count: 20, sort: 'likes' })
+        body: JSON.stringify({ url: creatorUrl, count, sort })
       })
       const data = await res.json()
       if (data.creator) {
         setCreatorData(data)
         const updated = [
-          { ...data.creator, videos: data.videos, summary: data.summary, url: creatorUrl, addedAt: new Date().toISOString() },
+          { ...data.creator, videos: data.videos, analysis: data.analysis, summary: data.summary, url: creatorUrl, addedAt: new Date().toISOString() },
           ...trackedCreators.filter((c: any) => c.url !== creatorUrl)
         ]
         setTrackedCreators(updated)
@@ -773,30 +773,34 @@ export default function ContentOSApp() {
         )}
         {tab === 'materials' && (
           <Materials
-            acc={acc} matTab={matTab} setMatTab={setMatTab}
-            hotspots={HOTSPOTS} aiTopics={aiTopics} topicsLoading={topicsLoading}
-            generateTopics={generateTopics}
-            useTopic={(t: string) => { setSelectedTopic(t); setTab('content'); setContentStep(2) }}
-            savedContents={savedContents} savedTopics={savedTopics} saveTopic={saveTopic}
-            creatorUrl={creatorUrl} setCreatorUrl={setCreatorUrl}
-            creatorLoading={creatorLoading} creatorData={creatorData}
-            setCreatorData={setCreatorData} trackedCreators={trackedCreators}
-            scrapeCreator={scrapeCreator} showToast={showToast}
-            radarData={radarData} radarLoading={radarLoading} fetchRadar={fetchRadar}
-            styleTemplates={styleTemplates} styleLoading={styleLoading}
-            styleUrl={styleUrl} setStyleUrl={setStyleUrl}
-            styleName={styleName} setStyleName={setStyleName}
-            styleText={styleText} setStyleText={setStyleText}
-            analyzeStyle={analyzeStyle}
-            applyTemplate={(t: any) => { setCopyStyle(t.name); showToast(`✅ 已应用「${t.name}」风格`) }}
-            deleteTemplate={(id: string) => {
-              const u = styleTemplates.filter((t: any) => t.id !== id)
-              setStyleTemplates(u)
-              saveToLocal('contentos_style_templates', u)
-              showToast('已删除')
-            }}
-          />
-        )}
+                acc={acc} matTab={matTab} setMatTab={setMatTab}
+                hotspots={HOTSPOTS} aiTopics={aiTopics} topicsLoading={topicsLoading}
+                generateTopics={generateTopics}
+                useTopic={(t: string) => { setSelectedTopic(t); setTab('content'); setContentStep(2) }}
+                savedContents={savedContents} savedTopics={savedTopics} saveTopic={saveTopic}
+                creatorUrl={creatorUrl} setCreatorUrl={setCreatorUrl}
+                creatorLoading={creatorLoading} creatorData={creatorData}
+                setCreatorData={setCreatorData} trackedCreators={trackedCreators}
+                setTrackedCreators={setTrackedCreators}
+                scrapeCreator={scrapeCreator} showToast={showToast}
+                radarData={radarData} radarLoading={radarLoading} fetchRadar={fetchRadar}
+                styleTemplates={styleTemplates} styleLoading={styleLoading}
+                styleUrl={styleUrl} setStyleUrl={setStyleUrl}
+                styleName={styleName} setStyleName={setStyleName}
+                styleText={styleText} setStyleText={setStyleText}
+                analyzeStyle={analyzeStyle}
+                applyTemplate={(t: any) => { setCopyStyle(t.name); showToast(`✅ 已应用「${t.name}」风格`) }}
+                deleteTemplate={(id: string) => {
+                  const u = styleTemplates.filter((t: any) => t.id !== id)
+                  setStyleTemplates(u)
+                  saveToLocal('contentos_style_templates', u)
+                  showToast('已删除')
+                }}
+                saveToLocal={saveToLocal}
+                setTab={setTab}
+                setVideoCopy={setVideoCopy}
+              />
+            )}
         {tab === 'content' && (
           <ContentCenter
             acc={acc} step={contentStep} setStep={setContentStep}
@@ -1045,7 +1049,10 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, showToast
 // ═══════════════════════════════════════════════════════════
 // MATERIALS
 // ═══════════════════════════════════════════════════════════
-function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate }: any) {
+// ═══════════════════════════════════════════════════════════
+// MATERIALS v2 — 素材中心（情报雷达 + 博主追踪全面升级）
+// ═══════════════════════════════════════════════════════════
+function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy }: any) {
   const TABS = [
     { id: 'hotspot', label: '🔥 热点' },
     { id: 'topics', label: '💡 选题库' },
@@ -1053,6 +1060,58 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
     { id: 'creator', label: '🎯 博主' },
     { id: 'style', label: '🎨 风格' },
   ]
+
+  // 博主追踪本地状态
+  const [creatorSort, setCreatorSort] = React.useState<'likes' | 'comments' | 'collects'>('likes')
+  const [creatorCount, setCreatorCount] = React.useState(20)
+  const [expandedVideo, setExpandedVideo] = React.useState<number | null>(null)
+  const [selectedCreator, setSelectedCreator] = React.useState<any>(null)
+  const [radarTab, setRadarTab] = React.useState<'hotspot' | 'format' | 'keyword' | 'insight'>('hotspot')
+
+  const TAG_COLORS: Record<string, string> = {
+    '社会': 'bg-red-50 text-red-500',
+    '娱乐': 'bg-pink-50 text-pink-500',
+    '行业': 'bg-blue-50 text-blue-500',
+    '节日': 'bg-orange-50 text-orange-500',
+    '科技': 'bg-purple-50 text-purple-500',
+    '生活': 'bg-green-50 text-green-500',
+  }
+
+  const TREND_ICONS: Record<string, string> = {
+    '上升': '↑',
+    '稳定': '→',
+    '下降': '↓',
+  }
+  const TREND_COLORS: Record<string, string> = {
+    '上升': 'text-red-500',
+    '稳定': 'text-gray-400',
+    '下降': 'text-blue-400',
+  }
+
+  const PLATFORM_ICONS: Record<string, string> = {
+    'douyin': '🎵',
+    'xiaohongshu': '📕',
+    'bilibili': '📺',
+    'kuaishou': '⚡',
+  }
+
+  function removeTrackedCreator(url: string) {
+    const updated = trackedCreators.filter((c: any) => c.url !== url)
+    setTrackedCreators(updated)
+    saveToLocal('contentos_creators', updated)
+    if (selectedCreator?.url === url) {
+      setSelectedCreator(null)
+      setCreatorData(null)
+    }
+    showToast('已移除追踪')
+  }
+
+  function useScript(script: string, title: string) {
+    setVideoCopy(script)
+    setTab('content')
+    showToast('✅ 文案已导入内容中心')
+  }
+
   return (
     <div className="flex flex-col h-full bg-[#F2F2F7]">
       <div className="px-5 pt-12 pb-0 flex-shrink-0">
@@ -1069,7 +1128,8 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
       </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4">
-        {/* Hotspot Tab */}
+
+        {/* ── 热点 Tab ── */}
         {matTab === 'hotspot' && (
           <div className="space-y-2">
             <p className="text-xs text-gray-400 mb-3 mt-1">今日热点 · 点击直接使用</p>
@@ -1079,221 +1139,558 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                 className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3 active:scale-[0.98] transition-transform cursor-pointer"
                 onClick={() => useTopic(h.title)}
               >
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-sm flex-shrink-0 ${i < 3 ? 'bg-gradient-to-br from-red-400 to-orange-400' : 'bg-gradient-to-br from-orange-300 to-amber-300'}`}>{i + 1}</div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-gray-900 text-sm">{h.title}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{h.tag}</div>
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-sm flex-shrink-0 ${i === 0 ? 'bg-red-400' : i === 1 ? 'bg-orange-400' : i === 2 ? 'bg-amber-400' : 'bg-gray-300'}`}>
+                  {i + 1}
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-                    <span className="text-xs font-bold text-red-400">{h.heat}</span>
-                  </div>
-                  <span className="text-[10px] text-blue-500 font-semibold">使用 →</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-gray-800 truncate">{h.title}</div>
+                  {h.desc && <div className="text-xs text-gray-400 mt-0.5 truncate">{h.desc}</div>}
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {h.heat && <span className="text-xs text-red-400 font-bold">{h.heat}</span>}
+                  <span className="text-gray-300 text-xs">→</span>
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Topics Tab */}
+        {/* ── 选题库 Tab ── */}
         {matTab === 'topics' && (
-          <div>
-            <div className="flex items-center justify-between mb-3 mt-1">
-              <p className="text-xs text-gray-400">AI 为 {acc.name} 生成的选题</p>
-              <button
-                onClick={generateTopics}
-                disabled={topicsLoading}
-                className="flex items-center gap-1 text-xs text-blue-500 font-semibold disabled:opacity-50"
-              >
-                {topicsLoading ? <><span className="w-3 h-3 border border-blue-400 border-t-transparent rounded-full animate-spin inline-block" />生成中</> : '🔄 重新生成'}
-              </button>
-            </div>
-            {aiTopics.length === 0 ? (
-              <div className="bg-white rounded-3xl p-8 text-center shadow-sm">
-                <div className="text-4xl mb-3">💡</div>
-                <div className="font-bold text-gray-800 mb-1 text-sm">AI 选题生成</div>
-                <div className="text-xs text-gray-400 mb-4 leading-relaxed">基于你的账号定位<br />生成高完播率选题</div>
-                <button
-                  onClick={generateTopics}
-                  disabled={topicsLoading}
-                  className="px-6 py-2.5 bg-blue-500 text-white text-sm font-bold rounded-2xl disabled:opacity-60 active:scale-[0.97] transition-transform"
-                >
-                  {topicsLoading ? '生成中...' : '✨ 生成选题'}
-                </button>
-              </div>
-            ) : (
+          <div className="space-y-3 mt-1">
+            <button
+              onClick={generateTopics}
+              disabled={topicsLoading}
+              className="w-full py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white text-sm font-bold rounded-2xl disabled:opacity-60 active:scale-[0.98] transition-transform shadow-md"
+            >
+              {topicsLoading ? '🤔 AI 生成中...' : '✨ AI 生成选题'}
+            </button>
+            {aiTopics.length > 0 && (
               <div className="space-y-2">
                 {aiTopics.map((t: any, i: number) => (
                   <div key={i} className="bg-white rounded-2xl p-4 shadow-sm">
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="font-semibold text-gray-900 text-sm flex-1 leading-snug">{t.title}</div>
+                      <div className="text-sm font-semibold text-gray-800 flex-1">{t.title || t}</div>
                       <div className="flex gap-1.5 flex-shrink-0">
-                        <button
-                          onClick={() => saveTopic(t.title)}
-                          className={`text-lg leading-none ${savedTopics.includes(t.title) ? 'text-yellow-400' : 'text-gray-200'}`}
-                        >★</button>
-                        <button
-                          onClick={() => useTopic(t.title)}
-                          className="px-3 py-1 bg-blue-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-transform"
-                        >使用</button>
+                        <button onClick={() => saveTopic(t)} className="text-xs text-blue-500 font-semibold px-2 py-0.5 bg-blue-50 rounded-lg">收藏</button>
+                        <button onClick={() => useTopic(t.title || t)} className="text-xs text-white font-semibold px-2 py-0.5 bg-blue-500 rounded-lg">使用</button>
                       </div>
                     </div>
-                    <div className="text-xs text-gray-400 mb-1">💡 {t.reason}</div>
-                    <div className="text-xs text-orange-500 mb-2">🎣 {t.hook}</div>
-                    <div className="flex gap-1 flex-wrap">
-                      {t.tags?.map((tag: string) => (
-                        <span key={tag} className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full">{tag}</span>
-                      ))}
-                    </div>
+                    {t.reason && <div className="text-xs text-gray-400 leading-relaxed">{t.reason}</div>}
+                    {t.hook && <div className="text-xs text-orange-500 mt-1.5 bg-orange-50 px-2 py-1 rounded-lg">💡 {t.hook}</div>}
                   </div>
                 ))}
-                {savedTopics.length > 0 && (
-                  <div className="bg-white rounded-2xl p-4 shadow-sm">
-                    <h3 className="font-bold text-gray-900 text-sm mb-2">⭐ 已收藏选题</h3>
-                    {savedTopics.map((t, i) => (
-                      <div key={i} className="flex items-center gap-2 py-2 border-b border-gray-50 last:border-0">
-                        <span className="text-yellow-400 text-sm">★</span>
-                        <span className="text-sm text-gray-700 flex-1">{t}</span>
-                        <button onClick={() => useTopic(t)} className="text-xs text-blue-500 font-semibold">使用</button>
-                      </div>
-                    ))}
+              </div>
+            )}
+            {savedTopics.length > 0 && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="font-bold text-gray-900 text-sm mb-3">⭐ 已收藏选题</div>
+                {savedTopics.map((t: any, i: number) => (
+                  <div key={i} className="flex items-center gap-2 py-2 border-b border-gray-50 last:border-0">
+                    <div className="flex-1 text-xs font-medium text-gray-700">{t.title || t}</div>
+                    <button onClick={() => useTopic(t.title || t)} className="text-xs text-blue-500 font-semibold px-2 py-0.5 bg-blue-50 rounded-lg flex-shrink-0">使用</button>
                   </div>
-                )}
+                ))}
               </div>
             )}
           </div>
         )}
 
-        {/* Radar Tab */}
+        {/* ── 情报雷达 Tab ── */}
         {matTab === 'radar' && (
           <div className="mt-1">
             {!radarData ? (
               <div className="bg-white rounded-3xl p-8 text-center shadow-sm">
-                <div className="text-4xl mb-3">📡</div>
-                <div className="font-bold text-gray-800 mb-1 text-sm">内容情报雷达</div>
-                <div className="text-xs text-gray-400 mb-4 leading-relaxed">每日热点 · 爆款形式<br />关键词热度分析</div>
+                <div className="text-5xl mb-4">📡</div>
+                <div className="font-black text-gray-800 text-base mb-1">内容情报雷达</div>
+                <div className="text-xs text-gray-400 mb-2 leading-relaxed">
+                  每日热点 · 爆款形式 · 关键词热度<br />
+                  <span className="text-blue-400 font-medium">基于 {acc.industry} 行业定制分析</span>
+                </div>
+                <div className="flex justify-center gap-4 mb-5 text-xs text-gray-400">
+                  <span>🔥 8个热点</span>
+                  <span>🎬 5种形式</span>
+                  <span>🏷️ 12个关键词</span>
+                </div>
                 <button
                   onClick={fetchRadar}
                   disabled={radarLoading}
-                  className="px-6 py-2.5 bg-orange-400 text-white text-sm font-bold rounded-2xl disabled:opacity-60 active:scale-[0.97] transition-transform"
+                  className="px-8 py-3 bg-gradient-to-r from-orange-400 to-amber-400 text-white text-sm font-bold rounded-2xl disabled:opacity-60 active:scale-[0.97] transition-transform shadow-md"
                 >
-                  {radarLoading ? '获取中...' : '📡 获取今日情报'}
+                  {radarLoading ? '📡 获取中...' : '📡 获取今日情报'}
                 </button>
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="bg-white rounded-2xl p-4 shadow-sm">
-                  <h3 className="font-bold text-gray-900 text-sm mb-3">🔥 今日热点</h3>
-                  {radarData.hotspots?.slice(0, 6).map((h: any, i: number) => (
-                    <div key={i} className="flex items-center gap-2 py-2 border-b border-gray-50 last:border-0">
-                      <span className={`text-xs font-black w-5 ${i < 3 ? 'text-red-400' : 'text-gray-300'}`}>{i + 1}</span>
-                      <span className="text-sm text-gray-800 flex-1">{h.title || h}</span>
-                      {h.heat && <span className="text-xs text-red-400 font-bold">{h.heat}</span>}
-                    </div>
+                {/* 顶部信息栏 */}
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-gray-400">
+                    📅 {radarData.updateTime || '今日'} · {acc.industry}行业
+                  </div>
+                  <button
+                    onClick={fetchRadar}
+                    disabled={radarLoading}
+                    className="text-xs text-orange-500 font-bold bg-orange-50 px-3 py-1 rounded-full active:scale-95 transition-transform"
+                  >
+                    {radarLoading ? '刷新中...' : '🔄 刷新'}
+                  </button>
+                </div>
+
+                {/* 子Tab切换 */}
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                  {[
+                    { id: 'hotspot', label: '🔥 热点' },
+                    { id: 'format', label: '🎬 形式' },
+                    { id: 'keyword', label: '🏷️ 关键词' },
+                    { id: 'insight', label: '💡 洞察' },
+                  ].map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => setRadarTab(t.id as any)}
+                      className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${radarTab === t.id ? 'bg-orange-400 text-white' : 'bg-white text-gray-500 shadow-sm'}`}
+                    >{t.label}</button>
                   ))}
                 </div>
-                {radarData.formats && (
-                  <div className="bg-white rounded-2xl p-4 shadow-sm">
-                    <h3 className="font-bold text-gray-900 text-sm mb-3">🎬 爆款内容形式</h3>
-                    {radarData.formats?.slice(0, 4).map((f: any, i: number) => (
-                      <div key={i} className="flex items-center gap-2 py-2 border-b border-gray-50 last:border-0">
-                        <span className="text-xs font-black text-gray-300 w-5">{i + 1}</span>
-                        <span className="text-sm text-gray-700">{f.format || f}</span>
+
+                {/* 热点列表 */}
+                {radarTab === 'hotspot' && (
+                  <div className="space-y-2">
+                    {radarData.hotspots?.map((h: any, i: number) => (
+                      <div key={i} className="bg-white rounded-2xl p-3.5 shadow-sm">
+                        <div className="flex items-start gap-3">
+                          <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-white font-black text-xs flex-shrink-0 ${i < 3 ? 'bg-red-400' : 'bg-gray-300'}`}>
+                            {i + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-sm font-bold text-gray-900">{h.title}</span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${TAG_COLORS[h.tag] || 'bg-gray-100 text-gray-500'}`}>{h.tag}</span>
+                            </div>
+                            {h.desc && <div className="text-xs text-gray-400 mb-1.5">{h.desc}</div>}
+                            {/* 热度条 */}
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${i < 3 ? 'bg-gradient-to-r from-red-400 to-orange-400' : 'bg-gradient-to-r from-blue-300 to-cyan-300'}`}
+                                  style={{ width: `${h.heat || 70}%` }}
+                                />
+                              </div>
+                              <span className="text-xs font-bold text-gray-500 flex-shrink-0">{h.heat}</span>
+                            </div>
+                          </div>
+                        </div>
+                        {h.canBorrow && h.borrowTip && (
+                          <div className="mt-2 flex items-center gap-1.5 bg-orange-50 rounded-xl px-3 py-1.5">
+                            <span className="text-orange-400 text-xs">💡</span>
+                            <span className="text-xs text-orange-600 font-medium">{h.borrowTip}</span>
+                            <button
+                              onClick={() => useTopic(h.title)}
+                              className="ml-auto text-[10px] text-white bg-orange-400 px-2 py-0.5 rounded-full font-bold flex-shrink-0"
+                            >用</button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
                 )}
-                {radarData.keywords && (
+
+                {/* 爆款形式 */}
+                {radarTab === 'format' && (
+                  <div className="space-y-2">
+                    {radarData.formats?.map((f: any, i: number) => (
+                      <div key={i} className="bg-white rounded-2xl p-4 shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-white text-xs font-black flex-shrink-0 ${i === 0 ? 'bg-red-400' : i === 1 ? 'bg-orange-400' : i === 2 ? 'bg-amber-400' : 'bg-gray-300'}`}>{i + 1}</span>
+                            <span className="font-bold text-gray-900 text-sm">{f.format}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${f.difficulty === '简单' ? 'bg-green-50 text-green-500' : f.difficulty === '中等' ? 'bg-yellow-50 text-yellow-600' : 'bg-red-50 text-red-400'}`}>{f.difficulty}</span>
+                            <span className="text-xs font-bold text-orange-500">{f.heat}</span>
+                          </div>
+                        </div>
+                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
+                          <div
+                            className="h-full bg-gradient-to-r from-orange-400 to-amber-300 rounded-full"
+                            style={{ width: `${f.heat || 70}%` }}
+                          />
+                        </div>
+                        <div className="text-xs text-gray-500 mb-1">{f.desc}</div>
+                        {f.example && (
+                          <div className="text-xs text-blue-500 bg-blue-50 px-2.5 py-1.5 rounded-xl">
+                            📌 {f.example}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 关键词热度 */}
+                {radarTab === 'keyword' && (
                   <div className="bg-white rounded-2xl p-4 shadow-sm">
-                    <h3 className="font-bold text-gray-900 text-sm mb-3">🔑 热门关键词</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {radarData.keywords?.slice(0, 10).map((k: any, i: number) => (
-                        <span key={i} className={`text-xs px-2.5 py-1 rounded-full font-medium ${i < 3 ? 'bg-red-50 text-red-500' : 'bg-gray-100 text-gray-600'}`}>{k.word || k}</span>
+                    <div className="font-bold text-gray-900 text-sm mb-3">🏷️ 热门关键词</div>
+                    <div className="space-y-2.5">
+                      {radarData.keywords?.map((k: any, i: number) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <span className="text-xs font-bold text-gray-400 w-4 flex-shrink-0">{i + 1}</span>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-sm font-semibold text-gray-800">{k.word}</span>
+                                {k.category && <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">{k.category}</span>}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className={`text-xs font-bold ${TREND_COLORS[k.trend] || 'text-gray-400'}`}>
+                                  {TREND_ICONS[k.trend] || '→'}
+                                </span>
+                                <span className="text-xs font-bold text-gray-600">{k.heat}</span>
+                              </div>
+                            </div>
+                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${k.trend === '上升' ? 'bg-gradient-to-r from-red-400 to-orange-300' : k.trend === '下降' ? 'bg-gradient-to-r from-blue-300 to-cyan-200' : 'bg-gradient-to-r from-gray-300 to-gray-200'}`}
+                                style={{ width: `${k.heat || 60}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
                       ))}
+                    </div>
+                    {/* 词云标签 */}
+                    <div className="mt-4 pt-3 border-t border-gray-50">
+                      <div className="text-xs text-gray-400 mb-2">快速复制关键词</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {radarData.keywords?.map((k: any, i: number) => (
+                          <button
+                            key={i}
+                            onClick={() => { navigator.clipboard?.writeText(k.word); showToast(`已复制：${k.word}`) }}
+                            className={`text-xs px-2.5 py-1 rounded-full font-medium active:scale-95 transition-transform ${i < 3 ? 'bg-red-50 text-red-500' : i < 6 ? 'bg-orange-50 text-orange-500' : 'bg-gray-100 text-gray-500'}`}
+                          >{k.word}</button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
-                <button
-                  onClick={fetchRadar}
-                  disabled={radarLoading}
-                  className="w-full py-2.5 bg-white rounded-2xl text-sm text-orange-500 font-semibold shadow-sm disabled:opacity-50 active:scale-[0.98] transition-transform"
-                >
-                  {radarLoading ? '刷新中...' : '🔄 刷新情报'}
-                </button>
+
+                {/* AI 洞察 */}
+                {radarTab === 'insight' && (
+                  <div className="space-y-3">
+                    {/* 核心洞察 */}
+                    <div className="bg-white rounded-2xl p-4 shadow-sm">
+                      <div className="font-bold text-gray-900 text-sm mb-3">💡 今日创作洞察</div>
+                      {radarData.insights?.map((insight: string, i: number) => (
+                        <div key={i} className="flex gap-3 py-2.5 border-b border-gray-50 last:border-0">
+                          <div className={`w-6 h-6 rounded-xl flex items-center justify-center text-white text-xs font-black flex-shrink-0 ${i === 0 ? 'bg-blue-400' : i === 1 ? 'bg-purple-400' : 'bg-green-400'}`}>{i + 1}</div>
+                          <div className="text-xs text-gray-700 leading-relaxed flex-1">{insight}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* 推荐选题 */}
+                    {radarData.bestTopics && (
+                      <div className="bg-white rounded-2xl p-4 shadow-sm">
+                        <div className="font-bold text-gray-900 text-sm mb-3">🎯 今日推荐选题</div>
+                        {radarData.bestTopics.map((t: any, i: number) => (
+                          <div key={i} className="py-2.5 border-b border-gray-50 last:border-0">
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <span className="text-sm font-semibold text-gray-800 flex-1">{t.title}</span>
+                              <button
+                                onClick={() => useTopic(t.title)}
+                                className="text-[10px] text-white bg-blue-500 px-2 py-0.5 rounded-full font-bold flex-shrink-0"
+                              >用</button>
+                            </div>
+                            {t.reason && <div className="text-xs text-gray-400 mb-1">{t.reason}</div>}
+                            {t.hook && <div className="text-xs text-orange-500 bg-orange-50 px-2 py-1 rounded-lg">💡 {t.hook}</div>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
         )}
 
-        {/* Creator Tab */}
+        {/* ── 博主追踪 Tab ── */}
         {matTab === 'creator' && (
           <div className="mt-1 space-y-3">
+            {/* 搜索框 */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-3">🔍 抓取博主内容</div>
+              <div className="font-bold text-gray-900 text-sm mb-3">🔍 追踪新博主</div>
               <input
                 value={creatorUrl}
                 onChange={e => setCreatorUrl(e.target.value)}
                 placeholder="粘贴抖音/小红书博主主页链接..."
                 className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none mb-2"
               />
+              {/* 排序和数量 */}
+              <div className="flex gap-2 mb-3">
+                <div className="flex-1">
+                  <div className="text-[10px] text-gray-400 mb-1">排序方式</div>
+                  <div className="flex gap-1">
+                    {[
+                      { id: 'likes', label: '👍 点赞' },
+                      { id: 'comments', label: '💬 评论' },
+                      { id: 'collects', label: '⭐ 收藏' },
+                    ].map(s => (
+                      <button
+                        key={s.id}
+                        onClick={() => setCreatorSort(s.id as any)}
+                        className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold transition-all ${creatorSort === s.id ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500'}`}
+                      >{s.label}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex-shrink-0">
+                  <div className="text-[10px] text-gray-400 mb-1">抓取数量</div>
+                  <div className="flex gap-1">
+                    {[20, 50].map(n => (
+                      <button
+                        key={n}
+                        onClick={() => setCreatorCount(n)}
+                        className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all ${creatorCount === n ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500'}`}
+                      >{n}条</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
               <button
-                onClick={scrapeCreator}
+                onClick={() => scrapeCreator(creatorSort, creatorCount)}
                 disabled={creatorLoading}
-                className="w-full py-2.5 bg-blue-500 text-white text-sm font-bold rounded-xl disabled:opacity-60 active:scale-[0.98] transition-transform"
+                className="w-full py-2.5 bg-gradient-to-r from-green-400 to-emerald-500 text-white text-sm font-bold rounded-xl disabled:opacity-60 active:scale-[0.98] transition-transform shadow-md"
               >
-                {creatorLoading ? '抓取中...' : '🚀 开始抓取 Top 20'}
+                {creatorLoading ? '🔍 分析中...' : '🎯 开始追踪分析'}
               </button>
             </div>
-            {creatorData && (
+
+            {/* 已追踪博主列表 */}
+            {trackedCreators.length > 0 && !creatorData && (
               <div className="bg-white rounded-2xl p-4 shadow-sm">
-                <div className="font-bold text-gray-900 text-sm mb-2">📊 {creatorData.creator?.name || '博主'} 的内容分析</div>
-                <div className="text-xs text-gray-500 mb-3 leading-relaxed bg-gray-50 rounded-xl p-3">{creatorData.summary}</div>
-                <div className="space-y-1">
-                  {creatorData.videos?.slice(0, 5).map((v: any, i: number) => (
-                    <div key={i} className="flex items-center gap-2 py-2 border-b border-gray-50 last:border-0">
-                      <span className="text-xs font-black text-gray-300 w-4">{i + 1}</span>
+                <div className="font-bold text-gray-900 text-sm mb-3">📌 已追踪博主 ({trackedCreators.length})</div>
+                <div className="space-y-2">
+                  {trackedCreators.map((c: any, i: number) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0 cursor-pointer active:bg-gray-50 rounded-xl px-1 transition-colors"
+                      onClick={() => { setCreatorData({ creator: c, videos: c.videos, analysis: c.analysis, summary: c.summary }); setSelectedCreator(c) }}
+                    >
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center text-white text-base font-black flex-shrink-0">
+                        {PLATFORM_ICONS[c.platform] || '🎵'}
+                      </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium text-gray-800 truncate">{v.title}</div>
-                        <div className="text-[10px] text-gray-400 mt-0.5">👍 {v.likes} · 💬 {v.comments} · ⭐ {v.collects || 0}</div>
+                        <div className="text-sm font-bold text-gray-800">{c.name || '博主'}</div>
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          {c.followers} · {c.videos?.length || 0}条视频 · {new Date(c.addedAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })}更新
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-xs text-blue-500 font-medium">查看</span>
+                        <button
+                          onClick={e => { e.stopPropagation(); removeTrackedCreator(c.url) }}
+                          className="text-gray-300 text-sm w-6 h-6 flex items-center justify-center rounded-lg hover:bg-red-50 hover:text-red-400 transition-colors"
+                        >✕</button>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
-            {trackedCreators.length > 0 && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
-                <div className="font-bold text-gray-900 text-sm mb-2">📌 已追踪博主</div>
-                {trackedCreators.map((c: any, i: number) => (
-                  <div
-                    key={i}
-                    onClick={() => setCreatorData({ creator: c, videos: c.videos, summary: c.summary })}
-                    className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0 cursor-pointer active:bg-gray-50 rounded-xl px-1 transition-colors"
-                  >
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                      {c.name?.[0] || '?'}
+
+            {/* 博主详情 */}
+            {creatorData && (
+              <div className="space-y-3">
+                {/* 返回按钮 */}
+                <button
+                  onClick={() => { setCreatorData(null); setSelectedCreator(null); setExpandedVideo(null) }}
+                  className="flex items-center gap-1.5 text-xs text-gray-500 font-medium"
+                >
+                  ← 返回列表
+                </button>
+
+                {/* 博主信息卡 */}
+                <div className="bg-gradient-to-br from-blue-500 to-cyan-400 rounded-3xl p-4 text-white shadow-lg">
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl flex-shrink-0">
+                      {PLATFORM_ICONS[creatorData.creator?.platform] || '🎵'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-gray-800">{c.name || '博主'}</div>
-                      <div className="text-xs text-gray-400">{c.videos?.length || 0} 条视频 · {new Date(c.addedAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })} 更新</div>
+                      <div className="font-black text-base">{creatorData.creator?.name}</div>
+                      <div className="text-white/70 text-xs mt-0.5">{creatorData.creator?.positioning}</div>
+                      <div className="flex gap-2 mt-1">
+                        <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">{creatorData.creator?.industry}</span>
+                        {creatorData.creator?.tags?.slice(0, 2).map((tag: string, i: number) => (
+                          <span key={i} className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">{tag}</span>
+                        ))}
+                      </div>
                     </div>
-                    <span className="text-xs text-blue-500">查看 →</span>
                   </div>
-                ))}
+                  {/* 数据统计 */}
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { label: '粉丝', value: creatorData.creator?.followers },
+                      { label: '总点赞', value: creatorData.creator?.totalLikes },
+                      { label: '均点赞', value: creatorData.creator?.avgLikes?.toLocaleString() },
+                      { label: '更新', value: creatorData.creator?.updateFreq?.replace('每周', '') || '稳定' },
+                    ].map((s, i) => (
+                      <div key={i} className="bg-white/20 rounded-xl p-2 text-center">
+                        <div className="text-xs font-black">{s.value}</div>
+                        <div className="text-[10px] text-white/60 mt-0.5">{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 分析报告 */}
+                {creatorData.analysis && (
+                  <div className="bg-white rounded-2xl p-4 shadow-sm">
+                    <div className="font-bold text-gray-900 text-sm mb-3">📊 爆款规律分析</div>
+                    <div className="space-y-2 mb-3">
+                      {creatorData.analysis.topPatterns?.map((p: string, i: number) => (
+                        <div key={i} className="flex gap-2 items-start">
+                          <span className={`w-5 h-5 rounded-lg flex items-center justify-center text-white text-[10px] font-black flex-shrink-0 ${i === 0 ? 'bg-red-400' : i === 1 ? 'bg-orange-400' : 'bg-blue-400'}`}>{i + 1}</span>
+                          <span className="text-xs text-gray-700 leading-relaxed">{p}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {/* 内容类型分布 */}
+                    {creatorData.analysis.contentRatio && (
+                      <div className="bg-gray-50 rounded-xl p-3 mb-3">
+                        <div className="text-xs text-gray-500 font-medium mb-2">内容类型分布</div>
+                        <div className="space-y-1.5">
+                          {Object.entries(creatorData.analysis.contentRatio).map(([type, pct]: [string, any]) => (
+                            <div key={type} className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500 w-16 flex-shrink-0">{type}</span>
+                              <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                <div className="h-full bg-gradient-to-r from-blue-400 to-cyan-300 rounded-full" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs font-bold text-gray-500 w-8 text-right">{pct}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* 钩子类型 */}
+                    {creatorData.analysis.hookTypes && (
+                      <div className="mb-3">
+                        <div className="text-xs text-gray-500 font-medium mb-1.5">常用钩子类型</div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {creatorData.analysis.hookTypes.map((h: string, i: number) => (
+                            <span key={i} className="text-xs bg-orange-50 text-orange-500 px-2 py-0.5 rounded-full font-medium">{h}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* 核心建议 */}
+                    {creatorData.analysis.recommendation && (
+                      <div className="bg-blue-50 rounded-xl p-3">
+                        <div className="text-xs text-blue-500 font-medium mb-1">💡 借鉴建议</div>
+                        <div className="text-xs text-blue-700 leading-relaxed">{creatorData.analysis.recommendation}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 视频列表 */}
+                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="font-bold text-gray-900 text-sm">🎬 视频列表</div>
+                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{creatorData.videos?.length || 0} 条</span>
+                  </div>
+                  <div className="space-y-2">
+                    {creatorData.videos?.map((v: any, i: number) => (
+                      <div key={i} className="border border-gray-100 rounded-2xl overflow-hidden">
+                        {/* 视频头部 */}
+                        <div
+                          className="flex items-start gap-3 p-3 cursor-pointer active:bg-gray-50 transition-colors"
+                          onClick={() => setExpandedVideo(expandedVideo === i ? null : i)}
+                        >
+                          <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-white text-xs font-black flex-shrink-0 ${i < 3 ? 'bg-red-400' : 'bg-gray-300'}`}>
+                            {v.rank || i + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-bold text-gray-800 mb-1">{v.title}</div>
+                            <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                              <span>👍 {v.likes?.toLocaleString()}</span>
+                              <span>💬 {v.comments?.toLocaleString()}</span>
+                              <span>⭐ {v.collects?.toLocaleString()}</span>
+                              <span className="ml-auto">{v.duration}</span>
+                            </div>
+                            {v.hook && (
+                              <div className="text-[10px] text-orange-500 mt-1 truncate">💡 {v.hook}</div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${v.type === '干货分享' ? 'bg-blue-50 text-blue-400' : v.type === '情感共鸣' ? 'bg-pink-50 text-pink-400' : v.type === '产品展示' ? 'bg-green-50 text-green-400' : 'bg-gray-100 text-gray-400'}`}>{v.type}</span>
+                            <span className="text-gray-300 text-xs">{expandedVideo === i ? '▲' : '▼'}</span>
+                          </div>
+                        </div>
+                        {/* 展开内容 */}
+                        {expandedVideo === i && (
+                          <div className="px-3 pb-3 border-t border-gray-50">
+                            {/* 标签 */}
+                            {v.tags && (
+                              <div className="flex flex-wrap gap-1 py-2">
+                                {v.tags.map((tag: string, ti: number) => (
+                                  <span key={ti} className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{tag}</span>
+                                ))}
+                                <span className="text-[10px] text-gray-400 ml-1">{v.publishDate}</span>
+                              </div>
+                            )}
+                            {/* 完整文案 */}
+                            {v.script && (
+                              <div className="bg-gray-50 rounded-xl p-3 mb-2">
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="text-[10px] text-gray-400 font-medium">完整口播文案</span>
+                                  <div className="flex gap-1.5">
+                                    <button
+                                      onClick={() => { navigator.clipboard?.writeText(v.script); showToast('✅ 文案已复制') }}
+                                      className="text-[10px] text-blue-500 font-bold bg-blue-50 px-2 py-0.5 rounded-lg"
+                                    >复制</button>
+                                    <button
+                                      onClick={() => useScript(v.script, v.title)}
+                                      className="text-[10px] text-white font-bold bg-blue-500 px-2 py-0.5 rounded-lg"
+                                    >导入</button>
+                                  </div>
+                                </div>
+                                <div className="text-xs text-gray-700 leading-relaxed">{v.script}</div>
+                              </div>
+                            )}
+                            {/* 爆款亮点 */}
+                            {v.highlight && (
+                              <div className="text-[10px] text-orange-600 bg-orange-50 px-2.5 py-1.5 rounded-xl">
+                                ⭐ 爆款亮点：{v.highlight}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
+
+            {/* 空状态 */}
             {!creatorData && trackedCreators.length === 0 && (
               <div className="bg-white rounded-3xl p-8 text-center shadow-sm">
-                <div className="text-4xl mb-3">🎯</div>
-                <div className="font-bold text-gray-800 mb-1 text-sm">博主追踪</div>
-                <div className="text-xs text-gray-400 leading-relaxed">粘贴竞品博主主页链接<br />AI 分析其爆款内容规律</div>
+                <div className="text-5xl mb-4">🎯</div>
+                <div className="font-black text-gray-800 text-base mb-1">博主追踪</div>
+                <div className="text-xs text-gray-400 leading-relaxed mb-4">
+                  粘贴竞品博主主页链接<br />
+                  AI 分析爆款规律 · 提取完整文案
+                </div>
+                <div className="flex justify-center gap-4 text-xs text-gray-400">
+                  <span>📊 数据分析</span>
+                  <span>📝 文案提取</span>
+                  <span>💡 规律总结</span>
+                </div>
               </div>
             )}
           </div>
         )}
 
-        {/* Style Tab */}
+        {/* ── 风格 Tab ── */}
         {matTab === 'style' && (
           <div className="mt-1 space-y-3">
             <div className="bg-white rounded-2xl p-4 shadow-sm">
@@ -1361,9 +1758,6 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
 }
 
 
-// ═══════════════════════════════════════════════════════════
-// CONTENT CENTER
-// ═══════════════════════════════════════════════════════════
 function ContentCenter({ acc, step, setStep, topic, setTopic, style, setStyle, userInput, setUserInput, versions, loading, error, copiedIdx, expandedCopy, setExpandedCopy, generate, copy, save, showToast, setTab, hotspots, savedContents, setVideoCopy }: any) {
   const STYLES = ['犀利观点', '温情故事', '干货教程', '幽默搞笑', '励志正能量', '悬念钩子']
 
