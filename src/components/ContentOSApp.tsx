@@ -561,7 +561,9 @@ export default function ContentOSApp() {
         body: JSON.stringify({
           topicTitle: selectedTopic, style: copyStyle, userInput,
           accountName: acc.name, industry: acc.industry,
-          positioning: acc.positioning, targetAudience: acc.targetAudience
+          positioning: acc.positioning, targetAudience: acc.targetAudience,
+          modulePrompt: modulePrompts['copy'] || '',
+          aiModel, aiApiKey, aiApiBase, aiTemperature
         })
       })
       const data = await res.json()
@@ -587,7 +589,11 @@ export default function ContentOSApp() {
       const res = await fetch('/api/generate-topics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ positioning: acc.positioning, industry: acc.industry, accountName: acc.name, count: 8 })
+        body: JSON.stringify({
+          positioning: acc.positioning, industry: acc.industry, accountName: acc.name, count: 8,
+          modulePrompt: modulePrompts['topics'] || '',
+          aiModel, aiApiKey, aiApiBase, aiTemperature
+        })
       })
       const data = await res.json()
       if (data.topics) setAiTopics(data.topics)
@@ -605,7 +611,11 @@ export default function ContentOSApp() {
       const res = await fetch('/api/daily-radar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ industry: acc.industry })
+        body: JSON.stringify({
+          industry: acc.industry,
+          modulePrompt: modulePrompts['radar'] || '',
+          aiModel, aiApiKey, aiApiBase
+        })
       })
       const data = await res.json()
       if (data.hotspots) setRadarData(data)
@@ -731,7 +741,12 @@ export default function ContentOSApp() {
       const res = await fetch('/api/generate-insights', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ views: '12.3万', likes: '2341', comments: '186', collects: '892', industry: acc.industry, accountName: acc.name })
+        body: JSON.stringify({
+          views: '12.3万', likes: '2341', comments: '186', collects: '892',
+          industry: acc.industry, accountName: acc.name,
+          modulePrompt: modulePrompts['operations'] || '',
+          aiModel, aiApiKey, aiApiBase
+        })
       })
       const data = await res.json()
       if (data.insights) setInsights(data.insights)
@@ -750,7 +765,12 @@ export default function ContentOSApp() {
       const res = await fetch('/api/generate-positioning', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ industry: posIndustry, product: posProduct, targetCustomer: posCustomer, city: posCity, advantage: posAdvantage })
+        body: JSON.stringify({
+          industry: posIndustry, product: posProduct, targetCustomer: posCustomer,
+          city: posCity, advantage: posAdvantage,
+          modulePrompt: modulePrompts['positioning'] || '',
+          aiModel, aiApiKey, aiApiBase
+        })
       })
       const data = await res.json()
       if (data.positioning) {
@@ -2630,6 +2650,57 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
   const charCount = videoCopy.length
   const estimatedDuration = Math.ceil(charCount / 4) // 约每秒4字
 
+  // 视频风格和字幕
+  const [videoRatio, setVideoRatio] = React.useState<'9:16' | '16:9' | '1:1'>('9:16')
+  const [subtitleStyle, setSubtitleStyle] = React.useState<'none' | 'bottom' | 'karaoke' | 'highlight'>('bottom')
+  const [isOptimizing, setIsOptimizing] = React.useState(false)
+  const [showOptimized, setShowOptimized] = React.useState(false)
+  const [optimizedCopy, setOptimizedCopy] = React.useState('')
+
+  const VIDEO_RATIOS = [
+    { id: '9:16', label: '竖屏', icon: '📱', desc: '抖音/快手/小红书' },
+    { id: '16:9', label: '横屏', icon: '🖥️', desc: 'B站/YouTube' },
+    { id: '1:1', label: '方形', icon: '⬜', desc: '微信视频号' },
+  ]
+  const SUBTITLE_STYLES = [
+    { id: 'none', label: '无字幕', icon: '🚫' },
+    { id: 'bottom', label: '底部字幕', icon: '📝' },
+    { id: 'karaoke', label: '卡拉OK', icon: '🎤' },
+    { id: 'highlight', label: '高亮词', icon: '✨' },
+  ]
+
+  async function optimizeCopy() {
+    if (!videoCopy.trim()) { showToast('请先输入文案'); return }
+    setIsOptimizing(true)
+    try {
+      const res = await fetch('/api/generate-copy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topicTitle: '优化以下口播文案',
+          style: '口播优化',
+          userInput: `请将以下文案优化为更适合短视频口播的版本，保持原意，让节奏更快、更口语化、开头更有钩子：
+
+${videoCopy}`,
+          accountName: acc.name, industry: acc.industry,
+          positioning: acc.positioning, targetAudience: acc.targetAudience,
+        })
+      })
+      const data = await res.json()
+      if (data.versions?.[0]?.content) {
+        setOptimizedCopy(data.versions[0].content)
+        setShowOptimized(true)
+        showToast('✅ 文案优化完成')
+      } else {
+        showToast('优化失败，请重试')
+      }
+    } catch {
+      showToast('网络错误')
+    } finally {
+      setIsOptimizing(false)
+    }
+  }
+
   // 初始化音频
   React.useEffect(() => {
     if (audioB64) {
@@ -2725,6 +2796,7 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
             )}
 
             {/* 文案输入框 */}
+            {/* 文案输入卡片 */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
               <div className="flex items-center justify-between mb-2">
                 <div className="font-bold text-gray-900 text-sm">✍️ 口播文案</div>
@@ -2737,10 +2809,10 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
                 value={videoCopy}
                 onChange={e => setVideoCopy(e.target.value)}
                 placeholder="输入或粘贴口播文案（建议 100-300 字，约 30-75 秒）..."
-                className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-36"
+                className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-32 leading-relaxed"
               />
               {/* 字数建议 */}
-              <div className="flex gap-2 mt-2">
+              <div className="flex gap-2 mt-2 mb-3">
                 {[
                   { label: '30秒', chars: '~120字', ok: charCount >= 80 && charCount <= 160 },
                   { label: '60秒', chars: '~240字', ok: charCount >= 160 && charCount <= 320 },
@@ -2750,6 +2822,76 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
                     <div className="font-bold">{t.label}</div>
                     <div>{t.chars}</div>
                   </div>
+                ))}
+              </div>
+              {/* AI 优化按钮 */}
+              <button
+                onClick={optimizeCopy}
+                disabled={isOptimizing || !videoCopy.trim()}
+                className="w-full py-2.5 bg-gradient-to-r from-violet-500 to-purple-400 text-white text-xs font-bold rounded-xl active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isOptimizing ? (
+                  <><span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />AI 优化中...</>
+                ) : '✨ AI 一键优化文案'}
+              </button>
+            </div>
+
+            {/* AI 优化结果 */}
+            {showOptimized && optimizedCopy && (
+              <div className="bg-violet-50 rounded-2xl p-4 border border-violet-200 animate-fade-in-up">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs font-bold text-violet-700">✨ AI 优化版本</div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { setVideoCopy(optimizedCopy); setShowOptimized(false); showToast('✅ 已应用优化版本') }}
+                      className="text-[10px] font-bold text-white bg-violet-500 px-2.5 py-1 rounded-lg active:scale-95"
+                    >应用</button>
+                    <button
+                      onClick={() => setShowOptimized(false)}
+                      className="text-[10px] font-medium text-violet-400 px-2 py-1 rounded-lg"
+                    >忽略</button>
+                  </div>
+                </div>
+                <p className="text-xs text-violet-700 leading-relaxed line-clamp-4">{optimizedCopy}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-[10px] text-violet-400">{optimizedCopy.length} 字</span>
+                  <span className="text-[10px] text-violet-400">≈ {Math.ceil(optimizedCopy.length / 4)} 秒</span>
+                </div>
+              </div>
+            )}
+
+            {/* 视频比例选择 */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">📐 视频比例</div>
+              <div className="grid grid-cols-3 gap-2">
+                {VIDEO_RATIOS.map(r => (
+                  <button
+                    key={r.id}
+                    onClick={() => setVideoRatio(r.id as any)}
+                    className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all active:scale-[0.97] ${videoRatio === r.id ? 'bg-purple-50 border-2 border-purple-400' : 'bg-gray-50 border-2 border-transparent'}`}
+                  >
+                    <span className="text-xl">{r.icon}</span>
+                    <span className={`text-xs font-bold ${videoRatio === r.id ? 'text-purple-700' : 'text-gray-700'}`}>{r.label}</span>
+                    <span className="text-[9px] text-gray-400 text-center leading-tight">{r.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 字幕样式 */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">💬 字幕样式</div>
+              <div className="grid grid-cols-2 gap-2">
+                {SUBTITLE_STYLES.map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => setSubtitleStyle(s.id as any)}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all active:scale-[0.97] ${subtitleStyle === s.id ? 'bg-purple-50 border-2 border-purple-400' : 'bg-gray-50 border-2 border-transparent'}`}
+                  >
+                    <span className="text-lg">{s.icon}</span>
+                    <span className={`text-xs font-semibold ${subtitleStyle === s.id ? 'text-purple-700' : 'text-gray-700'}`}>{s.label}</span>
+                    {subtitleStyle === s.id && <span className="ml-auto text-purple-500 text-xs">✓</span>}
+                  </button>
                 ))}
               </div>
             </div>
@@ -2921,24 +3063,60 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
           <>
             {/* 视频预览框 */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-3">🎬 视频预览</div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-bold text-gray-900 text-sm">🎬 视频预览</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{videoRatio}</span>
+                  <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{SUBTITLE_STYLES.find(s => s.id === subtitleStyle)?.label}</span>
+                </div>
+              </div>
               <div
-                className="rounded-2xl overflow-hidden aspect-[9/16] flex flex-col items-center justify-center relative"
+                className={`rounded-2xl overflow-hidden flex flex-col items-center justify-center relative mx-auto ${videoRatio === '9:16' ? 'aspect-[9/16] max-w-[160px]' : videoRatio === '16:9' ? 'aspect-[16/9] w-full' : 'aspect-square max-w-[200px]'}`}
                 style={{ backgroundColor: bgColor }}
               >
                 {/* 背景装饰 */}
                 <div className="absolute inset-0 opacity-10">
                   <div className="absolute top-8 left-8 w-20 h-20 rounded-full bg-white/20" />
                   <div className="absolute bottom-16 right-6 w-12 h-12 rounded-full bg-white/20" />
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full bg-white/5" />
+                </div>
+                {/* 顶部信息栏 */}
+                <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
+                  <div className="flex items-center gap-1">
+                    <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[8px]">
+                      {acc?.emoji || '🏪'}
+                    </div>
+                    <span className="text-white/70 text-[8px] font-medium">{acc?.name || '我的账号'}</span>
+                  </div>
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
                 </div>
                 {/* 形象 */}
-                <div className="text-7xl mb-4 relative z-10">
+                <div className="text-6xl mb-3 relative z-10 animate-float">
                   {AVATARS.find(a => a.id === avatarPreset)?.emoji || '👤'}
                 </div>
-                {/* 文案预览 */}
-                <div className="text-white/90 text-xs text-center px-6 leading-relaxed max-w-full relative z-10">
-                  {videoCopy.slice(0, 80)}{videoCopy.length > 80 ? '...' : ''}
-                </div>
+                {/* 字幕区域 */}
+                {subtitleStyle !== 'none' && (
+                  <div className={`absolute bottom-8 left-3 right-3 z-10 ${subtitleStyle === 'karaoke' ? 'text-center' : subtitleStyle === 'highlight' ? 'text-center' : 'text-center'}`}>
+                    {subtitleStyle === 'karaoke' && (
+                      <div className="bg-black/60 rounded-lg px-2 py-1">
+                        <span className="text-yellow-300 text-[9px] font-bold">{videoCopy.slice(0, 20)}</span>
+                        <span className="text-white/60 text-[9px]">{videoCopy.slice(20, 35)}</span>
+                      </div>
+                    )}
+                    {subtitleStyle === 'bottom' && (
+                      <div className="bg-black/60 rounded-lg px-2 py-1">
+                        <span className="text-white text-[9px] leading-relaxed">{videoCopy.slice(0, 30)}...</span>
+                      </div>
+                    )}
+                    {subtitleStyle === 'highlight' && (
+                      <div className="flex flex-wrap gap-0.5 justify-center">
+                        {videoCopy.slice(0, 20).split('').map((c: string, i: number) => (
+                          <span key={i} className={`text-[9px] font-bold ${i < 5 ? 'text-yellow-300' : 'text-white'}`}>{c}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
                 {/* 音频播放器（预览页） */}
                 {audioB64 && (
                   <div className="absolute bottom-4 left-4 right-4 z-10">
@@ -2980,6 +3158,8 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
                   ['声音', VOICES.find(v => v.id === voiceId)?.label || voiceId],
                   ['语速', `${speed}x`],
                   ['形象', AVATARS.find(a => a.id === avatarPreset)?.label || '自定义'],
+                  ['视频比例', videoRatio],
+                  ['字幕样式', SUBTITLE_STYLES.find(s => s.id === subtitleStyle)?.label || '无'],
                   ['语音状态', audioB64 ? '✅ 已合成' : '⏳ 未合成'],
                   ['预计时长', `≈ ${Math.ceil(estimatedDuration / speed)} 秒`],
                 ].map(([k, v]) => (
@@ -3008,7 +3188,17 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
             )}
 
             {/* MiniMax 视频生成 */}
-            <VideoGeneratePanel videoCopy={videoCopy} showToast={showToast} />
+            <VideoGeneratePanel videoCopy={videoCopy} showToast={showToast} videoRatio={videoRatio} subtitleStyle={subtitleStyle} />
+            {/* 一键加入排期 */}
+            <button
+              onClick={() => {
+                setTab('operations')
+                showToast('✅ 已跳转到运营中心，可添加排期')
+              }}
+              className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md"
+            >
+              📅 加入发布排期
+            </button>
             <button onClick={() => setStep('input')} className="w-full py-2 text-sm text-gray-400">← 重新开始</button>
           </>
         )}
@@ -3020,7 +3210,7 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
 // ═══════════════════════════════════════════════════════════
 // VIDEO GENERATE PANEL — MiniMax 视频合成面板
 // ═══════════════════════════════════════════════════════════
-function VideoGeneratePanel({ videoCopy, showToast }: any) {
+function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle }: any) {
   const [videoPrompt, setVideoPrompt] = React.useState('')
   const [videoTaskId, setVideoTaskId] = React.useState('')
   const [videoStatus, setVideoStatus] = React.useState<'idle' | 'generating' | 'polling' | 'done' | 'error' | 'demo'>('idle')
@@ -3028,14 +3218,23 @@ function VideoGeneratePanel({ videoCopy, showToast }: any) {
   const [videoError, setVideoError] = React.useState('')
   const [pollCount, setPollCount] = React.useState(0)
   const pollRef = React.useRef<any>(null)
+  const [selectedStyle, setSelectedStyle] = React.useState('realistic')
+
+  const VIDEO_STYLES = [
+    { id: 'realistic', label: '真实感', icon: '🎥', desc: '真人主播风格' },
+    { id: 'anime', label: '动漫风', icon: '🎨', desc: '二次元卡通风格' },
+    { id: 'cinematic', label: '电影感', icon: '🎬', desc: '大片质感' },
+    { id: 'minimal', label: '简约风', icon: '⬜', desc: '纯净背景' },
+  ]
 
   // 根据文案自动生成视频描述
   React.useEffect(() => {
     if (videoCopy) {
-      const preview = videoCopy.slice(0, 80).replace(/\n/g, ' ')
-      setVideoPrompt(`一位专业主播正在讲述：${preview}，竖屏视频，真实感强，光线明亮`)
+      const preview = videoCopy.slice(0, 60).replace(/\n/g, ' ')
+      const ratioDesc = videoRatio === '9:16' ? '竖屏' : videoRatio === '16:9' ? '横屏' : '方形'
+      setVideoPrompt(`一位专业主播正在讲述：${preview}，${ratioDesc}视频，真实感强，光线明亮，专业摄影棚`)
     }
-  }, [videoCopy])
+  }, [videoCopy, videoRatio])
 
   async function startGenerate() {
     if (!videoPrompt.trim()) { showToast('请输入视频描述'); return }
@@ -3105,30 +3304,53 @@ function VideoGeneratePanel({ videoCopy, showToast }: any) {
 
   return (
     <div className="space-y-3">
-      {/* 视频描述输入 */}
+      {/* 视频风格选择 */}
       <div className="bg-white rounded-2xl p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-3">
           <div className="font-bold text-gray-900 text-sm">🎬 AI 视频合成</div>
           <span className="text-[10px] px-2 py-0.5 bg-purple-50 text-purple-500 rounded-full font-medium">MiniMax T2V</span>
         </div>
-        <div className="text-xs text-gray-400 mb-3 leading-relaxed">基于文案自动生成视频描述，或手动修改后生成</div>
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          {VIDEO_STYLES.map(s => (
+            <button
+              key={s.id}
+              onClick={() => setSelectedStyle(s.id)}
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all active:scale-[0.97] ${selectedStyle === s.id ? 'bg-purple-50 border-2 border-purple-400' : 'bg-gray-50 border-2 border-transparent'}`}
+            >
+              <span className="text-lg">{s.icon}</span>
+              <div className="text-left">
+                <div className={`text-xs font-bold ${selectedStyle === s.id ? 'text-purple-700' : 'text-gray-700'}`}>{s.label}</div>
+                <div className="text-[9px] text-gray-400">{s.desc}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 视频描述输入 */}
+      <div className="bg-white rounded-2xl p-4 shadow-sm">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-xs font-bold text-gray-500">📝 视频描述（Prompt）</div>
+          <button
+            onClick={() => {
+              if (videoCopy) {
+                const preview = videoCopy.slice(0, 60).replace(/\n/g, ' ')
+                const styleDesc = selectedStyle === 'anime' ? '动漫风格，卡通人物' : selectedStyle === 'cinematic' ? '电影感，大片质感' : selectedStyle === 'minimal' ? '简约背景，纯净风格' : '真实感，专业主播'
+                setVideoPrompt(`${styleDesc}，一位主播正在讲述：${preview}，竖屏视频，光线明亮`)
+              }
+            }}
+            className="text-[10px] text-blue-400 font-medium"
+          >↺ 重新生成</button>
+        </div>
         <textarea
           value={videoPrompt}
           onChange={e => setVideoPrompt(e.target.value)}
           placeholder="描述你想要的视频画面，如：一位女主播在明亮的直播间讲述美食探店经历..."
-          className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20 text-gray-700"
+          className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20 text-gray-700 leading-relaxed"
         />
-        <div className="flex items-center justify-between mt-1">
+        <div className="flex items-center justify-between mt-1.5">
           <span className="text-[10px] text-gray-400">{videoPrompt.length} 字</span>
-          <button
-            onClick={() => {
-              if (videoCopy) {
-                const preview = videoCopy.slice(0, 80).replace(/\n/g, ' ')
-                setVideoPrompt(`一位专业主播正在讲述：${preview}，竖屏视频，真实感强，光线明亮`)
-              }
-            }}
-            className="text-[10px] text-blue-400 font-medium"
-          >↺ 从文案重新生成</button>
+          <span className="text-[10px] text-gray-400">建议 50-150 字</span>
         </div>
       </div>
 
@@ -3144,50 +3366,116 @@ function VideoGeneratePanel({ videoCopy, showToast }: any) {
 
       {(videoStatus === 'generating' || videoStatus === 'polling') && (
         <div className="bg-white rounded-2xl p-5 shadow-sm">
-          <div className="flex flex-col items-center gap-3">
-            <div className="relative w-14 h-14">
+          <div className="flex flex-col items-center gap-4">
+            {/* 进度动画 */}
+            <div className="relative w-20 h-20">
               <div className="absolute inset-0 rounded-full border-4 border-purple-100"/>
-              <div className="absolute inset-0 rounded-full border-4 border-t-purple-500 animate-spin"/>
-              <div className="absolute inset-0 flex items-center justify-center text-lg">🎬</div>
+              <div className="absolute inset-0 rounded-full border-4 border-t-purple-500 border-r-purple-300 animate-spin"/>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-2xl animate-pulse">🎬</span>
+              </div>
             </div>
-            <div className="text-center">
-              <p className="text-sm font-bold text-gray-800">{videoStatus === 'generating' ? '提交任务中...' : `视频生成中 (${pollCount * 5}s)`}</p>
-              <p className="text-xs text-gray-400 mt-1">MiniMax T2V 正在渲染，通常需要 1-3 分钟</p>
+            <div className="text-center w-full">
+              <p className="text-sm font-bold text-gray-800 mb-1">
+                {videoStatus === 'generating' ? '提交任务中...' : `AI 渲染中 · ${pollCount * 5}s`}
+              </p>
+              <p className="text-xs text-gray-400 mb-3">MiniMax T2V 正在生成，通常需要 1-3 分钟</p>
+              {/* 进度条 */}
+              <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-purple-400 to-pink-400 rounded-full transition-all duration-1000"
+                  style={{ width: `${Math.min(pollCount * 2, 90)}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+                <span>0s</span>
+                <span>预计 60-180s</span>
+              </div>
             </div>
-            {videoTaskId && <div className="text-[10px] text-gray-300 font-mono">任务ID: {videoTaskId.slice(0, 20)}...</div>}
+            {videoTaskId && (
+              <div className="bg-gray-50 rounded-xl px-3 py-2 w-full">
+                <div className="text-[10px] text-gray-400 mb-0.5">任务 ID</div>
+                <div className="text-[10px] text-gray-500 font-mono truncate">{videoTaskId}</div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {videoStatus === 'demo' && (
-        <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100">
-          <div className="font-bold text-amber-700 text-sm mb-2">⚠️ 演示模式</div>
-          <div className="text-xs text-amber-600 leading-relaxed mb-3">
-            MiniMax API 未配置，无法生成真实视频。<br/>
-            请在 Vercel 环境变量中添加 <code className="bg-amber-100 px-1 rounded">MINIMAX_API_KEY</code>
+        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-4 border border-amber-200">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-base">⚙️</div>
+            <div>
+              <div className="font-bold text-amber-700 text-sm">需要配置 API</div>
+              <div className="text-[10px] text-amber-500">MiniMax 视频生成 API 未配置</div>
+            </div>
           </div>
-          <div className="bg-white rounded-xl p-3 space-y-1.5">
-            <div className="text-xs font-semibold text-gray-700">配置步骤：</div>
-            {['1. 登录 platform.minimaxi.com 获取 API Key', '2. 进入 Vercel 项目 → Settings → Environment Variables', '3. 添加 MINIMAX_API_KEY = 你的密钥', '4. 重新部署即可'].map((s, i) => (
-              <div key={i} className="text-xs text-gray-500">{s}</div>
+          <div className="bg-white rounded-xl p-3 space-y-2 mb-3">
+            <div className="text-xs font-bold text-gray-700 mb-1">📋 配置步骤</div>
+            {[
+              { step: '1', text: '登录 platform.minimaxi.com 注册账号' },
+              { step: '2', text: '获取 API Key 和 Group ID' },
+              { step: '3', text: 'Vercel → Settings → Environment Variables' },
+              { step: '4', text: '添加 MINIMAX_API_KEY 和 MINIMAX_GROUP_ID' },
+              { step: '5', text: '重新部署项目即可使用' },
+            ].map((s, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <span className="w-4 h-4 rounded-full bg-amber-100 text-amber-600 text-[9px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{s.step}</span>
+                <span className="text-[11px] text-gray-600 leading-relaxed">{s.text}</span>
+              </div>
             ))}
           </div>
-          <button onClick={() => setVideoStatus('idle')} className="w-full mt-3 py-2 bg-amber-100 text-amber-700 text-xs font-semibold rounded-xl">重新尝试</button>
+          <div className="flex gap-2">
+            <button onClick={() => setVideoStatus('idle')} className="flex-1 py-2.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-xl active:scale-[0.97]">重新尝试</button>
+            <button
+              onClick={() => window.open('https://platform.minimaxi.com', '_blank')}
+              className="flex-1 py-2.5 bg-amber-500 text-white text-xs font-bold rounded-xl active:scale-[0.97]"
+            >前往获取 →</button>
+          </div>
         </div>
       )}
 
       {videoStatus === 'done' && (
         <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <div className="font-bold text-gray-900 text-sm mb-3">✅ 视频生成完成</div>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-xl bg-green-100 flex items-center justify-center text-base">✅</div>
+            <div>
+              <div className="font-bold text-gray-900 text-sm">视频生成完成！</div>
+              <div className="text-[10px] text-gray-400">MiniMax T2V 渲染成功</div>
+            </div>
+          </div>
           {videoUrl ? (
             <div className="space-y-3">
-              <video src={videoUrl} controls className="w-full rounded-xl bg-black" style={{maxHeight: '200px'}} />
-              <a href={videoUrl} download={`contentos_video_${Date.now()}.mp4`} className="block w-full py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold rounded-2xl text-sm text-center active:scale-[0.98] transition-all">⬇️ 下载视频</a>
+              <div className="rounded-2xl overflow-hidden bg-black">
+                <video src={videoUrl} controls className="w-full" style={{maxHeight: '220px'}} />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <a
+                  href={videoUrl}
+                  download={`contentos_video_${Date.now()}.mp4`}
+                  className="flex items-center justify-center gap-1.5 py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold rounded-2xl text-xs active:scale-[0.98] transition-all"
+                >
+                  ⬇️ 下载视频
+                </a>
+                <button
+                  onClick={() => { navigator.clipboard?.writeText(videoUrl); showToast('✅ 链接已复制') }}
+                  className="flex items-center justify-center gap-1.5 py-3 bg-blue-50 text-blue-500 font-bold rounded-2xl text-xs active:scale-[0.98] transition-all"
+                >
+                  🔗 复制链接
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="text-xs text-gray-500 text-center py-4">视频已生成，但下载链接获取失败</div>
+            <div className="bg-gray-50 rounded-xl p-4 text-center">
+              <div className="text-2xl mb-2">🎬</div>
+              <div className="text-xs text-gray-500">视频已生成，下载链接获取中...</div>
+            </div>
           )}
-          <button onClick={() => { setVideoStatus('idle'); setVideoUrl(''); setVideoTaskId('') }} className="w-full mt-2 py-2 text-xs text-gray-400">重新生成</button>
+          <button
+            onClick={() => { setVideoStatus('idle'); setVideoUrl(''); setVideoTaskId('') }}
+            className="w-full mt-3 py-2.5 bg-gray-100 text-gray-500 text-xs font-semibold rounded-xl active:scale-[0.97]"
+          >🔄 重新生成</button>
         </div>
       )}
 
