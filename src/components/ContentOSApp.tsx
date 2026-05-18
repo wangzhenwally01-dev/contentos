@@ -2661,6 +2661,7 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
         {/* Stats Tab */}
         {opsTab === 'stats' && (
           <>
+            {/* 核心数据卡片 */}
             <div className="grid grid-cols-2 gap-3">
               {STATS.map((s, i) => (
                 <div key={i} className="bg-white rounded-2xl p-4 shadow-sm">
@@ -2674,30 +2675,157 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
                 </div>
               ))}
             </div>
+
+            {/* 粉丝增长折线图 */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-3">📊 近7天发布</div>
-              <div className="flex items-end gap-1.5 h-24">
-                {[2, 0, 1, 3, 1, 0, 2].map((v, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                    <div
-                      className="w-full rounded-t-lg bg-gradient-to-t from-blue-500 to-cyan-400 transition-all"
-                      style={{ height: `${v * 24}px`, minHeight: v > 0 ? '8px' : '0' }}
-                    />
-                    <span className="text-[9px] text-gray-400">{['一', '二', '三', '四', '五', '六', '日'][i]}</span>
-                  </div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-bold text-gray-900 text-sm">👥 粉丝增长趋势</div>
+                <div className="flex gap-1">
+                  {['7天', '30天'].map((t, i) => (
+                    <button key={i} className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-all ${i === 0 ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-400'}`}>{t}</button>
+                  ))}
+                </div>
+              </div>
+              <svg viewBox="0 0 300 100" className="w-full" style={{height: '90px'}}>
+                <defs>
+                  <linearGradient id="fanGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.3"/>
+                    <stop offset="100%" stopColor="#3B82F6" stopOpacity="0"/>
+                  </linearGradient>
+                </defs>
+                {/* 网格线 */}
+                {[0,1,2,3].map(i => (
+                  <line key={i} x1="30" y1={10 + i * 22} x2="295" y2={10 + i * 22} stroke="#F3F4F6" strokeWidth="1"/>
                 ))}
+                {/* Y轴标签 */}
+                {['1.2k','900','600','300'].map((v, i) => (
+                  <text key={i} x="25" y={14 + i * 22} textAnchor="end" fontSize="7" fill="#9CA3AF">{v}</text>
+                ))}
+                {/* 面积填充 */}
+                <path d="M30,76 L75,68 L120,55 L165,48 L210,38 L255,28 L295,18 L295,88 L30,88 Z" fill="url(#fanGrad)"/>
+                {/* 折线 */}
+                <polyline points="30,76 75,68 120,55 165,48 210,38 255,28 295,18" fill="none" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                {/* 数据点 */}
+                {[[30,76],[75,68],[120,55],[165,48],[210,38],[255,28],[295,18]].map(([x,y],i) => (
+                  <circle key={i} cx={x} cy={y} r="3" fill="white" stroke="#3B82F6" strokeWidth="2"/>
+                ))}
+                {/* X轴标签 */}
+                {['周一','周二','周三','周四','周五','周六','周日'].map((d, i) => (
+                  <text key={i} x={30 + i * 44} y="98" textAnchor="middle" fontSize="7" fill="#9CA3AF">{d}</text>
+                ))}
+              </svg>
+            </div>
+
+            {/* 播放量趋势折线图 */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-bold text-gray-900 text-sm">▶️ 播放量趋势</div>
+                <div className="text-[10px] text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">近7天</div>
+              </div>
+              <svg viewBox="0 0 300 100" className="w-full" style={{height: '90px'}}>
+                <defs>
+                  <linearGradient id="playGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.3"/>
+                    <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0"/>
+                  </linearGradient>
+                </defs>
+                {[0,1,2,3].map(i => (
+                  <line key={i} x1="30" y1={10 + i * 22} x2="295" y2={10 + i * 22} stroke="#F3F4F6" strokeWidth="1"/>
+                ))}
+                {['8k','6k','4k','2k'].map((v, i) => (
+                  <text key={i} x="25" y={14 + i * 22} textAnchor="end" fontSize="7" fill="#9CA3AF">{v}</text>
+                ))}
+                <path d="M30,72 L75,58 L120,65 L165,35 L210,42 L255,22 L295,30 L295,88 L30,88 Z" fill="url(#playGrad)"/>
+                <polyline points="30,72 75,58 120,65 165,35 210,42 255,22 295,30" fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                {[[30,72],[75,58],[120,65],[165,35],[210,42],[255,22],[295,30]].map(([x,y],i) => (
+                  <circle key={i} cx={x} cy={y} r="3" fill="white" stroke="#8B5CF6" strokeWidth="2"/>
+                ))}
+                {['周一','周二','周三','周四','周五','周六','周日'].map((d, i) => (
+                  <text key={i} x={30 + i * 44} y="98" textAnchor="middle" fontSize="7" fill="#9CA3AF">{d}</text>
+                ))}
+              </svg>
+            </div>
+
+            {/* 互动率对比条形图 */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">❤️ 互动率分析</div>
+              {[
+                { label: '点赞率', value: 8.4, max: 15, color: 'from-red-400 to-pink-400', icon: '👍' },
+                { label: '评论率', value: 3.2, max: 15, color: 'from-blue-400 to-cyan-400', icon: '💬' },
+                { label: '收藏率', value: 5.7, max: 15, color: 'from-amber-400 to-orange-400', icon: '⭐' },
+                { label: '分享率', value: 2.1, max: 15, color: 'from-green-400 to-emerald-400', icon: '🔗' },
+              ].map((item, i) => (
+                <div key={i} className="mb-3 last:mb-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs">{item.icon}</span>
+                      <span className="text-xs font-medium text-gray-700">{item.label}</span>
+                    </div>
+                    <span className="text-xs font-bold text-gray-900">{item.value}%</span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full bg-gradient-to-r ${item.color} rounded-full`}
+                      style={{ width: `${(item.value / item.max) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* 内容类型分布 */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">🎬 内容类型分布</div>
+              <div className="flex items-center gap-4">
+                {/* SVG 饼图 */}
+                <svg viewBox="0 0 100 100" className="w-24 h-24 flex-shrink-0">
+                  {/* 口播类 45% */}
+                  <path d="M50,50 L50,5 A45,45 0 0,1 92.5,72.5 Z" fill="#3B82F6"/>
+                  {/* 剧情类 25% */}
+                  <path d="M50,50 L92.5,72.5 A45,45 0 0,1 27.5,90 Z" fill="#8B5CF6"/>
+                  {/* 教程类 20% */}
+                  <path d="M50,50 L27.5,90 A45,45 0 0,1 7.5,27.5 Z" fill="#F59E0B"/>
+                  {/* 其他 10% */}
+                  <path d="M50,50 L7.5,27.5 A45,45 0 0,1 50,5 Z" fill="#10B981"/>
+                  {/* 中心白圆 */}
+                  <circle cx="50" cy="50" r="28" fill="white"/>
+                  <text x="50" y="47" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#1F2937">内容</text>
+                  <text x="50" y="58" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#1F2937">分布</text>
+                </svg>
+                {/* 图例 */}
+                <div className="flex-1 space-y-2">
+                  {[
+                    { label: '口播类', pct: '45%', color: 'bg-blue-500' },
+                    { label: '剧情类', pct: '25%', color: 'bg-purple-500' },
+                    { label: '教程类', pct: '20%', color: 'bg-amber-500' },
+                    { label: '其他', pct: '10%', color: 'bg-emerald-500' },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <div className={`w-2 h-2 rounded-full ${item.color}`}/>
+                        <span className="text-xs text-gray-600">{item.label}</span>
+                      </div>
+                      <span className="text-xs font-bold text-gray-900">{item.pct}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
+
+            {/* 最佳内容 */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
               <div className="font-bold text-gray-900 text-sm mb-3">🏆 最佳内容</div>
               {savedContents.length > 0 ? (
                 savedContents.slice(0, 3).map((c: any, i: number) => (
                   <div key={c.id} className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-black flex-shrink-0 ${i === 0 ? 'bg-yellow-400' : i === 1 ? 'bg-gray-400' : 'bg-amber-600'}`}>{i + 1}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium text-gray-800 truncate">{c.topic}</div>
-                      <div className="text-[10px] text-gray-400">{c.style} · {new Date(c.createdAt).toLocaleDateString('zh-CN')}</div>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-black flex-shrink-0 ${i === 0 ? 'bg-gradient-to-br from-amber-400 to-orange-500' : i === 1 ? 'bg-gradient-to-br from-gray-400 to-gray-500' : 'bg-gradient-to-br from-orange-400 to-red-400'}`}>
+                      {i + 1}
                     </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold text-gray-800 truncate">{c.topic}</div>
+                      <div className="text-[10px] text-gray-400 mt-0.5">{c.style} · {c.savedAt}</div>
+                    </div>
+                    <div className="text-[10px] text-blue-500 font-semibold">查看</div>
                   </div>
                 ))
               ) : (
