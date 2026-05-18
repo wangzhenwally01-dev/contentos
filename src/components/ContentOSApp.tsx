@@ -396,6 +396,12 @@ export default function ContentOSApp() {
   const [aiTopics, setAiTopics] = useState<Topic[]>([])
   const [topicsLoading, setTopicsLoading] = useState(false)
   const [savedTopics, setSavedTopics] = useState<string[]>([])
+  // 选题库升级状态
+  const [topicFilter, setTopicFilter] = useState<'all' | 'saved' | 'ai'>('all')
+  const [topicSearch, setTopicSearch] = useState('')
+  const [batchCount, setBatchCount] = useState(8)
+  const [topicCategories] = useState(['全部', '干货教程', '热点借势', '情感共鸣', '产品种草', '故事叙事', '问答互动'])
+  const [selectedCategory, setSelectedCategory] = useState('全部')
   const [creatorUrl, setCreatorUrl] = useState('')
   const [creatorLoading, setCreatorLoading] = useState(false)
   const [creatorData, setCreatorData] = useState<any>(null)
@@ -460,6 +466,16 @@ export default function ContentOSApp() {
   const [videoLoading, setVideoLoading] = useState(false)
   const [videoAudioB64, setVideoAudioB64] = useState('')
   const [videoError, setVideoError] = useState('')
+  // 多段口播状态
+  const [videoSegments, setVideoSegments] = useState<any[]>([])
+  const [segmentMode, setSegmentMode] = useState(false)
+  const [activeSegment, setActiveSegment] = useState(0)
+  const [segmentAudios, setSegmentAudios] = useState<Record<number, string>>({})
+  const [segmentLoading, setSegmentLoading] = useState<Record<number, boolean>>({})
+  // 字幕预览状态
+  const [subtitlePreview, setSubtitlePreview] = useState(false)
+  const [subtitleLines, setSubtitleLines] = useState<string[]>([])
+  const [currentSubLine, setCurrentSubLine] = useState(0)
 
   // Profile / AI Settings
   const [aiModel, setAiModel] = useState('deepseek-chat')
@@ -590,21 +606,25 @@ export default function ContentOSApp() {
     }
   }
 
-  async function generateTopics() {
+  async function generateTopics(count?: number, category?: string) {
     setTopicsLoading(true)
     try {
       const res = await fetch('/api/generate-topics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          positioning: acc.positioning, industry: acc.industry, accountName: acc.name, count: 8,
+          positioning: acc.positioning, industry: acc.industry, accountName: acc.name,
+          count: count || batchCount,
+          category: category && category !== '全部' ? category : undefined,
           modulePrompt: modulePrompts['topics'] || '',
           aiModel, aiApiKey, aiApiBase, aiTemperature
         })
       })
       const data = await res.json()
-      if (data.topics) setAiTopics(data.topics)
-      else showToast('生成失败，请重试')
+      if (data.topics) {
+        setAiTopics(prev => count ? [...data.topics, ...prev] : data.topics)
+        showToast(`✅ 已生成 ${data.topics.length} 个选题`)
+      } else showToast('生成失败，请重试')
     } catch {
       showToast('网络错误，请重试')
     } finally {
@@ -1215,6 +1235,10 @@ export default function ContentOSApp() {
                 acc={acc} matTab={matTab} setMatTab={setMatTab}
                 hotspots={HOTSPOTS} aiTopics={aiTopics} topicsLoading={topicsLoading}
                 generateTopics={generateTopics}
+                topicFilter={topicFilter} setTopicFilter={setTopicFilter}
+                topicSearch={topicSearch} setTopicSearch={setTopicSearch}
+                batchCount={batchCount} setBatchCount={setBatchCount}
+                topicCategories={topicCategories} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}
                 useTopic={(t: string) => { setSelectedTopic(t); setTab('content'); setContentStep(2) }}
                 savedContents={savedContents} savedTopics={savedTopics} saveTopic={saveTopic}
                 creatorUrl={creatorUrl} setCreatorUrl={setCreatorUrl}
@@ -1273,6 +1297,14 @@ export default function ContentOSApp() {
             setShowAiPanel={setShowAiPanel}
             setQuickRecordData={setQuickRecordData}
             setShowVideoRecord={setShowVideoRecord}
+            videoSegments={videoSegments} setVideoSegments={setVideoSegments}
+            segmentMode={segmentMode} setSegmentMode={setSegmentMode}
+            activeSegment={activeSegment} setActiveSegment={setActiveSegment}
+            segmentAudios={segmentAudios} setSegmentAudios={setSegmentAudios}
+            segmentLoading={segmentLoading} setSegmentLoading={setSegmentLoading}
+            subtitlePreview={subtitlePreview} setSubtitlePreview={setSubtitlePreview}
+            subtitleLines={subtitleLines} setSubtitleLines={setSubtitleLines}
+            currentSubLine={currentSubLine} setCurrentSubLine={setCurrentSubLine}
           />
         )}
         {tab === 'operations' && (
@@ -1647,7 +1679,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
 }
 
 
-function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy, setShowAiPanel }: any) {
+function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, topicFilter, setTopicFilter, topicSearch, setTopicSearch, batchCount, setBatchCount, topicCategories, selectedCategory, setSelectedCategory, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy, setShowAiPanel }: any) {
   const TABS = [
     { id: 'hotspot', label: '🔥 热点' },
     { id: 'topics', label: '💡 选题库' },
@@ -1762,13 +1794,72 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
         {/* ── 选题库 Tab ── */}
         {matTab === 'topics' && (
           <div className="space-y-3 mt-1">
-            <button
-              onClick={generateTopics}
-              disabled={topicsLoading}
-              className="w-full py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white text-sm font-bold rounded-2xl disabled:opacity-60 active:scale-[0.98] transition-transform shadow-md"
-            >
-              {topicsLoading ? '🤔 AI 生成中...' : '✨ AI 生成选题'}
-            </button>
+            {/* 搜索栏 */}
+            <div className="bg-white rounded-2xl px-3 py-2.5 shadow-sm flex items-center gap-2">
+              <span className="text-gray-400 text-sm">🔍</span>
+              <input
+                value={topicSearch}
+                onChange={(e: any) => setTopicSearch(e.target.value)}
+                placeholder="搜索选题..."
+                className="flex-1 text-sm outline-none bg-transparent text-gray-700 placeholder:text-gray-300"
+              />
+              {topicSearch && (
+                <button onClick={() => setTopicSearch('')} className="text-gray-300 text-sm">✕</button>
+              )}
+            </div>
+
+            {/* 分类筛选 */}
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-0.5">
+              {topicCategories.map((cat: string) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${selectedCategory === cat ? 'bg-blue-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}
+                >{cat}</button>
+              ))}
+            </div>
+
+            {/* 操作栏 */}
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1 bg-white rounded-xl p-1 shadow-sm flex-1">
+                {[{id:'all',label:'全部'},{id:'ai',label:'AI生成'},{id:'saved',label:'已收藏'}].map((f: any) => (
+                  <button
+                    key={f.id}
+                    onClick={() => setTopicFilter(f.id)}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${topicFilter === f.id ? 'bg-blue-500 text-white' : 'text-gray-400'}`}
+                  >{f.label}</button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1 bg-white rounded-xl px-2 py-1.5 shadow-sm">
+                <span className="text-xs text-gray-400">批量</span>
+                <select
+                  value={batchCount}
+                  onChange={(e: any) => setBatchCount(parseInt(e.target.value))}
+                  className="text-xs font-bold text-gray-700 outline-none bg-transparent"
+                >
+                  {[5,8,12,20].map(n => <option key={n} value={n}>{n}个</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* 生成按钮组 */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => generateTopics(batchCount, selectedCategory)}
+                disabled={topicsLoading}
+                className="py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white text-sm font-bold rounded-2xl disabled:opacity-60 active:scale-[0.98] transition-transform shadow-md"
+              >
+                {topicsLoading ? '🤔 生成中...' : '✨ AI 生成选题'}
+              </button>
+              <button
+                onClick={() => generateTopics(batchCount, selectedCategory)}
+                disabled={topicsLoading || aiTopics.length === 0}
+                className="py-3 bg-gradient-to-r from-purple-500 to-pink-400 text-white text-sm font-bold rounded-2xl disabled:opacity-60 active:scale-[0.98] transition-transform shadow-md"
+              >
+                {topicsLoading ? '...' : '➕ 追加更多'}
+              </button>
+            </div>
+
             {topicsLoading && (
               <div className="space-y-3 animate-fade-in">
                 {[1,2,3].map(i => (
@@ -1780,6 +1871,8 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                 ))}
               </div>
             )}
+
+            {/* 空状态 */}
             {!topicsLoading && aiTopics.length === 0 && savedTopics.length === 0 && (
               <div className="bg-white rounded-3xl p-8 text-center shadow-sm animate-fade-in-up">
                 <div className="text-5xl mb-3 animate-float">💡</div>
@@ -1794,38 +1887,84 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                 </div>
               </div>
             )}
-            {aiTopics.length > 0 && (
-              <div className="space-y-2">
-                {aiTopics.map((t: any, i: number) => (
-                  <div key={i} className="bg-white rounded-2xl p-4 shadow-sm">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="text-sm font-semibold text-gray-800 flex-1">{t.title || t}</div>
-                      <div className="flex gap-1.5 flex-shrink-0">
-                        <button onClick={() => saveTopic(t)} className="text-xs text-blue-500 font-semibold px-2 py-0.5 bg-blue-50 rounded-lg">收藏</button>
-                        <button onClick={() => useTopic(t.title || t)} className="text-xs text-white font-semibold px-2 py-0.5 bg-blue-500 rounded-lg">使用</button>
+
+            {/* AI 生成选题列表 */}
+            {(() => {
+              const allTopics = [
+                ...(topicFilter !== 'saved' ? aiTopics : []),
+                ...(topicFilter !== 'ai' ? savedTopics.map((t: any) => ({ title: typeof t === 'string' ? t : t.title, isSaved: true })) : [])
+              ]
+              const filtered = allTopics.filter((t: any) => {
+                const title = typeof t === 'string' ? t : (t.title || '')
+                const matchSearch = !topicSearch || title.toLowerCase().includes(topicSearch.toLowerCase())
+                const matchCat = selectedCategory === '全部' || (t.category === selectedCategory)
+                return matchSearch && matchCat
+              })
+              if (filtered.length === 0 && (aiTopics.length > 0 || savedTopics.length > 0)) {
+                return (
+                  <div className="text-center py-6">
+                    <div className="text-2xl mb-2">🔍</div>
+                    <p className="text-xs text-gray-400">没有找到匹配的选题</p>
+                  </div>
+                )
+              }
+              return (
+                <div className="space-y-2">
+                  {filtered.map((t: any, i: number) => {
+                    const title = typeof t === 'string' ? t : (t.title || t)
+                    const isSaved = savedTopics.some((s: any) => (typeof s === 'string' ? s : s.title) === title)
+                    return (
+                      <div key={i} className="bg-white rounded-2xl p-4 shadow-sm animate-fade-in-up" style={{animationDelay:`${i*30}ms`}}>
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="flex-1">
+                            <div className="text-sm font-semibold text-gray-800 leading-snug">{title}</div>
+                            {t.category && t.category !== '全部' && (
+                              <span className="text-[10px] bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded-full font-medium mt-1 inline-block">{t.category}</span>
+                            )}
+                          </div>
+                          <div className="flex gap-1.5 flex-shrink-0">
+                            <button
+                              onClick={() => saveTopic(t)}
+                              className={`text-xs font-semibold px-2 py-0.5 rounded-lg transition-all ${isSaved ? 'bg-orange-50 text-orange-500' : 'bg-gray-100 text-gray-500'}`}
+                            >{isSaved ? '⭐' : '☆'}</button>
+                            <button
+                              onClick={() => useTopic(title)}
+                              className="text-xs text-white font-semibold px-2.5 py-0.5 bg-blue-500 rounded-lg active:scale-95 transition-transform"
+                            >写文案</button>
+                          </div>
+                        </div>
+                        {t.reason && <div className="text-xs text-gray-400 leading-relaxed mb-1.5">{t.reason}</div>}
+                        {t.hook && <div className="text-xs text-orange-500 bg-orange-50 px-2 py-1 rounded-lg">💡 {t.hook}</div>}
+                        {/* 快速操作 */}
+                        <div className="flex gap-2 mt-2.5 pt-2.5 border-t border-gray-50">
+                          <button
+                            onClick={() => { useTopic(title); }}
+                            className="flex-1 py-1.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white text-xs font-bold rounded-xl active:scale-[0.97] transition-transform"
+                          >✍️ 一键写文案</button>
+                          <button
+                            onClick={() => {
+                              const videoTitle = title
+                              setVideoCopy(videoTitle)
+                              setTab('video')
+                              showToast('✅ 已跳转视频生成')
+                            }}
+                            className="flex-1 py-1.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white text-xs font-bold rounded-xl active:scale-[0.97] transition-transform"
+                          >🎬 直接做视频</button>
+                        </div>
                       </div>
-                    </div>
-                    {t.reason && <div className="text-xs text-gray-400 leading-relaxed">{t.reason}</div>}
-                    {t.hook && <div className="text-xs text-orange-500 mt-1.5 bg-orange-50 px-2 py-1 rounded-lg">💡 {t.hook}</div>}
+                    )
+                  })}
+                  {/* 底部统计 */}
+                  <div className="text-center py-2">
+                    <span className="text-xs text-gray-400">共 {filtered.length} 个选题 · AI生成 {aiTopics.length} · 已收藏 {savedTopics.length}</span>
                   </div>
-                ))}
-              </div>
-            )}
-            {savedTopics.length > 0 && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
-                <div className="font-bold text-gray-900 text-sm mb-3">⭐ 已收藏选题</div>
-                {savedTopics.map((t: any, i: number) => (
-                  <div key={i} className="flex items-center gap-2 py-2 border-b border-gray-50 last:border-0">
-                    <div className="flex-1 text-xs font-medium text-gray-700">{t.title || t}</div>
-                    <button onClick={() => useTopic(t.title || t)} className="text-xs text-blue-500 font-semibold px-2 py-0.5 bg-blue-50 rounded-lg flex-shrink-0">使用</button>
-                  </div>
-                ))}
-              </div>
-            )}
+                </div>
+              )
+            })()}
           </div>
         )}
 
-        {/* ── 情报雷达 Tab ── */}
+                {/* ── 情报雷达 Tab ── */}
         {matTab === 'radar' && (
           <div className="mt-1">
             {!radarData ? (
@@ -2664,7 +2803,7 @@ function ContentCenter({ acc, step, setStep, topic, setTopic, style, setStyle, u
 // ═══════════════════════════════════════════════════════════
 // VIDEO STUDIO v2 — 视频生成（TTS 实际可用 + 音频播放）
 // ═══════════════════════════════════════════════════════════
-function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCopy, voiceId, setVoiceId, speed, setSpeed, avatarType, setAvatarType, avatarPreset, setAvatarPreset, bgType, setBgType, bgColor, setBgColor, loading, audioB64, error, generateTTS, showToast, savedContents, setTab, setShowAiPanel, setQuickRecordData, setShowVideoRecord }: any) {
+function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCopy, voiceId, setVoiceId, speed, setSpeed, avatarType, setAvatarType, avatarPreset, setAvatarPreset, bgType, setBgType, bgColor, setBgColor, loading, audioB64, error, generateTTS, showToast, savedContents, setTab, setShowAiPanel, setQuickRecordData, setShowVideoRecord, videoSegments, setVideoSegments, segmentMode, setSegmentMode, activeSegment, setActiveSegment, segmentAudios, setSegmentAudios, segmentLoading, setSegmentLoading, subtitlePreview, setSubtitlePreview, subtitleLines, setSubtitleLines, currentSubLine, setCurrentSubLine }: any) {
   const VOICES = [
     { id: 'female-shaonv', label: '少女音', emoji: '👧', desc: '清甜活泼，适合生活类' },
     { id: 'female-yujie', label: '御姐音', emoji: '👩', desc: '成熟知性，适合职场类' },
@@ -2784,6 +2923,75 @@ ${videoCopy}`,
     const m = Math.floor(sec / 60)
     const s = Math.floor(sec % 60)
     return `${m}:${s.toString().padStart(2, '0')}`
+  }
+
+  // 多段口播：将文案按句子分割
+  function splitToSegments(text: string) {
+    const sentences = text.split(/(?<=[。！？.!?])\s*/).filter(s => s.trim())
+    const segs = sentences.map((s, i) => ({
+      id: i,
+      text: s.trim(),
+      voice: voiceId || 'female-shaonv',
+      speed: speed || 1.0,
+      pause: 0.5, // 段间停顿秒数
+    }))
+    setVideoSegments(segs)
+    setSegmentMode(true)
+    setActiveSegment(0)
+  }
+
+  // 生成字幕行
+  function generateSubtitleLines(text: string) {
+    const charsPerLine = 14
+    const lines: string[] = []
+    let i = 0
+    while (i < text.length) {
+      lines.push(text.slice(i, i + charsPerLine))
+      i += charsPerLine
+    }
+    setSubtitleLines(lines)
+    setSubtitlePreview(true)
+    setCurrentSubLine(0)
+    // 模拟字幕滚动
+    let lineIdx = 0
+    const interval = setInterval(() => {
+      lineIdx++
+      if (lineIdx >= lines.length) { clearInterval(interval); return }
+      setCurrentSubLine(lineIdx)
+    }, 2000)
+  }
+
+  // 导出字幕 SRT 文件
+  function exportSRT(text: string) {
+    const charsPerLine = 14
+    const secPerLine = 2
+    let srt = ''
+    let i = 0, idx = 1
+    while (i < text.length) {
+      const line = text.slice(i, i + charsPerLine)
+      const start = (idx - 1) * secPerLine
+      const end = idx * secPerLine
+      const fmt = (s: number) => {
+        const h = Math.floor(s / 3600).toString().padStart(2, '0')
+        const m = Math.floor((s % 3600) / 60).toString().padStart(2, '0')
+        const sec = Math.floor(s % 60).toString().padStart(2, '0')
+        return `${h}:${m}:${sec},000`
+      }
+      srt += `${idx}
+${fmt(start)} --> ${fmt(end)}
+${line}
+
+`
+      i += charsPerLine
+      idx++
+    }
+    const blob = new Blob([srt], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `subtitle_${Date.now()}.srt`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -2910,6 +3118,77 @@ ${videoCopy}`,
               </div>
             )}
 
+            {/* 多段口播 */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-bold text-gray-900 text-sm">🎙️ 多段口播</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400">{segmentMode ? `${videoSegments.length} 段` : '单段模式'}</span>
+                  <button
+                    onClick={() => {
+                      if (!segmentMode) {
+                        if (!videoCopy.trim()) { showToast('请先输入文案'); return }
+                        splitToSegments(videoCopy)
+                      } else {
+                        setSegmentMode(false)
+                        setVideoSegments([])
+                      }
+                    }}
+                    className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-all active:scale-95 ${segmentMode ? 'bg-red-50 text-red-500' : 'bg-purple-50 text-purple-500'}`}
+                  >{segmentMode ? '退出分段' : '开启分段'}</button>
+                </div>
+              </div>
+
+              {!segmentMode ? (
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <div className="text-xs text-gray-500 leading-relaxed">
+                    💡 开启多段模式后，文案将按句子自动分割，每段可独立设置声音和语速，适合制作有节奏感的口播视频
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {videoSegments.map((seg: any, i: number) => (
+                    <div
+                      key={seg.id}
+                      onClick={() => setActiveSegment(i)}
+                      className={`rounded-xl p-3 cursor-pointer transition-all ${activeSegment === i ? 'bg-purple-50 border-2 border-purple-300' : 'bg-gray-50 border-2 border-transparent'}`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 ${activeSegment === i ? 'bg-purple-500 text-white' : 'bg-gray-300 text-white'}`}>{i+1}</span>
+                          <span className="text-xs text-gray-400">{seg.text.length} 字 · ≈{Math.ceil(seg.text.length/4)}秒</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {segmentAudios[i] && <span className="text-[10px] text-green-500 bg-green-50 px-1.5 py-0.5 rounded-full">✅ 已合成</span>}
+                          {segmentLoading[i] && <span className="text-[10px] text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-full">合成中...</span>}
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-700 leading-relaxed line-clamp-2">{seg.text}</div>
+                      {activeSegment === i && (
+                        <div className="mt-2 pt-2 border-t border-purple-100 flex items-center gap-2">
+                          <span className="text-[10px] text-gray-400">停顿</span>
+                          <input
+                            type="range" min="0" max="2" step="0.5"
+                            value={seg.pause}
+                            onChange={(e: any) => {
+                              const updated = [...videoSegments]
+                              updated[i] = { ...updated[i], pause: parseFloat(e.target.value) }
+                              setVideoSegments(updated)
+                            }}
+                            className="flex-1 h-1 accent-purple-500"
+                          />
+                          <span className="text-[10px] text-purple-500 font-bold">{seg.pause}s</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  <div className="text-center pt-1">
+                    <span className="text-xs text-gray-400">总时长 ≈ {videoSegments.reduce((acc: number, s: any) => acc + Math.ceil(s.text.length/4) + s.pause, 0).toFixed(0)} 秒</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* 视频比例选择 */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
               <div className="font-bold text-gray-900 text-sm mb-3">📐 视频比例</div>
@@ -3007,6 +3286,23 @@ ${videoCopy}`,
               </div>
             )}
 
+            {/* 多段口播合成提示 */}
+            {segmentMode && videoSegments.length > 0 && (
+              <div className="bg-purple-50 rounded-2xl p-3 border border-purple-100">
+                <div className="text-xs text-purple-700 font-semibold mb-1">🎙️ 多段口播模式</div>
+                <div className="text-xs text-purple-600 leading-relaxed mb-2">
+                  共 {videoSegments.length} 段，点击下方按钮将合成整段音频（各段间自动添加停顿）
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {videoSegments.map((seg: any, i: number) => (
+                    <span key={i} className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${segmentAudios[i] ? 'bg-green-100 text-green-600' : 'bg-purple-100 text-purple-500'}`}>
+                      段{i+1} {segmentAudios[i] ? '✅' : '⏳'}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <button
               onClick={generateTTS}
               disabled={loading}
@@ -3015,9 +3311,9 @@ ${videoCopy}`,
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  合成中...
+                  {segmentMode ? `合成中 (${videoSegments.length}段)...` : '合成中...'}
                 </span>
-              ) : '🎙️ 合成语音'}
+              ) : segmentMode ? `🎙️ 合成 ${videoSegments.length} 段语音` : '🎙️ 合成语音'}
             </button>
             <button onClick={() => setStep('input')} className="w-full py-2 text-sm text-gray-400">← 返回</button>
           </>
@@ -3236,6 +3532,102 @@ ${videoCopy}`,
                 ⬇️ 下载音频 MP3
               </button>
             )}
+
+            {/* 字幕预览 & 导出 */}
+            {subtitleStyle !== 'none' && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="font-bold text-gray-900 text-sm">💬 字幕预览</div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => generateSubtitleLines(videoCopy)}
+                      className="text-xs text-blue-500 font-semibold bg-blue-50 px-2.5 py-1 rounded-xl active:scale-95 transition-transform"
+                    >▶ 预览</button>
+                    <button
+                      onClick={() => exportSRT(videoCopy)}
+                      className="text-xs text-green-600 font-semibold bg-green-50 px-2.5 py-1 rounded-xl active:scale-95 transition-transform"
+                    >⬇ 导出SRT</button>
+                  </div>
+                </div>
+                {subtitlePreview && subtitleLines.length > 0 ? (
+                  <div
+                    className="rounded-2xl overflow-hidden flex items-end justify-center relative mx-auto"
+                    style={{ backgroundColor: bgColor, height: '120px', maxWidth: '200px' }}
+                  >
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-white/20 text-3xl">🎬</span>
+                    </div>
+                    {subtitleStyle === 'bottom' && (
+                      <div className="absolute bottom-3 left-2 right-2 text-center">
+                        <span className="bg-black/60 text-white text-xs px-2 py-1 rounded-lg font-medium">
+                          {subtitleLines[currentSubLine] || ''}
+                        </span>
+                      </div>
+                    )}
+                    {subtitleStyle === 'karaoke' && (
+                      <div className="absolute bottom-3 left-2 right-2 text-center">
+                        <span className="bg-black/60 text-white text-xs px-2 py-1 rounded-lg font-medium">
+                          {subtitleLines.slice(Math.max(0, currentSubLine-1), currentSubLine+2).map((l, i) => (
+                            <span key={i} className={i === (currentSubLine > 0 ? 1 : 0) ? 'text-yellow-300' : 'text-white/60'}>{l} </span>
+                          ))}
+                        </span>
+                      </div>
+                    )}
+                    {subtitleStyle === 'highlight' && (
+                      <div className="absolute bottom-3 left-2 right-2 text-center">
+                        <span className="bg-yellow-400/90 text-gray-900 text-xs px-2 py-1 rounded-lg font-bold">
+                          {subtitleLines[currentSubLine] || ''}
+                        </span>
+                      </div>
+                    )}
+                    <div className="absolute top-2 right-2 text-[9px] text-white/50">{currentSubLine+1}/{subtitleLines.length}</div>
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 rounded-xl p-3 text-center">
+                    <div className="text-xs text-gray-400">点击「预览」查看字幕效果</div>
+                    <div className="text-[10px] text-gray-300 mt-1">当前样式：{subtitleStyle === 'bottom' ? '底部字幕' : subtitleStyle === 'karaoke' ? '卡拉OK' : '高亮词'}</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 一键导出面板 */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">📦 一键导出</div>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { label: '导出文案 TXT', icon: '📄', action: () => {
+                    const blob = new Blob([videoCopy], { type: 'text/plain' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url; a.download = `copy_${Date.now()}.txt`; a.click()
+                    URL.revokeObjectURL(url)
+                    showToast('✅ 文案已导出')
+                  }},
+                  { label: '导出字幕 SRT', icon: '💬', action: () => exportSRT(videoCopy) },
+                  { label: '复制文案', icon: '📋', action: () => {
+                    navigator.clipboard.writeText(videoCopy).then(() => showToast('✅ 文案已复制'))
+                  }},
+                  { label: '下载音频', icon: '🎵', action: () => {
+                    if (!audioB64) { showToast('请先合成语音'); return }
+                    const link = document.createElement('a')
+                    link.href = `data:audio/mp3;base64,${audioB64}`
+                    link.download = `audio_${Date.now()}.mp3`
+                    link.click()
+                    showToast('✅ 音频下载中...')
+                  }},
+                ].map((item: any) => (
+                  <button
+                    key={item.label}
+                    onClick={item.action}
+                    className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl text-xs font-semibold text-gray-700 active:scale-[0.97] transition-transform hover:bg-gray-100"
+                  >
+                    <span className="text-base">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* MiniMax 视频生成 */}
             <VideoGeneratePanel videoCopy={videoCopy} showToast={showToast} videoRatio={videoRatio} subtitleStyle={subtitleStyle} />
