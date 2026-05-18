@@ -410,6 +410,12 @@ export default function ContentOSApp() {
 
   // Operations
   const [opsTab, setOpsTab] = useState<OpsTab>('schedule')
+  // 视频数据记录（每条视频的发布数据）
+  const [videoRecords, setVideoRecords] = useState<any[]>([])
+  const [showVideoRecord, setShowVideoRecord] = useState(false)
+  const [recordingVideo, setRecordingVideo] = useState<any>(null)
+  // 快速录入面板（从视频页跳转过来时使用）
+  const [quickRecordData, setQuickRecordData] = useState<any>(null)
   const [schedule, setSchedule] = useState<ScheduleItem[]>([
     { id: '1', time: '今天 18:30', title: '端午节限定套餐来了！', status: '待发布', platform: '抖音' },
     { id: '2', time: '明天 12:00', title: '开面馆3年踩过的坑', status: '草稿', platform: '抖音' },
@@ -517,6 +523,7 @@ export default function ContentOSApp() {
         if (s.temperature) setAiTemperature(s.temperature)
       }
       const mp = localStorage.getItem('contentos_module_prompts'); if (mp) setModulePrompts(JSON.parse(mp))
+      const vr = localStorage.getItem('contentos_video_records'); if (vr) setVideoRecords(JSON.parse(vr))
       const cr = localStorage.getItem('contentos_credits'); if (cr) setCredits(parseInt(cr) || 1000)
     } catch {}
   }, [])
@@ -812,6 +819,42 @@ export default function ContentOSApp() {
     } finally {
       setVideoLoading(false)
     }
+  }
+
+  // 保存视频数据记录
+  function saveVideoRecord(record: any) {
+    const newRecord = {
+      ...record,
+      id: Date.now().toString(),
+      createdAt: new Date().toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      accountId: acc.id,
+      accountName: acc.name,
+    }
+    const updated = [newRecord, ...videoRecords]
+    setVideoRecords(updated)
+    saveToLocal('contentos_video_records', updated)
+    // 同步更新 platformStats（累加数据）
+    setPlatformStats((prev: any) => {
+      const addVal = (arr: number[], add: number) => [...arr.slice(1), (arr[arr.length - 1] || 0) + add]
+      const p = parseInt(record.plays) || 0
+      const l = parseInt(record.likes) || 0
+      const c = parseInt(record.comments) || 0
+      const col = parseInt(record.collects) || 0
+      return {
+        ...prev,
+        plays: addVal(prev.plays, p),
+        likes: addVal(prev.likes, l),
+        comments: addVal(prev.comments, c),
+        collects: addVal(prev.collects, col),
+        totalPlays: prev.totalPlays + p,
+        weeklyPosts: prev.weeklyPosts + 1,
+        lastSync: new Date().toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      }
+    })
+    showToast('✅ 数据已录入，图表已更新')
+    setShowVideoRecord(false)
+    setRecordingVideo(null)
+    setQuickRecordData(null)
   }
 
   // ─── Content Helpers ──────────────────────────────────────
@@ -1228,6 +1271,8 @@ export default function ContentOSApp() {
             generateTTS={generateTTS} showToast={showToast}
             savedContents={savedContents} setTab={setTab}
             setShowAiPanel={setShowAiPanel}
+            setQuickRecordData={setQuickRecordData}
+            setShowVideoRecord={setShowVideoRecord}
           />
         )}
         {tab === 'operations' && (
@@ -1251,6 +1296,11 @@ export default function ContentOSApp() {
             newSchedulePlatform={newSchedulePlatform} setNewSchedulePlatform={setNewSchedulePlatform}
             addScheduleItem={addScheduleItem}
             setShowAiPanel={setShowAiPanel}
+            videoRecords={videoRecords}
+            showVideoRecord={showVideoRecord} setShowVideoRecord={setShowVideoRecord}
+            recordingVideo={recordingVideo} setRecordingVideo={setRecordingVideo}
+            quickRecordData={quickRecordData} setQuickRecordData={setQuickRecordData}
+            saveVideoRecord={saveVideoRecord}
           />
         )}
         {tab === 'profile' && (
@@ -2614,7 +2664,7 @@ function ContentCenter({ acc, step, setStep, topic, setTopic, style, setStyle, u
 // ═══════════════════════════════════════════════════════════
 // VIDEO STUDIO v2 — 视频生成（TTS 实际可用 + 音频播放）
 // ═══════════════════════════════════════════════════════════
-function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCopy, voiceId, setVoiceId, speed, setSpeed, avatarType, setAvatarType, avatarPreset, setAvatarPreset, bgType, setBgType, bgColor, setBgColor, loading, audioB64, error, generateTTS, showToast, savedContents, setTab, setShowAiPanel }: any) {
+function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCopy, voiceId, setVoiceId, speed, setSpeed, avatarType, setAvatarType, avatarPreset, setAvatarPreset, bgType, setBgType, bgColor, setBgColor, loading, audioB64, error, generateTTS, showToast, savedContents, setTab, setShowAiPanel, setQuickRecordData, setShowVideoRecord }: any) {
   const VOICES = [
     { id: 'female-shaonv', label: '少女音', emoji: '👧', desc: '清甜活泼，适合生活类' },
     { id: 'female-yujie', label: '御姐音', emoji: '👩', desc: '成熟知性，适合职场类' },
@@ -3189,16 +3239,39 @@ ${videoCopy}`,
 
             {/* MiniMax 视频生成 */}
             <VideoGeneratePanel videoCopy={videoCopy} showToast={showToast} videoRatio={videoRatio} subtitleStyle={subtitleStyle} />
-            {/* 一键加入排期 */}
-            <button
-              onClick={() => {
-                setTab('operations')
-                showToast('✅ 已跳转到运营中心，可添加排期')
-              }}
-              className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md"
-            >
-              📅 加入发布排期
-            </button>
+            {/* 操作按钮组 */}
+            <div className="grid grid-cols-2 gap-2">
+              {/* 录入发布数据 */}
+              <button
+                onClick={() => {
+                  if (setQuickRecordData) {
+                    setQuickRecordData({
+                      title: videoCopy.slice(0, 30) + (videoCopy.length > 30 ? '...' : ''),
+                      copy: videoCopy,
+                      voice: voiceId,
+                      platform: acc?.platform || '抖音',
+                      publishedAt: new Date().toLocaleDateString('zh-CN'),
+                    })
+                    setShowVideoRecord(true)
+                    setTab('operations')
+                    showToast('✅ 跳转到运营中心录入数据')
+                  }
+                }}
+                className="py-3.5 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md flex items-center justify-center gap-1.5"
+              >
+                📊 录入数据
+              </button>
+              {/* 加入排期 */}
+              <button
+                onClick={() => {
+                  setTab('operations')
+                  showToast('✅ 已跳转到运营中心，可添加排期')
+                }}
+                className="py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md flex items-center justify-center gap-1.5"
+              >
+                📅 加入排期
+              </button>
+            </div>
             <button onClick={() => setStep('input')} className="w-full py-2 text-sm text-gray-400">← 重新开始</button>
           </>
         )}
@@ -3494,7 +3567,7 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle }:
 // ═══════════════════════════════════════════════════════════
 // CONTENT CALENDAR — 内容日历视图
 // ═══════════════════════════════════════════════════════════
-function ContentCalendar({ schedule, setSchedule, showToast, setShowAddSchedule }: any) {
+function ContentCalendar({ schedule, setSchedule, showToast, setShowAddSchedule, setShowVideoRecord, setQuickRecordData }: any) {
   const today = new Date()
   const [viewMonth, setViewMonth] = React.useState(today.getMonth())
   const [viewYear, setViewYear] = React.useState(today.getFullYear())
@@ -3615,7 +3688,18 @@ function ContentCalendar({ schedule, setSchedule, showToast, setShowAddSchedule 
                   <div className="text-xs font-semibold text-gray-800 truncate">{s.title}</div>
                   <div className="text-[10px] text-gray-400">{s.time} · {PLATFORM_EMOJI[s.platform] || ''} {s.platform}</div>
                 </div>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold flex-shrink-0 ${s.status === '待发布' ? 'bg-orange-50 text-orange-500' : s.status === '已发布' ? 'bg-green-50 text-green-500' : 'bg-gray-100 text-gray-400'}`}>{s.status}</span>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {s.status === '已发布' && setShowVideoRecord && (
+                    <button
+                      onClick={() => {
+                        if (setQuickRecordData) setQuickRecordData({ title: s.title, platform: s.platform, publishDate: s.time })
+                        if (setShowVideoRecord) setShowVideoRecord(true)
+                      }}
+                      className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-500 font-semibold active:scale-95 transition-transform"
+                    >录入</button>
+                  )}
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${s.status === '待发布' ? 'bg-orange-50 text-orange-500' : s.status === '已发布' ? 'bg-green-50 text-green-500' : 'bg-gray-100 text-gray-400'}`}>{s.status}</span>
+                </div>
               </div>
             ))}
           </div>
@@ -3812,7 +3896,137 @@ function BestTimePanel({ acc }: any) {
 
 
 
-function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedContents, showToast, insights, insightsLoading, fetchInsights, showAddSchedule, setShowAddSchedule, newScheduleTitle, setNewScheduleTitle, newSchedulePlatform, setNewSchedulePlatform, addScheduleItem, platformStats, setPlatformStats, statsRange, setStatsRange, showDataBind, setShowDataBind, dataBindTab, setDataBindTab, manualFans, setManualFans, manualPlays, setManualPlays, manualLikes, setManualLikes, statsLoading, fetchPlatformStats, updateManualStats, setShowAiPanel }: any) {
+// ═══════════════════════════════════════════════════════════
+// VideoRecordModal — 视频数据录入弹窗
+// ═══════════════════════════════════════════════════════════
+function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordData, saveVideoRecord }: any) {
+  const PLATFORMS = ['抖音', '小红书', 'B站', '视频号', '快手']
+  const [title, setTitle] = React.useState(quickRecordData?.title || '')
+  const [platform, setPlatform] = React.useState(quickRecordData?.platform || '抖音')
+  const [publishDate, setPublishDate] = React.useState(quickRecordData?.publishDate || new Date().toLocaleDateString('zh-CN'))
+  const [plays, setPlays] = React.useState('')
+  const [likes, setLikes] = React.useState('')
+  const [comments, setComments] = React.useState('')
+  const [collects, setCollects] = React.useState('')
+  const [fansChange, setFansChange] = React.useState('')
+
+  function handleSave() {
+    if (!title.trim()) return
+    saveVideoRecord({ title, platform, publishDate, plays, likes, comments, collects, fansChange })
+  }
+
+  return (
+    <div className="absolute inset-0 bg-black/40 z-50 flex flex-col rounded-[50px] overflow-hidden" onClick={() => { setShowVideoRecord(false); setQuickRecordData(null) }}>
+      <div className="flex-1" />
+      <div className="bg-white rounded-t-3xl p-5 pb-8 max-h-[90%] flex flex-col" onClick={(e: any) => e.stopPropagation()}>
+        {/* 标题栏 */}
+        <div className="flex items-center justify-between mb-4 flex-shrink-0">
+          <div>
+            <h3 className="font-black text-gray-900">📊 录入视频数据</h3>
+            <p className="text-xs text-gray-400 mt-0.5">录入后自动更新运营图表</p>
+          </div>
+          <button onClick={() => { setShowVideoRecord(false); setQuickRecordData(null) }} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-3">
+          {/* 视频标题 */}
+          <div>
+            <p className="text-xs text-gray-500 mb-1.5 font-medium">视频标题</p>
+            <input
+              value={title}
+              onChange={(e: any) => setTitle(e.target.value)}
+              placeholder="输入视频标题"
+              className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none"
+            />
+          </div>
+
+          {/* 发布平台 */}
+          <div>
+            <p className="text-xs text-gray-500 mb-1.5 font-medium">发布平台</p>
+            <div className="flex gap-2 flex-wrap">
+              {PLATFORMS.map((p: string) => (
+                <button
+                  key={p}
+                  onClick={() => setPlatform(p)}
+                  className={}
+                >{p}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* 发布时间 */}
+          <div>
+            <p className="text-xs text-gray-500 mb-1.5 font-medium">发布时间</p>
+            <input
+              value={publishDate}
+              onChange={(e: any) => setPublishDate(e.target.value)}
+              placeholder="如：2025/1/15"
+              className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none"
+            />
+          </div>
+
+          {/* 数据录入 */}
+          <div>
+            <p className="text-xs text-gray-500 mb-1.5 font-medium">视频数据</p>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: '播放量', placeholder: '如：12000', value: plays, set: setPlays, icon: '▶️' },
+                { label: '点赞数', placeholder: '如：580', value: likes, set: setLikes, icon: '❤️' },
+                { label: '评论数', placeholder: '如：120', value: comments, set: setComments, icon: '💬' },
+                { label: '收藏数', placeholder: '如：340', value: collects, set: setCollects, icon: '⭐' },
+              ].map((f: any) => (
+                <div key={f.label} className="bg-gray-50 rounded-xl p-2.5">
+                  <div className="text-[10px] text-gray-400 mb-1">{f.icon} {f.label}</div>
+                  <input
+                    value={f.value}
+                    onChange={(e: any) => f.set(e.target.value)}
+                    placeholder={f.placeholder}
+                    type="number"
+                    className="w-full bg-transparent text-sm font-bold text-gray-800 outline-none placeholder:text-gray-300"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 粉丝变化 */}
+          <div>
+            <p className="text-xs text-gray-500 mb-1.5 font-medium">粉丝变化（可选）</p>
+            <input
+              value={fansChange}
+              onChange={(e: any) => setFansChange(e.target.value)}
+              placeholder="如：+120 或 -5"
+              className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none"
+            />
+          </div>
+
+          {/* 互动率预览 */}
+          {plays && (parseInt(plays) > 0) && (
+            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-3">
+              <div className="text-xs text-blue-600 font-semibold mb-1">📈 互动率预览</div>
+              <div className="text-2xl font-black text-blue-700">
+                {(((parseInt(likes||'0') + parseInt(comments||'0') + parseInt(collects||'0')) / parseInt(plays)) * 100).toFixed(1)}%
+              </div>
+              <div className="text-[10px] text-blue-400 mt-0.5">(点赞+评论+收藏) / 播放量</div>
+            </div>
+          )}
+        </div>
+
+        {/* 保存按钮 */}
+        <div className="flex gap-2 mt-4 flex-shrink-0">
+          <button onClick={() => { setShowVideoRecord(false); setQuickRecordData(null) }} className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-2xl text-sm">取消</button>
+          <button
+            onClick={handleSave}
+            disabled={!title.trim()}
+            className="flex-1 py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-transform disabled:opacity-50"
+          >💾 保存数据</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedContents, showToast, insights, insightsLoading, fetchInsights, showAddSchedule, setShowAddSchedule, newScheduleTitle, setNewScheduleTitle, newSchedulePlatform, setNewSchedulePlatform, addScheduleItem, platformStats, setPlatformStats, statsRange, setStatsRange, showDataBind, setShowDataBind, dataBindTab, setDataBindTab, manualFans, setManualFans, manualPlays, setManualPlays, manualLikes, setManualLikes, statsLoading, fetchPlatformStats, updateManualStats, setShowAiPanel, videoRecords, showVideoRecord, setShowVideoRecord, recordingVideo, setRecordingVideo, quickRecordData, setQuickRecordData, saveVideoRecord }: any) {
   const TABS = [{ id: 'schedule', label: '📅 排期' }, { id: 'stats', label: '📊 数据' }, { id: 'goals', label: '🎯 目标' }]
   const STATS = [
     { label: '本周发布', value: '3', unit: '条', trend: '+1', up: true },
@@ -3860,6 +4074,16 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
         </div>
       )}
 
+      {/* 视频数据录入弹窗 */}
+      {showVideoRecord && (
+        <VideoRecordModal
+          quickRecordData={quickRecordData}
+          setShowVideoRecord={setShowVideoRecord}
+          setQuickRecordData={setQuickRecordData}
+          saveVideoRecord={saveVideoRecord}
+        />
+      )}
+
       <div className="px-5 pt-12 pb-0 flex-shrink-0">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-black text-gray-900">运营中心</h1>
@@ -3887,7 +4111,7 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
         {opsTab === 'schedule' && (
           <>
             {/* 内容日历 */}
-            <ContentCalendar schedule={schedule} setSchedule={setSchedule} showToast={showToast} setShowAddSchedule={setShowAddSchedule} />
+            <ContentCalendar schedule={schedule} setSchedule={setSchedule} showToast={showToast} setShowAddSchedule={setShowAddSchedule} setShowVideoRecord={setShowVideoRecord} setQuickRecordData={setQuickRecordData} />
 
             {/* 最佳发布时间 */}
             <BestTimePanel acc={acc} />
@@ -3953,7 +4177,7 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
                     <button onClick={() => setShowDataBind(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
                   </div>
                   <div className="flex gap-2 mb-4">
-                    {[{id:'manual',label:'✏️ 手动录入'},{id:'import',label:'🤖 AI 生成'}].map((t: any) => (
+                    {[{id:'manual',label:'✏️ 手动录入'},{id:'import',label:'🤖 AI 生成'},{id:'records',label:'📊 视频记录'}].map((t: any) => (
                       <button key={t.id} onClick={() => setDataBindTab(t.id)} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${dataBindTab === t.id ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500'}`}>{t.label}</button>
                     ))}
                   </div>
@@ -3993,6 +4217,36 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
                       <button onClick={() => { fetchPlatformStats(); setShowDataBind(false) }} disabled={statsLoading} className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-400 text-white text-sm font-bold rounded-2xl active:scale-[0.98] transition-transform disabled:opacity-60">
                         {statsLoading ? '生成中...' : '🤖 AI 生成数据'}
                       </button>
+                    </div>
+                  )}
+                  {dataBindTab === 'records' && (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {videoRecords.length === 0 ? (
+                        <div className="text-center py-8">
+                          <div className="text-3xl mb-2">📊</div>
+                          <p className="text-xs text-gray-400">暂无视频数据记录</p>
+                          <p className="text-xs text-gray-300 mt-1">在视频生成页发布后录入数据</p>
+                        </div>
+                      ) : videoRecords.map((r: any, i: number) => (
+                        <div key={r.id} className="bg-gray-50 rounded-xl p-3 animate-fade-in-up" style={{animationDelay:`${i*40}ms`}}>
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className="text-xs font-semibold text-gray-800 flex-1 truncate">{r.title || '未命名视频'}</div>
+                            <span className="text-[10px] text-gray-400 flex-shrink-0">{r.createdAt}</span>
+                          </div>
+                          <div className="flex items-center gap-1 mb-2">
+                            <span className="text-[10px] bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded-full font-medium">{r.platform || '抖音'}</span>
+                            {r.publishDate && <span className="text-[10px] text-gray-400">{r.publishDate}</span>}
+                          </div>
+                          <div className="grid grid-cols-4 gap-1">
+                            {[{label:'播放',val:r.plays},{label:'点赞',val:r.likes},{label:'评论',val:r.comments},{label:'收藏',val:r.collects}].map((d: any) => (
+                              <div key={d.label} className="text-center">
+                                <div className="text-xs font-bold text-gray-800">{parseInt(d.val||0)>=10000?(parseInt(d.val)/10000).toFixed(1)+'w':d.val||0}</div>
+                                <div className="text-[9px] text-gray-400">{d.label}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -4193,6 +4447,50 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
                 <div className="text-xs text-gray-400 text-center py-4">暂无数据，先去生成文案吧</div>
               )}
             </div>
+
+            {/* 视频数据记录列表 */}
+            {videoRecords.length > 0 && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="font-bold text-gray-900 text-sm">🎬 视频数据记录</div>
+                  <button
+                    onClick={() => { setShowVideoRecord(true) }}
+                    className="text-xs text-blue-500 font-semibold bg-blue-50 px-2.5 py-1 rounded-xl active:scale-95 transition-transform"
+                  >+ 录入</button>
+                </div>
+                <div className="space-y-2">
+                  {videoRecords.slice(0, 5).map((r: any, i: number) => {
+                    const plays = parseInt(r.plays) || 0
+                    const likes = parseInt(r.likes) || 0
+                    const comments = parseInt(r.comments) || 0
+                    const collects = parseInt(r.collects) || 0
+                    const engRate = plays > 0 ? (((likes + comments + collects) / plays) * 100).toFixed(1) : '0.0'
+                    return (
+                      <div key={r.id} className="border border-gray-100 rounded-xl p-3 animate-fade-in-up" style={{animationDelay:`${i*50}ms`}}>
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="text-xs font-semibold text-gray-800 flex-1 line-clamp-1">{r.title || '未命名视频'}</div>
+                          <span className="text-[10px] bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded-full font-medium flex-shrink-0">{r.platform || '抖音'}</span>
+                        </div>
+                        <div className="grid grid-cols-5 gap-1 mb-1.5">
+                          {[{label:'播放',val:plays,color:'text-blue-600'},{label:'点赞',val:likes,color:'text-red-500'},{label:'评论',val:comments,color:'text-orange-500'},{label:'收藏',val:collects,color:'text-yellow-500'},{label:'互动率',val:engRate+'%',color:'text-green-600'}].map((d: any) => (
+                            <div key={d.label} className="text-center">
+                              <div className={`text-xs font-bold ${d.color}`}>{typeof d.val === 'number' && d.val >= 10000 ? (d.val/10000).toFixed(1)+'w' : d.val}</div>
+                              <div className="text-[9px] text-gray-400">{d.label}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="text-[10px] text-gray-400">{r.publishDate || r.createdAt}</div>
+                      </div>
+                    )
+                  })}
+                  {videoRecords.length > 5 && (
+                    <div className="text-center py-2">
+                      <span className="text-xs text-gray-400">还有 {videoRecords.length - 5} 条记录，在数据绑定中查看全部</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* 数据说明 */}
             <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100">
