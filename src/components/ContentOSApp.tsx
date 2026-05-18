@@ -1289,6 +1289,8 @@ export default function ContentOSApp() {
                 radarData={radarData} fetchRadar={fetchRadar} radarLoading={radarLoading}
                 savedTopics={savedTopics}
                 setShowAiPanel={setShowAiPanel}
+                videoRecords={videoRecords}
+                savedTopicsCount={savedTopics.length}
               />
             )}
         {tab === 'materials' && (
@@ -1444,310 +1446,505 @@ export default function ContentOSApp() {
 // ═══════════════════════════════════════════════════════════
 // DASHBOARD v2 — 工作台首页（每日任务+快捷入口+数据概览）
 // ═══════════════════════════════════════════════════════════
-function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab, showToast, user, onLogout, savedContents, schedule, onPositioning, showAddAccount, setShowAddAccount, newAccName, setNewAccName, newAccIndustry, setNewAccIndustry, newAccEmoji, setNewAccEmoji, addAccount, hotspots, radarData, fetchRadar, radarLoading, savedTopics, setShowAiPanel }: any) {
-  const EMOJIS = ['🏪', '🍜', '💪', '💄', '📚', '🏠', '🚗', '🎵', '🌿', '☕']
+function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab, showToast, user, onLogout, savedContents, schedule, onPositioning, showAddAccount, setShowAddAccount, newAccName, setNewAccName, newAccIndustry, setNewAccIndustry, newAccEmoji, setNewAccEmoji, addAccount, hotspots, radarData, fetchRadar, radarLoading, savedTopics, setShowAiPanel, videoRecords, savedTopicsCount }: any) {
+      const EMOJIS = ['🏪', '🍜', '💪', '💄', '📚', '🏠', '🚗', '🎵', '🌿', '☕']
 
-  // 今日任务清单（基于账号状态动态生成）
-  const todayTasks = React.useMemo(() => {
-    const tasks = []
-    const today = new Date().toDateString()
-    const todaySchedule = schedule.filter((s: any) => {
-      const d = new Date(s.time || s.date || '')
-      return d.toDateString() === today
-    })
+      // 任务完成状态
+      const [completedTasks, setCompletedTasks] = React.useState<Set<string>>(new Set())
+      const [showDailyPlan, setShowDailyPlan] = React.useState(false)
+      const [planLoading, setPlanLoading] = React.useState(false)
+      const [dailyPlan, setDailyPlan] = React.useState<any[]>([])
+      const [showAddAcc, setShowAddAcc] = React.useState(false)
 
-    if (acc.positioning === '待完善') {
-      tasks.push({ id: 'positioning', icon: '🎯', label: '完善账号定位', desc: '生成专属定位方案', priority: 'high', action: 'positioning' })
-    }
-    if (todaySchedule.length > 0) {
-      todaySchedule.forEach((s: any) => {
-        tasks.push({ id: s.id, icon: '📤', label: `发布：${s.title}`, desc: `${s.platform} · ${s.time}`, priority: 'high', action: 'operations' })
-      })
-    }
-    if (savedContents.length === 0) {
-      tasks.push({ id: 'copy', icon: '✍️', label: '生成今日文案', desc: '选择选题，AI 一键生成', priority: 'medium', action: 'content' })
-    } else {
-      tasks.push({ id: 'copy2', icon: '✍️', label: '继续创作文案', desc: `已有 ${savedContents.length} 条，继续生产`, priority: 'low', action: 'content' })
-    }
-    if (!radarData) {
-      tasks.push({ id: 'radar', icon: '📡', label: '获取今日情报', desc: '热点 · 爆款形式 · 关键词', priority: 'medium', action: 'radar' })
-    }
-    tasks.push({ id: 'topic', icon: '💡', label: '生成今日选题', desc: '基于账号定位的高完播率选题', priority: 'low', action: 'topics' })
+      // 今日 & 明日排期
+      const today = new Date()
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      const todayStr = today.toDateString()
+      const tomorrowStr = tomorrow.toDateString()
 
-    return tasks.slice(0, 5)
-  }, [acc, schedule, savedContents, radarData])
+      const todaySchedule = React.useMemo(() => schedule.filter((s: any) => {
+        const d = new Date(s.time || s.date || '')
+        return d.toDateString() === todayStr
+      }), [schedule, todayStr])
 
-  const completedCount = todayTasks.filter((t: any) => t.priority === 'low').length
-  const totalCount = todayTasks.length
+      const tomorrowSchedule = React.useMemo(() => schedule.filter((s: any) => {
+        const d = new Date(s.time || s.date || '')
+        return d.toDateString() === tomorrowStr
+      }), [schedule, tomorrowStr])
 
-  function handleTaskAction(action: string) {
-    if (action === 'positioning') { onPositioning(); return }
-    if (action === 'operations') { setTab('operations'); return }
-    if (action === 'content') { setTab('content'); return }
-    if (action === 'radar') { setTab('materials'); setMatTab('radar'); fetchRadar?.(); return }
-    if (action === 'topics') { setTab('materials'); setMatTab('topics'); return }
-  }
+      // 智能任务清单（动态生成）
+      const todayTasks = React.useMemo(() => {
+        const tasks: any[] = []
 
-  // 数据概览（模拟数据，后续接真实数据）
-  const stats = [
-    { label: '已保存文案', value: savedContents.length, unit: '条', icon: '📝', color: 'from-blue-400 to-cyan-400', trend: '+2' },
-    { label: '本周排期', value: schedule.filter((s: any) => {
-      const d = new Date(s.time || s.date || '')
-      const now = new Date()
-      const weekStart = new Date(now.setDate(now.getDate() - now.getDay()))
-      return d >= weekStart
-    }).length, unit: '条', icon: '📅', color: 'from-purple-400 to-pink-400', trend: '' },
-    { label: '收藏选题', value: savedTopics?.length || 0, unit: '个', icon: '💡', color: 'from-orange-400 to-amber-400', trend: '' },
-    { label: '管理账号', value: accounts.length, unit: '个', icon: '📱', color: 'from-green-400 to-emerald-400', trend: '' },
-  ]
+        if (acc.positioning === '待完善') {
+          tasks.push({ id: 'positioning', icon: '🎯', label: '完善账号定位', desc: '生成专属定位方案，提升内容精准度', priority: 'urgent', action: 'positioning', tag: '必做' })
+        }
+        todaySchedule.forEach((s: any) => {
+          tasks.push({ id: `pub_${s.id}`, icon: '📤', label: `发布：${s.title}`, desc: `${s.platform} · ${s.time || '今日'}`, priority: 'urgent', action: 'operations', tag: '今日' })
+        })
+        if (!radarData) {
+          tasks.push({ id: 'radar', icon: '📡', label: '获取今日情报', desc: '热点 · 爆款形式 · 关键词趋势', priority: 'important', action: 'radar', tag: '推荐' })
+        }
+        if (savedContents.length === 0) {
+          tasks.push({ id: 'copy', icon: '✍️', label: '生成今日文案', desc: '选择选题，AI 一键生成高质量文案', priority: 'important', action: 'content', tag: '推荐' })
+        } else {
+          tasks.push({ id: 'copy2', icon: '✍️', label: '继续创作文案', desc: `已有 ${savedContents.length} 条，保持更新节奏`, priority: 'normal', action: 'content', tag: '建议' })
+        }
+        if ((savedTopicsCount || savedTopics?.length || 0) < 3) {
+          tasks.push({ id: 'topic', icon: '💡', label: '补充选题库', desc: '选题不足，AI 批量生成高完播率选题', priority: 'important', action: 'topics', tag: '推荐' })
+        } else {
+          tasks.push({ id: 'topic2', icon: '💡', label: '生成今日选题', desc: `已有 ${savedTopicsCount || savedTopics?.length || 0} 个选题，继续扩充`, priority: 'normal', action: 'topics', tag: '建议' })
+        }
+        if (todaySchedule.length === 0) {
+          tasks.push({ id: 'schedule', icon: '📅', label: '安排今日发布', desc: '还没有今日排期，去运营中心添加', priority: 'normal', action: 'operations', tag: '建议' })
+        }
 
-  const QUICK_ACTIONS = [
-    { icon: '✍️', label: '写文案', desc: 'AI 生成', color: 'from-blue-500 to-cyan-400', tab: 'content' },
-    { icon: '📡', label: '看情报', desc: '今日热点', color: 'from-orange-400 to-amber-400', tab: 'materials', matTab: 'radar' },
-    { icon: '🎯', label: '追博主', desc: '竞品分析', color: 'from-green-400 to-emerald-500', tab: 'materials', matTab: 'creator' },
-    { icon: '🎬', label: '做视频', desc: 'TTS合成', color: 'from-purple-500 to-pink-400', tab: 'video' },
-  ]
+        return tasks.slice(0, 6)
+      }, [acc, todaySchedule, savedContents, radarData, savedTopics, savedTopicsCount])
 
-  return (
-    <div className="flex flex-col h-full bg-[#F2F2F7]">
-      {/* Add Account Modal */}
-      {showAddAccount && (
-        <div className="absolute inset-0 bg-black/50 z-50 flex items-end rounded-[50px] overflow-hidden">
-          <div className="w-full bg-white rounded-t-3xl p-5 pb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-black text-gray-900">添加新账号</h3>
-              <button onClick={() => setShowAddAccount(false)} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">✕</button>
+      const completedCount = completedTasks.size
+      const totalCount = todayTasks.length
+      const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
+
+      function toggleTask(id: string) {
+        setCompletedTasks((prev: Set<string>) => {
+          const next = new Set(prev)
+          if (next.has(id)) next.delete(id)
+          else next.add(id)
+          return next
+        })
+      }
+
+      function handleTaskAction(action: string) {
+        if (action === 'positioning') { onPositioning() }
+        else if (action === 'content') { setTab('content') }
+        else if (action === 'topics') { setTab('materials'); setMatTab('topics') }
+        else if (action === 'operations') { setTab('operations') }
+        else if (action === 'radar') { setTab('materials'); setMatTab('hotspot') }
+      }
+
+      // 生成每日内容计划
+      async function generateDailyPlan() {
+        setPlanLoading(true)
+        setShowDailyPlan(true)
+        await new Promise(r => setTimeout(r, 1200))
+        const plans = [
+          { time: '08:00', type: '情报收集', title: '查看今日热点与行业动态', status: 'pending', icon: '📡', color: 'blue' },
+          { time: '10:00', type: '选题确认', title: `为「${acc.name}」确认今日创作选题`, status: 'pending', icon: '💡', color: 'purple' },
+          { time: '14:00', type: '文案创作', title: 'AI 生成文案，人工润色优化', status: 'pending', icon: '✍️', color: 'green' },
+          { time: '16:00', type: '视频制作', title: '录制/合成视频，添加字幕', status: 'pending', icon: '🎬', color: 'orange' },
+          { time: '19:00', type: '发布上线', title: todaySchedule.length > 0 ? `发布「${todaySchedule[0].title}」` : '发布今日内容', status: todaySchedule.length > 0 ? 'scheduled' : 'pending', icon: '📤', color: 'red' },
+          { time: '21:00', type: '数据复盘', title: '查看今日数据，记录视频表现', status: 'pending', icon: '📊', color: 'gray' },
+        ]
+        setDailyPlan(plans)
+        setPlanLoading(false)
+      }
+
+      // 数据概览
+      const statsCards = [
+        { label: '已存文案', value: savedContents.length, icon: '✍️', color: 'blue', action: 'content' },
+        { label: '选题库', value: savedTopicsCount || savedTopics?.length || 0, icon: '💡', color: 'purple', action: 'topics' },
+        { label: '排期数', value: schedule.length, icon: '📅', color: 'green', action: 'operations' },
+        { label: '视频记录', value: videoRecords?.length || 0, icon: '🎬', color: 'orange', action: 'operations' },
+      ]
+
+      const priorityConfig: any = {
+        urgent: { label: '紧急', bg: 'bg-red-50', text: 'text-red-500', dot: 'bg-red-400', tagBg: 'bg-red-100 text-red-500' },
+        important: { label: '重要', bg: 'bg-orange-50', text: 'text-orange-500', dot: 'bg-orange-400', tagBg: 'bg-orange-100 text-orange-500' },
+        normal: { label: '普通', bg: 'bg-gray-50', text: 'text-gray-400', dot: 'bg-gray-300', tagBg: 'bg-gray-100 text-gray-500' },
+      }
+
+      const dateStr = today.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })
+
+      return (
+        <div className="flex flex-col h-full bg-gray-50">
+          {/* 顶部账号栏 */}
+          <div className="bg-white px-4 pt-12 pb-3 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center text-lg shadow-sm">
+                  {acc.emoji || '🏪'}
+                </div>
+                <div>
+                  <div className="font-bold text-gray-900 text-sm leading-tight">{acc.name}</div>
+                  <div className="text-[10px] text-gray-400">{acc.industry} · {acc.positioning === '待完善' ? <span className="text-orange-400">定位待完善</span> : acc.positioning?.slice(0, 10)}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setShowAiPanel(true)} className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-base">🤖</button>
+                <button onClick={() => setShowAddAcc(!showAddAcc)} className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-base">⚙️</button>
+              </div>
             </div>
-            <div className="space-y-3">
-              <input value={newAccName} onChange={e => setNewAccName(e.target.value)} placeholder="账号名称（如：美食探店号）" className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none" />
-              <input value={newAccIndustry} onChange={e => setNewAccIndustry(e.target.value)} placeholder="行业（如：餐饮、美妆、教育）" className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none" />
-              <div>
-                <div className="text-xs text-gray-400 mb-2">选择图标</div>
-                <div className="flex gap-2 flex-wrap">
-                  {EMOJIS.map(e => (
-                    <button key={e} onClick={() => setNewAccEmoji(e)} className={`w-9 h-9 rounded-xl text-xl flex items-center justify-center transition-all ${newAccEmoji === e ? 'bg-blue-100 scale-110 ring-2 ring-blue-400' : 'bg-gray-100'}`}>{e}</button>
+
+            {/* 账号切换 */}
+            {accounts.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+                {accounts.map((a: any, i: number) => (
+                  <button
+                    key={a.id}
+                    onClick={() => setAccountIdx(i)}
+                    className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${i === accountIdx ? 'bg-blue-500 text-white shadow-sm' : 'bg-gray-100 text-gray-500'}`}
+                  >
+                    <span>{a.emoji || '🏪'}</span>
+                    <span>{a.name}</span>
+                  </button>
+                ))}
+                <button
+                  onClick={() => setShowAddAccount(true)}
+                  className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-400"
+                >
+                  <span>+</span>
+                  <span>添加</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* 主内容区 */}
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 pb-24">
+
+            {/* 日期 + 进度概览 */}
+            <div className="bg-gradient-to-r from-blue-500 to-cyan-400 rounded-2xl p-4 text-white shadow-md">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <div className="text-white/70 text-xs mb-0.5">今天</div>
+                  <div className="font-bold text-base">{dateStr}</div>
+                </div>
+                <button
+                  onClick={generateDailyPlan}
+                  className="bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition-all active:scale-95"
+                >
+                  📋 今日计划
+                </button>
+              </div>
+              {/* 进度条 */}
+              <div className="bg-white/20 rounded-full h-2 mb-2">
+                <div
+                  className="bg-white rounded-full h-2 transition-all duration-500"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-white/80">今日任务完成度</span>
+                <span className="font-bold">{completedCount}/{totalCount} · {progressPct}%</span>
+              </div>
+            </div>
+
+            {/* 每日内容计划弹层 */}
+            {showDailyPlan && (
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
+                  <div className="font-bold text-gray-900 text-sm">📋 今日内容计划</div>
+                  <button onClick={() => setShowDailyPlan(false)} className="text-gray-400 text-sm">✕</button>
+                </div>
+                {planLoading ? (
+                  <div className="flex items-center justify-center py-8 gap-2">
+                    <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-xs text-gray-400">AI 正在生成今日计划...</span>
+                  </div>
+                ) : (
+                  <div className="p-4 space-y-3">
+                    {dailyPlan.map((item: any, i: number) => {
+                      const colorMap: any = {
+                        blue: 'bg-blue-50 text-blue-500',
+                        purple: 'bg-purple-50 text-purple-500',
+                        green: 'bg-green-50 text-green-500',
+                        orange: 'bg-orange-50 text-orange-500',
+                        red: 'bg-red-50 text-red-500',
+                        gray: 'bg-gray-50 text-gray-500',
+                      }
+                      return (
+                        <div key={i} className="flex items-start gap-3">
+                          <div className="flex flex-col items-center flex-shrink-0">
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm ${colorMap[item.color]}`}>{item.icon}</div>
+                            {i < dailyPlan.length - 1 && <div className="w-0.5 h-4 bg-gray-100 mt-1" />}
+                          </div>
+                          <div className="flex-1 min-w-0 pb-1">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className="text-[10px] text-gray-400 font-mono">{item.time}</span>
+                              <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">{item.type}</span>
+                              {item.status === 'scheduled' && <span className="text-[10px] text-green-500 bg-green-50 px-1.5 py-0.5 rounded-full">已排期</span>}
+                            </div>
+                            <div className="text-xs font-medium text-gray-800">{item.title}</div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                    <button
+                      onClick={() => setTab('operations')}
+                      className="w-full mt-2 py-2 bg-blue-50 text-blue-500 text-xs font-semibold rounded-xl"
+                    >
+                      前往运营中心管理排期 →
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 数据概览 */}
+            <div className="grid grid-cols-4 gap-2">
+              {statsCards.map((card: any) => (
+                <button
+                  key={card.label}
+                  onClick={() => { if (card.action === 'topics') { setTab('materials'); setMatTab('topics') } else setTab(card.action) }}
+                  className="bg-white rounded-2xl p-3 shadow-sm text-center active:scale-95 transition-transform"
+                >
+                  <div className="text-lg mb-1">{card.icon}</div>
+                  <div className="text-base font-black text-gray-900">{card.value}</div>
+                  <div className="text-[9px] text-gray-400 mt-0.5 leading-tight">{card.label}</div>
+                </button>
+              ))}
+            </div>
+
+            {/* 智能任务清单 */}
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
+                <div className="flex items-center gap-2">
+                  <div className="font-bold text-gray-900 text-sm">✅ 今日任务</div>
+                  <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{completedCount}/{totalCount}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {completedCount === totalCount && totalCount > 0 && (
+                    <span className="text-[10px] text-green-500 bg-green-50 px-2 py-0.5 rounded-full font-bold">全部完成 🎉</span>
+                  )}
+                </div>
+              </div>
+              <div className="divide-y divide-gray-50">
+                {todayTasks.map((task: any) => {
+                  const cfg = priorityConfig[task.priority]
+                  const done = completedTasks.has(task.id)
+                  return (
+                    <div
+                      key={task.id}
+                      className={`flex items-center gap-3 px-4 py-3 transition-all ${done ? 'opacity-50' : ''}`}
+                    >
+                      {/* 勾选框 */}
+                      <button
+                        onClick={() => toggleTask(task.id)}
+                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${done ? 'bg-green-400 border-green-400' : `border-gray-200 ${cfg.bg}`}`}
+                      >
+                        {done && <span className="text-white text-[10px] font-black">✓</span>}
+                      </button>
+                      {/* 任务内容 */}
+                      <button
+                        onClick={() => handleTaskAction(task.action)}
+                        className="flex-1 flex items-center gap-3 text-left min-w-0"
+                      >
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-base flex-shrink-0 ${cfg.bg}`}>
+                          {task.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className={`text-xs font-semibold ${done ? 'line-through text-gray-400' : 'text-gray-800'}`}>{task.label}</div>
+                          <div className="text-[10px] text-gray-400 mt-0.5 truncate">{task.desc}</div>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${cfg.tagBg}`}>{task.tag}</span>
+                          {!done && <span className="text-gray-300 text-xs">→</span>}
+                        </div>
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* 今日 & 明日发布计划 */}
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
+                <div className="font-bold text-gray-900 text-sm">📅 发布计划</div>
+                <button onClick={() => setTab('operations')} className="text-xs text-blue-500 font-medium">管理 →</button>
+              </div>
+              {/* 今日 */}
+              <div className="px-4 pt-3 pb-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">今日</span>
+                  {todaySchedule.length > 0 && <span className="text-[10px] text-blue-400 bg-blue-50 px-1.5 py-0.5 rounded-full">{todaySchedule.length} 条</span>}
+                </div>
+                {todaySchedule.length === 0 ? (
+                  <div className="flex items-center gap-2 py-2 mb-2">
+                    <span className="text-gray-300 text-sm">📭</span>
+                    <span className="text-xs text-gray-400">今日暂无排期</span>
+                    <button onClick={() => setTab('operations')} className="text-xs text-blue-400 font-medium ml-auto">+ 添加</button>
+                  </div>
+                ) : (
+                  <div className="space-y-2 mb-2">
+                    {todaySchedule.map((s: any) => (
+                      <div key={s.id} className="flex items-center gap-3 py-1.5">
+                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${s.status === '待发布' ? 'bg-orange-400' : s.status === '已发布' ? 'bg-green-400' : 'bg-gray-300'}`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-medium text-gray-800 truncate">{s.title}</div>
+                          <div className="text-[10px] text-gray-400">{s.time} · {s.platform}</div>
+                        </div>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${s.status === '待发布' ? 'bg-orange-50 text-orange-500' : s.status === '已发布' ? 'bg-green-50 text-green-500' : 'bg-gray-100 text-gray-400'}`}>{s.status}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* 明日 */}
+              <div className="px-4 pb-3 border-t border-gray-50 pt-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">明日</span>
+                  {tomorrowSchedule.length > 0 && <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">{tomorrowSchedule.length} 条</span>}
+                </div>
+                {tomorrowSchedule.length === 0 ? (
+                  <div className="flex items-center gap-2 py-1">
+                    <span className="text-gray-300 text-sm">📭</span>
+                    <span className="text-xs text-gray-400">明日暂无排期</span>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {tomorrowSchedule.map((s: any) => (
+                      <div key={s.id} className="flex items-center gap-3 py-1">
+                        <div className="w-2 h-2 rounded-full flex-shrink-0 bg-gray-200" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-medium text-gray-600 truncate">{s.title}</div>
+                          <div className="text-[10px] text-gray-400">{s.time} · {s.platform}</div>
+                        </div>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-400 flex-shrink-0">{s.status}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 快捷入口 */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">⚡ 快捷入口</div>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { icon: '📡', label: '情报雷达', action: () => { setTab('materials'); setMatTab('hotspot') }, color: 'bg-blue-50' },
+                  { icon: '💡', label: '生成选题', action: () => { setTab('materials'); setMatTab('topics') }, color: 'bg-purple-50' },
+                  { icon: '✍️', label: '写文案', action: () => setTab('content'), color: 'bg-green-50' },
+                  { icon: '🎬', label: '做视频', action: () => setTab('video'), color: 'bg-orange-50' },
+                  { icon: '📊', label: '运营中心', action: () => setTab('operations'), color: 'bg-red-50' },
+                  { icon: '🎨', label: '风格模板', action: () => { setTab('materials'); setMatTab('style') }, color: 'bg-pink-50' },
+                  { icon: '👥', label: '博主追踪', action: () => { setTab('materials'); setMatTab('creator') }, color: 'bg-cyan-50' },
+                  { icon: '🎯', label: '账号定位', action: onPositioning, color: 'bg-amber-50' },
+                ].map((item: any, i: number) => (
+                  <button
+                    key={i}
+                    onClick={item.action}
+                    className={`${item.color} rounded-2xl p-3 flex flex-col items-center gap-1.5 active:scale-95 transition-transform`}
+                  >
+                    <span className="text-xl">{item.icon}</span>
+                    <span className="text-[10px] font-semibold text-gray-600 text-center leading-tight">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 今日热点预览 */}
+            {hotspots && hotspots.length > 0 && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="font-bold text-gray-900 text-sm">🔥 今日热点</div>
+                  <button
+                    onClick={() => { setTab('materials'); setMatTab('hotspot') }}
+                    className="text-xs text-blue-500 font-medium"
+                  >查看全部 →</button>
+                </div>
+                <div className="space-y-2.5">
+                  {hotspots.slice(0, 4).map((h: any, i: number) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <span className={`text-xs font-black w-5 text-center flex-shrink-0 ${i === 0 ? 'text-red-400' : i === 1 ? 'text-orange-400' : i === 2 ? 'text-amber-400' : 'text-gray-300'}`}>{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium text-gray-800 truncate">{h.title}</div>
+                        {h.desc && <div className="text-[10px] text-gray-400 truncate mt-0.5">{h.desc}</div>}
+                      </div>
+                      {h.heat && <span className="text-[10px] text-red-400 font-bold flex-shrink-0">{h.heat}</span>}
+                    </div>
                   ))}
                 </div>
               </div>
-              <div className="flex gap-3 pt-1">
-                <button onClick={() => setShowAddAccount(false)} className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-2xl text-sm">取消</button>
-                <button onClick={addAccount} className="flex-1 py-3 bg-blue-500 text-white font-bold rounded-2xl text-sm">添加</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+            )}
 
-      {/* Header */}
-      <div className="px-5 pt-12 pb-3 flex-shrink-0">
-        {/* 顶部问候 */}
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <p className="text-xs text-gray-400 font-medium">
-              {new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })}
-            </p>
-            <h1 className="text-xl font-black text-gray-900">
-              {new Date().getHours() < 12 ? '早上好 ☀️' : new Date().getHours() < 18 ? '下午好 🌤️' : '晚上好 🌙'}
-            </h1>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* AI 快捷设置按钮 */}
-            <button
-              onClick={() => setShowAiPanel(true)}
-              className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 shadow-sm flex items-center justify-center text-base active:scale-95 transition-transform relative"
-            >
-              🤖
-              <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white" />
-            </button>
-            <button
-              onClick={onLogout}
-              className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-lg active:scale-95 transition-transform"
-            >
-              {user?.id === 'guest' ? '👤' : (user?.email?.[0]?.toUpperCase() || '👋')}
-            </button>
-          </div>
-        </div>
-
-        {/* 账号切换 */}
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-          {accounts.map((a: any, i: number) => (
-            <button
-              key={a.id}
-              onClick={() => setAccountIdx(i)}
-              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-semibold transition-all active:scale-95 ${i === accountIdx ? 'bg-blue-500 text-white shadow-md' : 'bg-white text-gray-600 shadow-sm'}`}
-            >
-              <span>{a.emoji}</span><span>{a.name}</span>
-            </button>
-          ))}
-          <button
-            onClick={() => setShowAddAccount(true)}
-            className="flex-shrink-0 w-8 h-8 rounded-2xl bg-white shadow-sm flex items-center justify-center text-gray-400 text-lg active:scale-95 transition-transform"
-          >+</button>
-        </div>
-      </div>
-
-      {/* 滚动内容区 */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4 space-y-3">
-
-        {/* 数据概览 */}
-        <div className="grid grid-cols-2 gap-2">
-          {stats.map((s, i) => (
-            <div key={i} className={`bg-gradient-to-br ${s.color} rounded-2xl p-3.5 text-white shadow-sm`}>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-lg">{s.icon}</span>
-                {s.trend && <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded-full font-bold">{s.trend} 今日</span>}
-              </div>
-              <div className="text-2xl font-black">{s.value}<span className="text-sm font-medium ml-0.5 opacity-80">{s.unit}</span></div>
-              <div className="text-white/70 text-[10px] mt-0.5">{s.label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* 快捷入口 */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <div className="font-bold text-gray-900 text-sm mb-3">⚡ 快捷入口</div>
-          <div className="grid grid-cols-4 gap-2">
-            {QUICK_ACTIONS.map((a, i) => (
-              <button
-                key={i}
-                onClick={() => {
-                  setTab(a.tab)
-                  if (a.matTab) setMatTab(a.matTab)
-                }}
-                className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
-              >
-                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${a.color} flex items-center justify-center text-xl shadow-sm`}>
-                  {a.icon}
+            {/* 最近文案 */}
+            {savedContents.length > 0 && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="font-bold text-gray-900 text-sm">💾 最近文案</div>
+                  <button onClick={() => setTab('content')} className="text-xs text-blue-500 font-medium">查看全部 →</button>
                 </div>
-                <div className="text-[10px] font-bold text-gray-700">{a.label}</div>
-                <div className="text-[9px] text-gray-400">{a.desc}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 今日任务清单 */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="font-bold text-gray-900 text-sm">📋 今日任务</div>
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-16 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-green-400 to-emerald-400 rounded-full transition-all"
-                  style={{ width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }}
-                />
-              </div>
-              <span className="text-xs text-gray-400">{completedCount}/{totalCount}</span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            {todayTasks.map((task: any) => (
-              <button
-                key={task.id}
-                onClick={() => handleTaskAction(task.action)}
-                className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl bg-gray-50 active:bg-gray-100 transition-colors text-left"
-              >
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-base flex-shrink-0 ${task.priority === 'high' ? 'bg-red-50' : task.priority === 'medium' ? 'bg-orange-50' : 'bg-green-50'}`}>
-                  {task.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-semibold text-gray-800">{task.label}</div>
-                  <div className="text-[10px] text-gray-400 mt-0.5">{task.desc}</div>
-                </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  {task.priority === 'high' && <span className="text-[9px] text-red-400 bg-red-50 px-1.5 py-0.5 rounded-full font-bold">紧急</span>}
-                  {task.priority === 'medium' && <span className="text-[9px] text-orange-400 bg-orange-50 px-1.5 py-0.5 rounded-full font-bold">今日</span>}
-                  <span className="text-gray-300 text-xs">→</span>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 今日热点预览 */}
-        {hotspots && hotspots.length > 0 && (
-          <div className="bg-white rounded-2xl p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <div className="font-bold text-gray-900 text-sm">🔥 今日热点</div>
-              <button
-                onClick={() => { setTab('materials'); setMatTab('hotspot') }}
-                className="text-xs text-blue-500 font-medium"
-              >查看全部 →</button>
-            </div>
-            <div className="space-y-2">
-              {hotspots.slice(0, 3).map((h: any, i: number) => (
-                <div key={i} className="flex items-center gap-3">
-                  <span className={`text-xs font-black w-5 text-center flex-shrink-0 ${i === 0 ? 'text-red-400' : i === 1 ? 'text-orange-400' : 'text-amber-400'}`}>{i + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium text-gray-800 truncate">{h.title}</div>
+                {savedContents.slice(0, 2).map((c: any) => (
+                  <div key={c.id} className="py-2.5 border-b border-gray-50 last:border-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full font-medium">{c.style}</span>
+                      <span className="text-[10px] text-gray-300">{new Date(c.createdAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })}</span>
+                    </div>
+                    <div className="text-xs font-medium text-gray-800 truncate">{c.topic}</div>
+                    <div className="text-[10px] text-gray-400 mt-0.5 line-clamp-1">{c.content}</div>
                   </div>
-                  {h.heat && <span className="text-[10px] text-red-400 font-bold flex-shrink-0">{h.heat}</span>}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 近期排期 */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="font-bold text-gray-900 text-sm">📅 近期排期</div>
-            <button onClick={() => setTab('operations')} className="text-xs text-blue-500 font-medium">管理 →</button>
-          </div>
-          {schedule.length === 0 ? (
-            <div className="text-center py-3">
-              <div className="text-2xl mb-1">📅</div>
-              <div className="text-xs text-gray-400">暂无排期，去运营中心添加</div>
-              <button onClick={() => setTab('operations')} className="mt-2 text-xs text-blue-500 font-medium bg-blue-50 px-3 py-1 rounded-full">+ 添加排期</button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {schedule.slice(0, 3).map((s: any) => (
-                <div key={s.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${s.status === '待发布' ? 'bg-orange-400' : s.status === '已发布' ? 'bg-green-400' : 'bg-gray-300'}`} />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium text-gray-800 truncate">{s.title}</div>
-                    <div className="text-[10px] text-gray-400">{s.time} · {s.platform}</div>
-                  </div>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${s.status === '待发布' ? 'bg-orange-50 text-orange-500' : s.status === '已发布' ? 'bg-green-50 text-green-500' : 'bg-gray-100 text-gray-400'}`}>{s.status}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* 已保存文案预览 */}
-        {savedContents.length > 0 && (
-          <div className="bg-white rounded-2xl p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <div className="font-bold text-gray-900 text-sm">💾 最近文案</div>
-              <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{savedContents.length} 条</span>
-            </div>
-            {savedContents.slice(0, 2).map((c: any) => (
-              <div key={c.id} className="py-2.5 border-b border-gray-50 last:border-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full font-medium">{c.style}</span>
-                  <span className="text-[10px] text-gray-300">{new Date(c.createdAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })}</span>
-                </div>
-                <div className="text-xs font-medium text-gray-800 truncate">{c.topic}</div>
-                <div className="text-[10px] text-gray-400 mt-0.5 line-clamp-1">{c.content}</div>
+                ))}
               </div>
-            ))}
+            )}
+
+            {/* 账号定位 CTA */}
+            {acc.positioning === '待完善' && (
+              <button onClick={onPositioning} className="w-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-2xl p-4 text-white text-left shadow-md active:scale-[0.98] transition-transform">
+                <div className="font-bold text-sm mb-0.5">✨ 还没有账号定位？</div>
+                <div className="text-white/70 text-xs">AI 帮你分析行业，生成专属定位方案 →</div>
+              </button>
+            )}
+
+            {/* 添加账号弹层 */}
+            {showAddAcc && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-blue-100">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="font-bold text-gray-900 text-sm">➕ 添加账号</div>
+                  <button onClick={() => setShowAddAcc(false)} className="text-gray-400 text-sm">✕</button>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">账号名称</div>
+                    <input
+                      value={newAccName}
+                      onChange={(e: any) => setNewAccName(e.target.value)}
+                      placeholder="例：美食探店号"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-400"
+                    />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">行业方向</div>
+                    <input
+                      value={newAccIndustry}
+                      onChange={(e: any) => setNewAccIndustry(e.target.value)}
+                      placeholder="例：美食、健身、教育..."
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-400"
+                    />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-2">选择图标</div>
+                    <div className="flex gap-2 flex-wrap">
+                      {EMOJIS.map((e: string) => (
+                        <button
+                          key={e}
+                          onClick={() => setNewAccEmoji(e)}
+                          className={`w-9 h-9 rounded-xl text-lg flex items-center justify-center transition-all ${newAccEmoji === e ? 'bg-blue-100 ring-2 ring-blue-400' : 'bg-gray-100'}`}
+                        >{e}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { addAccount(); setShowAddAcc(false) }}
+                    disabled={!newAccName}
+                    className="w-full py-2.5 bg-blue-500 text-white rounded-xl text-sm font-bold disabled:opacity-40"
+                  >
+                    创建账号
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
-        )}
-
-        {/* 账号定位 CTA */}
-        {acc.positioning === '待完善' && (
-          <button onClick={onPositioning} className="w-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-2xl p-4 text-white text-left shadow-md active:scale-[0.98] transition-transform">
-            <div className="font-bold text-sm mb-0.5">✨ 还没有账号定位？</div>
-            <div className="text-white/70 text-xs">AI 帮你分析行业，生成专属定位方案 →</div>
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
-
+        </div>
+      )
+    }
+    
 
 function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, topicFilter, setTopicFilter, topicSearch, setTopicSearch, batchCount, setBatchCount, topicCategories, selectedCategory, setSelectedCategory, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy, setShowAiPanel, creatorAnalysisTab, setCreatorAnalysisTab, selectedScript, setSelectedScript, showScriptDetail, setShowScriptDetail }: any) {
   const TABS = [
