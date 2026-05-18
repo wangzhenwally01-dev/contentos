@@ -494,14 +494,6 @@ export default function ContentOSApp() {
     document.documentElement.setAttribute('data-accent', accentColor)
   }, [theme, accentColor])
 
-  // Theme / Appearance
-  const [theme, setTheme] = React.useState('light')
-  const [accentColor, setAccentColor] = React.useState('blue')
-  React.useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
-    document.documentElement.setAttribute('data-accent', accentColor)
-  }, [theme, accentColor])
-
   // Profile / AI Settings
   const [aiModel, setAiModel] = useState('deepseek-chat')
   const [aiApiKey, setAiApiKey] = useState('')
