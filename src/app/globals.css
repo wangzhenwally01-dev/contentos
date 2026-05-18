@@ -26,3 +26,104 @@ body {
     display: none;
   }
 }
+
+/* ── 动画系统 ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slideInBottom {
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.4); opacity: 0.7; }
+}
+@keyframes bounce-in {
+  0%   { transform: scale(0.3); opacity: 0; }
+  50%  { transform: scale(1.05); }
+  70%  { transform: scale(0.9); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+
+/* ── 动画工具类 ── */
+.animate-fade-in-up   { animation: fadeInUp 0.35s cubic-bezier(0.16,1,0.3,1) both; }
+.animate-fade-in      { animation: fadeIn 0.25s ease both; }
+.animate-slide-bottom { animation: slideInBottom 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+.animate-slide-left   { animation: slideInLeft 0.3s cubic-bezier(0.16,1,0.3,1) both; }
+.animate-scale-in     { animation: scaleIn 0.3s cubic-bezier(0.16,1,0.3,1) both; }
+.animate-bounce-in    { animation: bounce-in 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+.animate-float        { animation: float 3s ease-in-out infinite; }
+.animate-spin-slow    { animation: spin-slow 3s linear infinite; }
+.animate-pulse-dot    { animation: pulse-dot 1.5s ease-in-out infinite; }
+
+/* 延迟类 */
+.delay-50  { animation-delay: 50ms; }
+.delay-100 { animation-delay: 100ms; }
+.delay-150 { animation-delay: 150ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-250 { animation-delay: 250ms; }
+.delay-300 { animation-delay: 300ms; }
+
+/* ── 骨架屏 ── */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* ── 触摸反馈 ── */
+.tap-scale {
+  transition: transform 0.12s cubic-bezier(0.16,1,0.3,1);
+}
+.tap-scale:active {
+  transform: scale(0.96);
+}
+
+/* ── 卡片悬停 ── */
+.card-hover {
+  transition: transform 0.2s cubic-bezier(0.16,1,0.3,1), box-shadow 0.2s ease;
+}
+.card-hover:active {
+  transform: scale(0.98);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+/* ── 底部导航过渡 ── */
+.tab-transition {
+  transition: color 0.2s ease, transform 0.2s cubic-bezier(0.16,1,0.3,1);
+}
+.tab-transition:active {
+  transform: scale(0.9);
+}
+
+/* ── 页面切换 ── */
+.page-enter {
+  animation: fadeInUp 0.3s cubic-bezier(0.16,1,0.3,1) both;
+}
