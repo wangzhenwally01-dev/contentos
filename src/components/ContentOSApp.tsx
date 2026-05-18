@@ -4906,6 +4906,661 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
   )
 }
 
+
+// ═══════════════════════════════════════════════════════════
+    // STATS TAB — 数据图表（交互升级版）
+    // ═══════════════════════════════════════════════════════════
+    function StatsTab({ acc, platformStats, statsRange, setStatsRange, showDataBind, setShowDataBind, dataBindTab, setDataBindTab, manualFans, setManualFans, manualPlays, setManualPlays, manualLikes, setManualLikes, statsLoading, fetchPlatformStats, updateManualStats, videoRecords }: any) {
+      const [activeChart, setActiveChart] = React.useState<'fans' | 'plays' | 'engagement'>('fans')
+      const [hoveredIdx, setHoveredIdx] = React.useState<number | null>(null)
+      const [chartType, setChartType] = React.useState<'line' | 'bar'>('line')
+
+      const chartConfig: any = {
+        fans: {
+          label: '粉丝增长',
+          data: platformStats.fans,
+          color: '#3B82F6',
+          unit: '',
+          summary: `本周新增 +${(platformStats.fans[6] - platformStats.fans[0]).toLocaleString()}`,
+          total: platformStats.totalFans >= 10000 ? (platformStats.totalFans / 10000).toFixed(1) + '万' : platformStats.totalFans.toLocaleString(),
+        },
+        plays: {
+          label: '播放量',
+          data: platformStats.plays,
+          color: '#8B5CF6',
+          unit: '',
+          summary: `峰值 ${Math.max(...platformStats.plays).toLocaleString()}`,
+          total: platformStats.totalPlays >= 10000 ? (platformStats.totalPlays / 10000).toFixed(1) + '万' : platformStats.totalPlays.toLocaleString(),
+        },
+        engagement: {
+          label: '互动数据',
+          data: platformStats.likes,
+          color: '#F59E0B',
+          unit: '',
+          summary: `点赞+评论+收藏`,
+          total: (platformStats.likes[6] + platformStats.comments[6] + platformStats.collects[6]).toLocaleString(),
+        },
+      }
+
+      const cfg = chartConfig[activeChart]
+      const data = cfg.data as number[]
+      const maxVal = Math.max(...data) * 1.15 || 1
+      const minVal = Math.min(...data) * 0.85
+      const W = 280, H = 100
+      const padL = 8, padR = 8, padT = 10, padB = 20
+
+      function getX(i: number) {
+        return padL + (i / (data.length - 1)) * (W - padL - padR)
+      }
+      function getY(v: number) {
+        return padT + (1 - (v - minVal) / Math.max(maxVal - minVal, 1)) * (H - padT - padB)
+      }
+
+      const linePath = data.map((v, i) => `${i === 0 ? 'M' : 'L'}${getX(i).toFixed(1)},${getY(v).toFixed(1)}`).join(' ')
+      const areaPath = linePath + ` L${getX(data.length - 1).toFixed(1)},${(H - padB).toFixed(1)} L${getX(0).toFixed(1)},${(H - padB).toFixed(1)} Z`
+
+      const DAYS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+
+      function fmtVal(v: number) {
+        if (v >= 10000) return (v / 10000).toFixed(1) + 'w'
+        if (v >= 1000) return (v / 1000).toFixed(1) + 'k'
+        return v.toString()
+      }
+
+      return (
+        <>
+          {/* 数据绑定弹窗 */}
+          {showDataBind && (
+            <div className="absolute inset-0 bg-black/40 z-40 flex flex-col rounded-[50px] overflow-hidden" onClick={() => setShowDataBind(false)}>
+              <div className="flex-1" />
+              <div className="bg-white rounded-t-3xl p-5 pb-8" onClick={(e: any) => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="font-black text-gray-900">数据绑定</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">手动录入或导入平台数据</p>
+                  </div>
+                  <button onClick={() => setShowDataBind(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
+                </div>
+                <div className="flex gap-2 mb-4">
+                  {[{id:'manual',label:'✏️ 手动录入'},{id:'import',label:'🤖 AI 生成'},{id:'records',label:'📊 视频记录'}].map((t: any) => (
+                    <button key={t.id} onClick={() => setDataBindTab(t.id)} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${dataBindTab === t.id ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500'}`}>{t.label}</button>
+                  ))}
+                </div>
+                {dataBindTab === 'manual' && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { label: '当前粉丝数', placeholder: `当前: ${platformStats.totalFans.toLocaleString()}`, value: manualFans, set: setManualFans },
+                        { label: '总播放量', placeholder: `当前: ${platformStats.totalPlays.toLocaleString()}`, value: manualPlays, set: setManualPlays },
+                        { label: '本周点赞', placeholder: `当前: ${platformStats.likes[6]}`, value: manualLikes, set: setManualLikes },
+                      ].map((f: any, i: number) => (
+                        <div key={i} className={i === 2 ? 'col-span-2' : ''}>
+                          <div className="text-xs text-gray-500 mb-1 font-medium">{f.label}</div>
+                          <input value={f.value} onChange={(e: any) => f.set(e.target.value)} placeholder={f.placeholder} className="w-full px-3 py-2 rounded-xl bg-gray-100 text-sm outline-none" type="number" />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="bg-blue-50 rounded-xl p-3">
+                      <div className="text-xs text-blue-600 font-semibold mb-1">📊 数据来源</div>
+                      <div className="text-xs text-blue-500 leading-relaxed">从抖音/小红书创作者后台复制数据填入，系统将自动生成趋势图表</div>
+                    </div>
+                    <button onClick={updateManualStats} className="w-full py-3 bg-blue-500 text-white text-sm font-bold rounded-2xl active:scale-[0.98] transition-transform">✅ 更新数据</button>
+                  </div>
+                )}
+                {dataBindTab === 'import' && (
+                  <div className="space-y-3">
+                    <div className="bg-purple-50 rounded-xl p-3">
+                      <div className="text-xs text-purple-700 font-semibold mb-1">🤖 AI 智能生成</div>
+                      <div className="text-xs text-purple-600 leading-relaxed">基于你的账号定位和行业，AI 将生成符合真实规律的数据趋势，用于图表展示和运营分析</div>
+                    </div>
+                    <div className="bg-white border border-gray-100 rounded-xl p-3 space-y-1.5">
+                      <div className="text-xs font-semibold text-gray-700">将基于以下信息生成：</div>
+                      {[`账号：${acc.name}`, `行业：${acc.industry}`, `定位：${acc.positioning?.slice(0,30) || '未设置'}...`].map((s: string, i: number) => (
+                        <div key={i} className="text-xs text-gray-500 flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0"/>{s}</div>
+                      ))}
+                    </div>
+                    <button onClick={() => { fetchPlatformStats(); setShowDataBind(false) }} disabled={statsLoading} className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-400 text-white text-sm font-bold rounded-2xl active:scale-[0.98] transition-transform disabled:opacity-60">
+                      {statsLoading ? '生成中...' : '🤖 AI 生成数据'}
+                    </button>
+                  </div>
+                )}
+                {dataBindTab === 'records' && (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {videoRecords.length === 0 ? (
+                      <div className="text-center py-8">
+                        <div className="text-3xl mb-2">📊</div>
+                        <p className="text-xs text-gray-400">暂无视频数据记录</p>
+                        <p className="text-xs text-gray-300 mt-1">在视频生成页发布后录入数据</p>
+                      </div>
+                    ) : videoRecords.map((r: any, i: number) => (
+                      <div key={r.id} className="bg-gray-50 rounded-xl p-3">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="text-xs font-semibold text-gray-800 flex-1 truncate">{r.title || '未命名视频'}</div>
+                          <span className="text-[10px] text-gray-400 flex-shrink-0">{r.createdAt}</span>
+                        </div>
+                        <div className="flex items-center gap-1 mb-2">
+                          <span className="text-[10px] bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded-full font-medium">{r.platform || '抖音'}</span>
+                          {r.publishDate && <span className="text-[10px] text-gray-400">{r.publishDate}</span>}
+                        </div>
+                        <div className="grid grid-cols-4 gap-1">
+                          {[{label:'播放',val:r.plays},{label:'点赞',val:r.likes},{label:'评论',val:r.comments},{label:'收藏',val:r.collects}].map((d: any) => (
+                            <div key={d.label} className="text-center">
+                              <div className="text-xs font-bold text-gray-800">{parseInt(d.val||0)>=10000?(parseInt(d.val)/10000).toFixed(1)+'w':d.val||0}</div>
+                              <div className="text-[9px] text-gray-400">{d.label}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 平台选择 + 数据绑定按钮 */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-black text-gray-900">{platformStats.platform} 数据</span>
+                {platformStats.lastSync && <span className="text-[10px] text-green-500 bg-green-50 px-2 py-0.5 rounded-full">已同步 {platformStats.lastSync}</span>}
+              </div>
+              <button
+                onClick={() => setShowDataBind(true)}
+                className="text-xs text-blue-500 font-semibold bg-blue-50 px-2.5 py-1 rounded-xl active:scale-95 transition-transform"
+              >
+                📊 录入数据
+              </button>
+            </div>
+            <select
+              value={platformStats.platform}
+              onChange={(e: any) => {}}
+              className="w-full bg-gray-50 rounded-xl px-3 py-2 text-sm text-gray-700 outline-none mb-3"
+            >
+              {['抖音', '小红书', 'B站', '视频号', '快手'].map((p: string) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+
+            {/* 核心数据卡片（可点击切换图表） */}
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: '总粉丝数', value: platformStats.totalFans >= 10000 ? (platformStats.totalFans/10000).toFixed(1)+'万' : platformStats.totalFans.toLocaleString(), trend: `+${Math.round((platformStats.fans[6]-platformStats.fans[0])/Math.max(platformStats.fans[0],1)*100)}%`, up: platformStats.fans[6] > platformStats.fans[0], icon: '👥', chartKey: 'fans' },
+                { label: '总播放量', value: platformStats.totalPlays >= 10000 ? (platformStats.totalPlays/10000).toFixed(1)+'万' : platformStats.totalPlays.toLocaleString(), trend: `+${Math.round((platformStats.plays[6]-platformStats.plays[0])/Math.max(platformStats.plays[0],1)*100)}%`, up: platformStats.plays[6] > platformStats.plays[0], icon: '▶️', chartKey: 'plays' },
+                { label: '本周互动', value: (platformStats.likes[6]+platformStats.comments[6]+platformStats.collects[6]).toLocaleString(), trend: '+12%', up: true, icon: '❤️', chartKey: 'engagement' },
+                { label: '平均互动率', value: platformStats.avgEngagement.toFixed(1), unit: '%', trend: '+0.8%', up: true, icon: '📈', chartKey: null },
+              ].map((s: any, i: number) => (
+                <button
+                  key={i}
+                  onClick={() => s.chartKey && setActiveChart(s.chartKey)}
+                  className={`rounded-2xl p-3 text-left transition-all active:scale-95 ${s.chartKey && activeChart === s.chartKey ? 'bg-blue-50 ring-2 ring-blue-200' : 'bg-gray-50'}`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-gray-500">{s.label}</span>
+                    <span className="text-base">{s.icon}</span>
+                  </div>
+                  <div className="text-lg font-black text-gray-900">{s.value}{s.unit || ''}</div>
+                  <div className={`text-[10px] font-semibold mt-0.5 ${s.up ? 'text-green-500' : 'text-red-400'}`}>
+                    {s.up ? '↑' : '↓'} {s.trend}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 交互式图表 */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            {/* 图表切换 Tab */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+                {[
+                  { key: 'fans', label: '粉丝' },
+                  { key: 'plays', label: '播放' },
+                  { key: 'engagement', label: '互动' },
+                ].map((t: any) => (
+                  <button
+                    key={t.key}
+                    onClick={() => setActiveChart(t.key)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeChart === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400'}`}
+                  >{t.label}</button>
+                ))}
+              </div>
+              {/* 折线/柱状切换 */}
+              <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+                {[{ key: 'line', icon: '📈' }, { key: 'bar', icon: '📊' }].map((t: any) => (
+                  <button
+                    key={t.key}
+                    onClick={() => setChartType(t.key)}
+                    className={`w-7 h-7 rounded-lg text-sm flex items-center justify-center transition-all ${chartType === t.key ? 'bg-white shadow-sm' : ''}`}
+                  >{t.icon}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* 图表标题 */}
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs font-semibold text-gray-700">{cfg.label} · 近7天</div>
+              <div className="text-xs text-gray-400">{cfg.summary}</div>
+            </div>
+
+            {/* SVG 图表 */}
+            <div className="relative" onMouseLeave={() => setHoveredIdx(null)}>
+              <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 100 }}>
+                <defs>
+                  <linearGradient id={`grad_${activeChart}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={cfg.color} stopOpacity="0.3" />
+                    <stop offset="100%" stopColor={cfg.color} stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+
+                {/* Y轴网格线 */}
+                {[0.25, 0.5, 0.75, 1].map((pct: number) => {
+                  const y = padT + pct * (H - padT - padB)
+                  return <line key={pct} x1={padL} y1={y} x2={W - padR} y2={y} stroke="#F3F4F6" strokeWidth="1" />
+                })}
+
+                {chartType === 'line' ? (
+                  <>
+                    <path d={areaPath} fill={`url(#grad_${activeChart})`} />
+                    <path d={linePath} fill="none" stroke={cfg.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    {data.map((v: number, i: number) => (
+                      <g key={i}>
+                        <circle
+                          cx={getX(i)} cy={getY(v)} r={hoveredIdx === i ? 5 : 3}
+                          fill={hoveredIdx === i ? cfg.color : 'white'}
+                          stroke={cfg.color} strokeWidth="2"
+                          style={{ cursor: 'pointer', transition: 'r 0.15s' }}
+                        />
+                        <rect x={getX(i) - 15} y={padT} width={30} height={H - padT - padB} fill="transparent" onMouseEnter={() => setHoveredIdx(i)} />
+                      </g>
+                    ))}
+                  </>
+                ) : (
+                  data.map((v: number, i: number) => {
+                    const barW = (W - padL - padR) / data.length * 0.6
+                    const x = getX(i) - barW / 2
+                    const barH = Math.max(2, (H - padT - padB) * (v - minVal) / Math.max(maxVal - minVal, 1))
+                    const y = H - padB - barH
+                    return (
+                      <g key={i} onMouseEnter={() => setHoveredIdx(i)} style={{ cursor: 'pointer' }}>
+                        <rect x={x} y={y} width={barW} height={barH} rx="3"
+                          fill={hoveredIdx === i ? cfg.color : cfg.color + '99'}
+                          style={{ transition: 'fill 0.15s' }}
+                        />
+                      </g>
+                    )
+                  })
+                )}
+
+                {/* Tooltip */}
+                {hoveredIdx !== null && (() => {
+                  const v = data[hoveredIdx]
+                  const tx = getX(hoveredIdx)
+                  const ty = getY(v) - 14
+                  const label = fmtVal(v)
+                  const boxW = label.length * 7 + 12
+                  const boxX = Math.min(Math.max(tx - boxW / 2, padL), W - padR - boxW)
+                  return (
+                    <g>
+                      <rect x={boxX} y={ty - 12} width={boxW} height={16} rx="4" fill={cfg.color} />
+                      <text x={boxX + boxW / 2} y={ty - 1} textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">{label}</text>
+                    </g>
+                  )
+                })()}
+
+                {/* X轴标签 */}
+                {data.map((_: any, i: number) => (
+                  <text key={i} x={getX(i)} y={H - 4} textAnchor="middle"
+                    fill={hoveredIdx === i ? cfg.color : '#9CA3AF'}
+                    fontSize="8" fontWeight={hoveredIdx === i ? 'bold' : 'normal'}
+                  >{DAYS[i]}</text>
+                ))}
+              </svg>
+
+              {/* Hover 详情卡 */}
+              {hoveredIdx !== null && (
+                <div className="absolute top-0 right-0 bg-white border border-gray-100 rounded-xl px-3 py-2 shadow-md text-xs pointer-events-none">
+                  <div className="text-gray-500 mb-0.5">{DAYS[hoveredIdx]}</div>
+                  <div className="font-black" style={{ color: cfg.color }}>{fmtVal(data[hoveredIdx])}</div>
+                </div>
+              )}
+            </div>
+
+            {/* 图表底部摘要 */}
+            <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
+              <div className="text-xs text-gray-400">{cfg.summary}</div>
+              <div className="text-xs font-bold text-gray-700">总计 {cfg.total}</div>
+            </div>
+          </div>
+
+          {/* 互动分布 */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="font-bold text-gray-900 text-sm mb-3">💬 互动分布</div>
+            <div className="space-y-3">
+              {[
+                { label: '点赞', data: platformStats.likes, color: '#EF4444', icon: '❤️' },
+                { label: '评论', data: platformStats.comments, color: '#3B82F6', icon: '💬' },
+                { label: '收藏', data: platformStats.collects, color: '#F59E0B', icon: '⭐' },
+              ].map((item: any) => {
+                const total = item.data.reduce((a: number, b: number) => a + b, 0)
+                const maxItem = Math.max(...item.data)
+                return (
+                  <div key={item.label}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm">{item.icon}</span>
+                        <span className="text-xs font-semibold text-gray-700">{item.label}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400">本周 {item.data[6].toLocaleString()}</span>
+                        <span className="text-xs font-bold text-gray-700">总 {total.toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-0.5 items-end h-8">
+                      {item.data.map((v: number, i: number) => {
+                        const h = Math.max(4, Math.round((v / Math.max(maxItem, 1)) * 28))
+                        return (
+                          <div key={i} className="flex-1 rounded-sm transition-all"
+                            style={{ height: h, backgroundColor: i === 6 ? item.color : item.color + '40', alignSelf: 'flex-end' }}
+                          />
+                        )
+                      })}
+                    </div>
+                    <div className="flex justify-between mt-1">
+                      {['一', '二', '三', '四', '五', '六', '日'].map((d: string, i: number) => (
+                        <span key={i} className="text-[8px] text-gray-300 flex-1 text-center">{d}</span>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* 视频记录列表 */}
+          {videoRecords.length > 0 && (
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-bold text-gray-900 text-sm">🎬 视频数据记录</div>
+                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{videoRecords.length} 条</span>
+              </div>
+              <div className="space-y-2">
+                {videoRecords.slice(0, 5).map((r: any, i: number) => {
+                  const plays = parseInt(r.plays || 0)
+                  const likes = parseInt(r.likes || 0)
+                  const engRate = plays > 0 ? ((likes / plays) * 100).toFixed(1) : '0'
+                  return (
+                    <div key={r.id} className="bg-gray-50 rounded-xl p-3">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="text-xs font-semibold text-gray-800 flex-1 truncate">{r.title || '未命名视频'}</div>
+                        <span className="text-[10px] text-gray-400 flex-shrink-0">{r.publishDate || r.createdAt}</span>
+                      </div>
+                      <div className="flex items-center gap-1 mb-2">
+                        <span className="text-[10px] bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded-full font-medium">{r.platform || '抖音'}</span>
+                        <span className="text-[10px] text-green-500 bg-green-50 px-1.5 py-0.5 rounded-full font-medium">互动率 {engRate}%</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1">
+                        {[{label:'播放',val:r.plays,color:'text-blue-500'},{label:'点赞',val:r.likes,color:'text-red-400'},{label:'评论',val:r.comments,color:'text-purple-400'},{label:'收藏',val:r.collects,color:'text-amber-400'}].map((d: any) => (
+                          <div key={d.label} className="text-center bg-white rounded-lg py-1.5">
+                            <div className={`text-xs font-bold ${d.color}`}>{parseInt(d.val||0)>=10000?(parseInt(d.val)/10000).toFixed(1)+'w':d.val||0}</div>
+                            <div className="text-[9px] text-gray-400">{d.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </>
+      )
+    }
+
+    
+// ═══════════════════════════════════════════════════════════
+    // GOALS TAB — 目标追踪（升级版）
+    // ═══════════════════════════════════════════════════════════
+    function GoalsTab({ acc, platformStats, schedule, savedContents, videoRecords }: any) {
+      const defaultGoals = [
+        { id: 'fans', label: '粉丝增长', icon: '👥', current: platformStats.fans[6] - platformStats.fans[0], target: 500, unit: '人', color: 'from-blue-400 to-cyan-400', bgColor: 'bg-blue-50', textColor: 'text-blue-500', desc: '本月新增粉丝目标' },
+        { id: 'videos', label: '视频发布', icon: '🎬', current: schedule.filter((s: any) => s.status === '已发布').length, target: 20, unit: '条', color: 'from-purple-400 to-pink-400', bgColor: 'bg-purple-50', textColor: 'text-purple-500', desc: '本月发布视频数量' },
+        { id: 'plays', label: '总播放量', icon: '▶️', current: platformStats.totalPlays, target: 50000, unit: '', color: 'from-orange-400 to-amber-400', bgColor: 'bg-orange-50', textColor: 'text-orange-500', desc: '累计播放量目标' },
+        { id: 'copy', label: '文案创作', icon: '✍️', current: savedContents.length, target: 30, unit: '条', color: 'from-green-400 to-teal-400', bgColor: 'bg-green-50', textColor: 'text-green-500', desc: '本月文案生产目标' },
+      ]
+
+      const [goals, setGoals] = React.useState(defaultGoals)
+      const [editingId, setEditingId] = React.useState<string | null>(null)
+      const [editValue, setEditValue] = React.useState('')
+
+      const totalFans = platformStats.totalFans
+      const phases = [
+        { phase: '起步期', desc: '建立账号基础，每周发布3-5条内容', threshold: 0, target: 1000, color: 'bg-blue-400', activeColor: 'from-blue-400 to-cyan-400' },
+        { phase: '成长期', desc: '打造爆款内容，粉丝突破1万', threshold: 1000, target: 10000, color: 'bg-purple-400', activeColor: 'from-purple-400 to-pink-400' },
+        { phase: '变现期', desc: '商业变现，开通橱窗/接广告', threshold: 10000, target: 100000, color: 'bg-orange-400', activeColor: 'from-orange-400 to-amber-400' },
+        { phase: '头部期', desc: '品牌合作，打造个人IP', threshold: 100000, target: 1000000, color: 'bg-green-400', activeColor: 'from-green-400 to-teal-400' },
+      ]
+      const currentPhaseIdx = Math.max(0, phases.findIndex((p, i) => totalFans >= p.threshold && (i === phases.length - 1 || totalFans < phases[i + 1].threshold)))
+
+      const weekEngagement = platformStats.likes.slice(-7).reduce((a: number, b: number) => a + b, 0) +
+        platformStats.comments.slice(-7).reduce((a: number, b: number) => a + b, 0)
+
+      function startEdit(goal: any) {
+        setEditingId(goal.id)
+        setEditValue(goal.target.toString())
+      }
+
+      function saveEdit(id: string) {
+        const val = parseInt(editValue)
+        if (!isNaN(val) && val > 0) {
+          setGoals((prev: any[]) => prev.map((g: any) => g.id === id ? { ...g, target: val } : g))
+        }
+        setEditingId(null)
+      }
+
+      function getPct(current: number, target: number) {
+        return Math.min(100, Math.round((current / Math.max(target, 1)) * 100))
+      }
+
+      function getStatusLabel(pct: number) {
+        if (pct >= 100) return { label: '已完成 🎉', color: 'text-green-500 bg-green-50' }
+        if (pct >= 75) return { label: '即将完成', color: 'text-blue-500 bg-blue-50' }
+        if (pct >= 50) return { label: '进行中', color: 'text-orange-500 bg-orange-50' }
+        return { label: '加油', color: 'text-gray-400 bg-gray-100' }
+      }
+
+      return (
+        <>
+          {/* 本周数据摘要 */}
+          <div className="bg-gradient-to-r from-blue-500 to-cyan-400 rounded-2xl p-4 text-white shadow-md">
+            <div className="text-white/70 text-xs mb-2">本周运营概览</div>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: '新增粉丝', value: (platformStats.fans[6] - platformStats.fans[0]).toLocaleString(), icon: '👥' },
+                { label: '本周发布', value: `${schedule.filter((s: any) => s.status === '已发布').length} 条`, icon: '🎬' },
+                { label: '互动总量', value: weekEngagement >= 1000 ? (weekEngagement / 1000).toFixed(1) + 'k' : weekEngagement.toString(), icon: '❤️' },
+              ].map((item: any, i: number) => (
+                <div key={i} className="text-center">
+                  <div className="text-lg mb-0.5">{item.icon}</div>
+                  <div className="font-black text-base">{item.value}</div>
+                  <div className="text-white/70 text-[10px]">{item.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 目标进度卡片 */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div className="font-bold text-gray-900 text-sm">🎯 本月目标追踪</div>
+              <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                {goals.filter((g: any) => getPct(g.current, g.target) >= 100).length}/{goals.length} 完成
+              </span>
+            </div>
+            <div className="space-y-4">
+              {goals.map((g: any) => {
+                const pct = getPct(g.current, g.target)
+                const status = getStatusLabel(pct)
+                const isEditing = editingId === g.id
+                return (
+                  <div key={g.id} className={`rounded-2xl p-3 transition-all ${pct >= 100 ? 'bg-green-50 ring-1 ring-green-200' : 'bg-gray-50'}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-sm ${g.bgColor}`}>{g.icon}</div>
+                        <div>
+                          <div className="text-xs font-bold text-gray-800">{g.label}</div>
+                          <div className="text-[10px] text-gray-400">{g.desc}</div>
+                        </div>
+                      </div>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${status.color}`}>{status.label}</span>
+                    </div>
+
+                    {/* 进度条 */}
+                    <div className="mb-2">
+                      <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full bg-gradient-to-r ${g.color} rounded-full transition-all duration-700`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* 数值 + 可编辑目标 */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-sm font-black ${g.textColor}`}>
+                          {g.current >= 10000 ? (g.current / 10000).toFixed(1) + '万' : g.current.toLocaleString()}{g.unit}
+                        </span>
+                        <span className="text-xs text-gray-400">/</span>
+                        {isEditing ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              value={editValue}
+                              onChange={(e: any) => setEditValue(e.target.value)}
+                              className="w-20 text-xs border border-blue-300 rounded-lg px-2 py-0.5 outline-none"
+                              type="number"
+                              autoFocus
+                              onBlur={() => saveEdit(g.id)}
+                              onKeyDown={(e: any) => e.key === 'Enter' && saveEdit(g.id)}
+                            />
+                            <span className="text-xs text-gray-400">{g.unit}</span>
+                          </div>
+                        ) : (
+                          <button onClick={() => startEdit(g)} className="text-xs text-gray-400 hover:text-blue-500 transition-colors">
+                            {g.target >= 10000 ? (g.target / 10000).toFixed(1) + '万' : g.target.toLocaleString()}{g.unit}
+                            <span className="ml-1 text-[9px] text-gray-300">✏️</span>
+                          </button>
+                        )}
+                      </div>
+                      <span className={`text-sm font-black ${pct >= 100 ? 'text-green-500' : g.textColor}`}>{pct}%</span>
+                    </div>
+
+                    {pct >= 100 && (
+                      <div className="mt-2 text-center text-xs text-green-500 font-bold animate-bounce">
+                        🎉 目标达成！继续保持！
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* 成长阶段 */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="font-bold text-gray-900 text-sm">📈 成长阶段</div>
+              <span className="text-xs text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full font-semibold">
+                当前：{phases[currentPhaseIdx]?.phase}
+              </span>
+            </div>
+
+            {/* 阶段进度条 */}
+            <div className="mb-4">
+              <div className="flex items-center gap-1 mb-2">
+                {phases.map((p: any, i: number) => (
+                  <div key={i} className={`flex-1 h-2 rounded-full transition-all ${i <= currentPhaseIdx ? `bg-gradient-to-r ${p.activeColor}` : 'bg-gray-100'}`} />
+                ))}
+              </div>
+              <div className="flex justify-between">
+                {phases.map((p: any, i: number) => (
+                  <span key={i} className={`text-[9px] font-semibold ${i === currentPhaseIdx ? 'text-blue-500' : i < currentPhaseIdx ? 'text-green-400' : 'text-gray-300'}`}>
+                    {p.phase}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* 当前阶段详情 */}
+            <div className={`bg-gradient-to-r ${phases[currentPhaseIdx]?.activeColor} rounded-2xl p-3 text-white mb-3`}>
+              <div className="font-bold text-sm mb-1">{phases[currentPhaseIdx]?.phase}</div>
+              <div className="text-white/80 text-xs mb-2">{phases[currentPhaseIdx]?.desc}</div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-white/70">当前粉丝</span>
+                <span className="font-bold">{totalFans >= 10000 ? (totalFans / 10000).toFixed(1) + '万' : totalFans.toLocaleString()}</span>
+              </div>
+              {currentPhaseIdx < phases.length - 1 && (
+                <div className="mt-2">
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="text-white/70">距下一阶段</span>
+                    <span className="font-bold">{(phases[currentPhaseIdx + 1].threshold - totalFans).toLocaleString()} 粉丝</span>
+                  </div>
+                  <div className="bg-white/20 rounded-full h-1.5">
+                    <div
+                      className="bg-white rounded-full h-1.5 transition-all"
+                      style={{ width: `${Math.min(100, ((totalFans - phases[currentPhaseIdx].threshold) / Math.max(phases[currentPhaseIdx + 1].threshold - phases[currentPhaseIdx].threshold, 1)) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 所有阶段列表 */}
+            <div className="space-y-2">
+              {phases.map((p: any, i: number) => (
+                <div key={i} className={`flex gap-3 py-2.5 px-3 rounded-xl transition-all ${i === currentPhaseIdx ? 'bg-blue-50' : ''}`}>
+                  <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${i < currentPhaseIdx ? 'bg-green-400' : i === currentPhaseIdx ? p.color : 'bg-gray-200'}`} />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className={`text-xs font-bold ${i === currentPhaseIdx ? 'text-blue-600' : i < currentPhaseIdx ? 'text-green-500' : 'text-gray-400'}`}>{p.phase}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${i < currentPhaseIdx ? 'bg-green-50 text-green-500' : i === currentPhaseIdx ? 'bg-blue-50 text-blue-500' : 'bg-gray-100 text-gray-400'}`}>
+                        {i < currentPhaseIdx ? '✅ 已完成' : i === currentPhaseIdx ? '进行中' : '未开始'}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-gray-400">{p.desc}</div>
+                    <div className="text-[10px] text-gray-300 mt-0.5">目标：{p.target >= 10000 ? (p.target / 10000) + '万' : p.target.toLocaleString()} 粉丝</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* AI 运营诊断 */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="font-bold text-gray-900 text-sm mb-3">🤖 AI 运营诊断</div>
+            <div className="space-y-2">
+              {[
+                { type: '优势', icon: '✅', color: 'bg-green-50 text-green-700', content: `互动率 ${platformStats.avgEngagement.toFixed(1)}%，高于行业平均水平` },
+                { type: '待改进', icon: '⚠️', color: 'bg-orange-50 text-orange-700', content: `发布频率偏低，建议每周至少发布 3 条内容` },
+                { type: '建议', icon: '💡', color: 'bg-blue-50 text-blue-700', content: `${acc.industry}行业最佳发布时间为 19:00-21:00，建议调整排期` },
+              ].map((item: any, i: number) => (
+                <div key={i} className={`rounded-xl p-3 ${item.color}`}>
+                  <div className="flex items-start gap-2">
+                    <span className="text-sm flex-shrink-0">{item.icon}</span>
+                    <div>
+                      <span className="text-[10px] font-bold mr-1">{item.type}</span>
+                      <span className="text-xs">{item.content}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )
+    }
+
+    
 function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedContents, showToast, insights, insightsLoading, fetchInsights, showAddSchedule, setShowAddSchedule, newScheduleTitle, setNewScheduleTitle, newSchedulePlatform, setNewSchedulePlatform, addScheduleItem, generateWeekPlan, weekPlanLoading, showWeekPlan, setShowWeekPlan, dragItem, setDragItem, dragOverDate, setDragOverDate, handleDragDrop, platformStats, setPlatformStats, statsRange, setStatsRange, showDataBind, setShowDataBind, dataBindTab, setDataBindTab, manualFans, setManualFans, manualPlays, setManualPlays, manualLikes, setManualLikes, statsLoading, fetchPlatformStats, updateManualStats, setShowAiPanel, videoRecords, showVideoRecord, setShowVideoRecord, recordingVideo, setRecordingVideo, quickRecordData, setQuickRecordData, saveVideoRecord }: any) {
   const TABS = [{ id: 'schedule', label: '📅 排期' }, { id: 'stats', label: '📊 数据' }, { id: 'goals', label: '🎯 目标' }]
   const STATS = [
@@ -5042,397 +5697,39 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
         )}
 
         {/* Stats Tab */}
-        {opsTab === 'stats' && (
-          <>
-            {/* 数据绑定弹窗 */}
-            {showDataBind && (
-              <div className="absolute inset-0 bg-black/40 z-40 flex flex-col rounded-[50px] overflow-hidden" onClick={() => setShowDataBind(false)}>
-                <div className="flex-1" />
-                <div className="bg-white rounded-t-3xl p-5 pb-8" onClick={(e: any) => e.stopPropagation()}>
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="font-black text-gray-900">数据绑定</h3>
-                      <p className="text-xs text-gray-400 mt-0.5">手动录入或导入平台数据</p>
-                    </div>
-                    <button onClick={() => setShowDataBind(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
-                  </div>
-                  <div className="flex gap-2 mb-4">
-                    {[{id:'manual',label:'✏️ 手动录入'},{id:'import',label:'🤖 AI 生成'},{id:'records',label:'📊 视频记录'}].map((t: any) => (
-                      <button key={t.id} onClick={() => setDataBindTab(t.id)} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${dataBindTab === t.id ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500'}`}>{t.label}</button>
-                    ))}
-                  </div>
-                  {dataBindTab === 'manual' && (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          { label: '当前粉丝数', placeholder: `当前: ${platformStats.totalFans.toLocaleString()}`, value: manualFans, set: setManualFans },
-                          { label: '总播放量', placeholder: `当前: ${platformStats.totalPlays.toLocaleString()}`, value: manualPlays, set: setManualPlays },
-                          { label: '本周点赞', placeholder: `当前: ${platformStats.likes[6]}`, value: manualLikes, set: setManualLikes },
-                        ].map((f: any, i: number) => (
-                          <div key={i} className={i === 2 ? 'col-span-2' : ''}>
-                            <div className="text-xs text-gray-500 mb-1 font-medium">{f.label}</div>
-                            <input value={f.value} onChange={(e: any) => f.set(e.target.value)} placeholder={f.placeholder} className="w-full px-3 py-2 rounded-xl bg-gray-100 text-sm outline-none" type="number" />
-                          </div>
-                        ))}
-                      </div>
-                      <div className="bg-blue-50 rounded-xl p-3">
-                        <div className="text-xs text-blue-600 font-semibold mb-1">📊 数据来源</div>
-                        <div className="text-xs text-blue-500 leading-relaxed">从抖音/小红书创作者后台复制数据填入，系统将自动生成趋势图表</div>
-                      </div>
-                      <button onClick={updateManualStats} className="w-full py-3 bg-blue-500 text-white text-sm font-bold rounded-2xl active:scale-[0.98] transition-transform">✅ 更新数据</button>
-                    </div>
-                  )}
-                  {dataBindTab === 'import' && (
-                    <div className="space-y-3">
-                      <div className="bg-purple-50 rounded-xl p-3">
-                        <div className="text-xs text-purple-700 font-semibold mb-1">🤖 AI 智能生成</div>
-                        <div className="text-xs text-purple-600 leading-relaxed">基于你的账号定位和行业，AI 将生成符合真实规律的数据趋势，用于图表展示和运营分析</div>
-                      </div>
-                      <div className="bg-white border border-gray-100 rounded-xl p-3 space-y-1.5">
-                        <div className="text-xs font-semibold text-gray-700">将基于以下信息生成：</div>
-                        {[`账号：${acc.name}`, `行业：${acc.industry}`, `定位：${acc.positioning?.slice(0,30) || '未设置'}...`].map((s: string, i: number) => (
-                          <div key={i} className="text-xs text-gray-500 flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0"/>{s}</div>
-                        ))}
-                      </div>
-                      <button onClick={() => { fetchPlatformStats(); setShowDataBind(false) }} disabled={statsLoading} className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-400 text-white text-sm font-bold rounded-2xl active:scale-[0.98] transition-transform disabled:opacity-60">
-                        {statsLoading ? '生成中...' : '🤖 AI 生成数据'}
-                      </button>
-                    </div>
-                  )}
-                  {dataBindTab === 'records' && (
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {videoRecords.length === 0 ? (
-                        <div className="text-center py-8">
-                          <div className="text-3xl mb-2">📊</div>
-                          <p className="text-xs text-gray-400">暂无视频数据记录</p>
-                          <p className="text-xs text-gray-300 mt-1">在视频生成页发布后录入数据</p>
-                        </div>
-                      ) : videoRecords.map((r: any, i: number) => (
-                        <div key={r.id} className="bg-gray-50 rounded-xl p-3 animate-fade-in-up" style={{animationDelay:`${i*40}ms`}}>
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <div className="text-xs font-semibold text-gray-800 flex-1 truncate">{r.title || '未命名视频'}</div>
-                            <span className="text-[10px] text-gray-400 flex-shrink-0">{r.createdAt}</span>
-                          </div>
-                          <div className="flex items-center gap-1 mb-2">
-                            <span className="text-[10px] bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded-full font-medium">{r.platform || '抖音'}</span>
-                            {r.publishDate && <span className="text-[10px] text-gray-400">{r.publishDate}</span>}
-                          </div>
-                          <div className="grid grid-cols-4 gap-1">
-                            {[{label:'播放',val:r.plays},{label:'点赞',val:r.likes},{label:'评论',val:r.comments},{label:'收藏',val:r.collects}].map((d: any) => (
-                              <div key={d.label} className="text-center">
-                                <div className="text-xs font-bold text-gray-800">{parseInt(d.val||0)>=10000?(parseInt(d.val)/10000).toFixed(1)+'w':d.val||0}</div>
-                                <div className="text-[9px] text-gray-400">{d.label}</div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+            {opsTab === 'stats' && (
+              <StatsTab
+                acc={acc}
+                platformStats={platformStats}
+                statsRange={statsRange}
+                setStatsRange={setStatsRange}
+                showDataBind={showDataBind}
+                setShowDataBind={setShowDataBind}
+                dataBindTab={dataBindTab}
+                setDataBindTab={setDataBindTab}
+                manualFans={manualFans}
+                setManualFans={setManualFans}
+                manualPlays={manualPlays}
+                setManualPlays={setManualPlays}
+                manualLikes={manualLikes}
+                setManualLikes={setManualLikes}
+                statsLoading={statsLoading}
+                fetchPlatformStats={fetchPlatformStats}
+                updateManualStats={updateManualStats}
+                videoRecords={videoRecords}
+              />
             )}
 
-            {/* 顶部操作栏 */}
-            <div className="bg-white rounded-2xl p-3 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-black text-gray-900">{platformStats.platform} 数据</span>
-                    {platformStats.lastSync && <span className="text-[10px] text-green-500 bg-green-50 px-2 py-0.5 rounded-full">已同步 {platformStats.lastSync}</span>}
-                  </div>
-                  <div className="text-xs text-gray-400 mt-0.5">点击"绑定"录入真实数据</div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {/* 平台切换 */}
-                  <select
-                    value={platformStats.platform}
-                    onChange={(e: any) => setPlatformStats((prev: any) => ({ ...prev, platform: e.target.value }))}
-                    className="text-xs bg-gray-100 text-gray-600 px-2 py-1.5 rounded-xl outline-none font-medium"
-                  >
-                    {['抖音', '小红书', 'B站', '视频号'].map((p: string) => <option key={p}>{p}</option>)}
-                  </select>
-                  <button onClick={() => setShowDataBind(true)} className="text-xs font-bold px-3 py-1.5 bg-blue-500 text-white rounded-xl active:scale-95 transition-transform">绑定</button>
-                </div>
-              </div>
-            </div>
-
-            {/* 核心数据卡片（动态） */}
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: '总粉丝数', value: platformStats.totalFans >= 10000 ? (platformStats.totalFans/10000).toFixed(1)+'万' : platformStats.totalFans.toLocaleString(), unit: '', trend: `+${Math.round((platformStats.fans[6]-platformStats.fans[0])/platformStats.fans[0]*100)}%`, up: platformStats.fans[6] > platformStats.fans[0] },
-                { label: '总播放量', value: platformStats.totalPlays >= 10000 ? (platformStats.totalPlays/10000).toFixed(1)+'万' : platformStats.totalPlays.toLocaleString(), unit: '', trend: `+${Math.round((platformStats.plays[6]-platformStats.plays[0])/platformStats.plays[0]*100)}%`, up: platformStats.plays[6] > platformStats.plays[0] },
-                { label: '本周互动', value: (platformStats.likes[6]+platformStats.comments[6]+platformStats.collects[6]).toLocaleString(), unit: '', trend: `+${Math.round(((platformStats.likes[6]+platformStats.comments[6])-(platformStats.likes[0]+platformStats.comments[0]))/(platformStats.likes[0]+platformStats.comments[0])*100)}%`, up: true },
-                { label: '平均互动率', value: platformStats.avgEngagement.toFixed(1), unit: '%', trend: '+0.8%', up: true },
-              ].map((s: any, i: number) => (
-                <div key={i} className="bg-white rounded-2xl p-4 shadow-sm">
-                  <div className="text-xs text-gray-400 mb-1">{s.label}</div>
-                  <div className="text-2xl font-black text-gray-900">{s.value}<span className="text-sm font-medium text-gray-400 ml-0.5">{s.unit}</span></div>
-                  <div className={`text-xs font-semibold mt-1 ${s.up ? 'text-green-500' : 'text-red-400'}`}>{s.up ? '↑' : '↓'} {s.trend} 较上周</div>
-                </div>
-              ))}
-            </div>
-
-            {/* 粉丝增长折线图（动态数据） */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <div className="font-bold text-gray-900 text-sm">👥 粉丝增长趋势</div>
-                <div className="flex gap-1">
-                  {(['7d','30d'] as const).map((t) => (
-                    <button key={t} onClick={() => setStatsRange(t)} className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-all ${statsRange === t ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-400'}`}>{t === '7d' ? '7天' : '30天'}</button>
-                  ))}
-                </div>
-              </div>
-              {(() => {
-                const data = platformStats.fans
-                const min = Math.min(...data)
-                const max = Math.max(...data)
-                const range = max - min || 1
-                const pts = data.map((v: number, i: number) => [30 + i * 44, 88 - ((v - min) / range) * 70])
-                const polyline = pts.map((p: number[]) => p.join(',')).join(' ')
-                const area = `M${pts[0][0]},${pts[0][1]} ` + pts.slice(1).map((p: number[]) => `L${p[0]},${p[1]}`).join(' ') + ` L${pts[pts.length-1][0]},88 L${pts[0][0]},88 Z`
-                return (
-                  <svg viewBox="0 0 300 100" className="w-full" style={{height:'90px'}}>
-                    <defs>
-                      <linearGradient id="fanGrad2" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.3"/>
-                        <stop offset="100%" stopColor="#3B82F6" stopOpacity="0"/>
-                      </linearGradient>
-                    </defs>
-                    {[0,1,2,3].map((i: number) => <line key={i} x1="30" y1={10+i*22} x2="295" y2={10+i*22} stroke="#F3F4F6" strokeWidth="1"/>)}
-                    {[max, Math.round(min+(max-min)*0.67), Math.round(min+(max-min)*0.33), min].map((v: number, i: number) => (
-                      <text key={i} x="25" y={14+i*22} textAnchor="end" fontSize="7" fill="#9CA3AF">{v>=10000?(v/10000).toFixed(1)+'w':v}</text>
-                    ))}
-                    <path d={area} fill="url(#fanGrad2)"/>
-                    <polyline points={polyline} fill="none" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    {pts.map((p: number[], i: number) => <circle key={i} cx={p[0]} cy={p[1]} r="3" fill="white" stroke="#3B82F6" strokeWidth="2"/>)}
-                    {['周一','周二','周三','周四','周五','周六','周日'].map((d: string, i: number) => (
-                      <text key={i} x={30+i*44} y="98" textAnchor="middle" fontSize="7" fill="#9CA3AF">{d}</text>
-                    ))}
-                  </svg>
-                )
-              })()}
-              <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
-                <div className="text-xs text-gray-400">本周新增 <span className="font-bold text-blue-500">+{platformStats.fans[6]-platformStats.fans[0]}</span></div>
-                <div className="text-xs text-gray-400">总计 <span className="font-bold text-gray-700">{platformStats.totalFans >= 10000 ? (platformStats.totalFans/10000).toFixed(1)+'万' : platformStats.totalFans.toLocaleString()}</span></div>
-              </div>
-            </div>
-
-            {/* 播放量趋势（动态） */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <div className="font-bold text-gray-900 text-sm">▶️ 播放量趋势</div>
-                <div className="text-[10px] text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">近7天</div>
-              </div>
-              {(() => {
-                const data = platformStats.plays
-                const min = Math.min(...data)
-                const max = Math.max(...data)
-                const range = max - min || 1
-                const pts = data.map((v: number, i: number) => [30 + i * 44, 88 - ((v - min) / range) * 70])
-                const polyline = pts.map((p: number[]) => p.join(',')).join(' ')
-                const area = `M${pts[0][0]},${pts[0][1]} ` + pts.slice(1).map((p: number[]) => `L${p[0]},${p[1]}`).join(' ') + ` L${pts[pts.length-1][0]},88 L${pts[0][0]},88 Z`
-                return (
-                  <svg viewBox="0 0 300 100" className="w-full" style={{height:'90px'}}>
-                    <defs>
-                      <linearGradient id="playGrad2" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.3"/>
-                        <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0"/>
-                      </linearGradient>
-                    </defs>
-                    {[0,1,2,3].map((i: number) => <line key={i} x1="30" y1={10+i*22} x2="295" y2={10+i*22} stroke="#F3F4F6" strokeWidth="1"/>)}
-                    {[max, Math.round(min+(max-min)*0.67), Math.round(min+(max-min)*0.33), min].map((v: number, i: number) => (
-                      <text key={i} x="25" y={14+i*22} textAnchor="end" fontSize="7" fill="#9CA3AF">{v>=10000?(v/10000).toFixed(1)+'w':v}</text>
-                    ))}
-                    <path d={area} fill="url(#playGrad2)"/>
-                    <polyline points={polyline} fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    {pts.map((p: number[], i: number) => <circle key={i} cx={p[0]} cy={p[1]} r="3" fill="white" stroke="#8B5CF6" strokeWidth="2"/>)}
-                    {['周一','周二','周三','周四','周五','周六','周日'].map((d: string, i: number) => (
-                      <text key={i} x={30+i*44} y="98" textAnchor="middle" fontSize="7" fill="#9CA3AF">{d}</text>
-                    ))}
-                  </svg>
-                )
-              })()}
-              <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
-                <div className="text-xs text-gray-400">峰值 <span className="font-bold text-purple-500">{Math.max(...platformStats.plays).toLocaleString()}</span></div>
-                <div className="text-xs text-gray-400">总计 <span className="font-bold text-gray-700">{platformStats.totalPlays >= 10000 ? (platformStats.totalPlays/10000).toFixed(1)+'万' : platformStats.totalPlays.toLocaleString()}</span></div>
-              </div>
-            </div>
-
-            {/* 互动数据柱状图（动态） */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-3">❤️ 互动数据（近7天）</div>
-              <div className="flex items-end gap-1 h-28 mb-2">
-                {platformStats.likes.map((v: number, i: number) => {
-                  const maxVal = Math.max(...platformStats.likes, ...platformStats.comments, ...platformStats.collects)
-                  const likeH = Math.max(4, (v / maxVal) * 88)
-                  const cmtH = Math.max(4, (platformStats.comments[i] / maxVal) * 88)
-                  const colH = Math.max(4, (platformStats.collects[i] / maxVal) * 88)
-                  return (
-                    <div key={i} className="flex-1 flex items-end gap-0.5">
-                      <div className="flex-1 bg-gradient-to-t from-red-400 to-pink-300 rounded-t-sm" style={{height:`${likeH}px`}}/>
-                      <div className="flex-1 bg-gradient-to-t from-blue-400 to-cyan-300 rounded-t-sm" style={{height:`${cmtH}px`}}/>
-                      <div className="flex-1 bg-gradient-to-t from-amber-400 to-yellow-300 rounded-t-sm" style={{height:`${colH}px`}}/>
-                    </div>
-                  )
-                })}
-              </div>
-              <div className="flex items-center gap-3 text-[10px] text-gray-500">
-                {[{color:'bg-red-400',label:'点赞'},{color:'bg-blue-400',label:'评论'},{color:'bg-amber-400',label:'收藏'}].map((l: any) => (
-                  <div key={l.label} className="flex items-center gap-1"><div className={`w-2 h-2 rounded-sm ${l.color}`}/>{l.label}</div>
-                ))}
-                <div className="ml-auto text-gray-400">本周总互动 <span className="font-bold text-gray-700">{(platformStats.likes.reduce((a: number,b: number)=>a+b,0)+platformStats.comments.reduce((a: number,b: number)=>a+b,0)+platformStats.collects.reduce((a: number,b: number)=>a+b,0)).toLocaleString()}</span></div>
-              </div>
-            </div>
-
-            {/* 内容类型分布 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-3">🎬 内容类型分布</div>
-              <div className="flex items-center gap-4">
-                <svg viewBox="0 0 100 100" className="w-24 h-24 flex-shrink-0">
-                  <path d="M50,50 L50,5 A45,45 0 0,1 92.5,72.5 Z" fill="#3B82F6"/>
-                  <path d="M50,50 L92.5,72.5 A45,45 0 0,1 27.5,90 Z" fill="#8B5CF6"/>
-                  <path d="M50,50 L27.5,90 A45,45 0 0,1 7.5,27.5 Z" fill="#F59E0B"/>
-                  <path d="M50,50 L7.5,27.5 A45,45 0 0,1 50,5 Z" fill="#10B981"/>
-                  <circle cx="50" cy="50" r="28" fill="white"/>
-                  <text x="50" y="47" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#1F2937">内容</text>
-                  <text x="50" y="58" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#1F2937">分布</text>
-                </svg>
-                <div className="flex-1 space-y-2">
-                  {[{label:'口播类',pct:'45%',color:'bg-blue-500'},{label:'剧情类',pct:'25%',color:'bg-purple-500'},{label:'教程类',pct:'20%',color:'bg-amber-500'},{label:'其他',pct:'10%',color:'bg-emerald-500'}].map((item: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5"><div className={`w-2 h-2 rounded-full ${item.color}`}/><span className="text-xs text-gray-600">{item.label}</span></div>
-                      <span className="text-xs font-bold text-gray-900">{item.pct}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* 最佳内容 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-3">🏆 最佳内容</div>
-              {savedContents.length > 0 ? (
-                savedContents.slice(0, 3).map((c: any, i: number) => (
-                  <div key={c.id} className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-black flex-shrink-0 ${i === 0 ? 'bg-gradient-to-br from-amber-400 to-orange-500' : i === 1 ? 'bg-gradient-to-br from-gray-400 to-gray-500' : 'bg-gradient-to-br from-orange-400 to-red-400'}`}>{i + 1}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-semibold text-gray-800 truncate">{c.topic}</div>
-                      <div className="text-[10px] text-gray-400 mt-0.5">{c.style} · {c.savedAt}</div>
-                    </div>
-                    <div className="text-[10px] text-blue-500 font-semibold">查看</div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-xs text-gray-400 text-center py-4">暂无数据，先去生成文案吧</div>
-              )}
-            </div>
-
-            {/* 视频数据记录列表 */}
-            {videoRecords.length > 0 && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="font-bold text-gray-900 text-sm">🎬 视频数据记录</div>
-                  <button
-                    onClick={() => { setShowVideoRecord(true) }}
-                    className="text-xs text-blue-500 font-semibold bg-blue-50 px-2.5 py-1 rounded-xl active:scale-95 transition-transform"
-                  >+ 录入</button>
-                </div>
-                <div className="space-y-2">
-                  {videoRecords.slice(0, 5).map((r: any, i: number) => {
-                    const plays = parseInt(r.plays) || 0
-                    const likes = parseInt(r.likes) || 0
-                    const comments = parseInt(r.comments) || 0
-                    const collects = parseInt(r.collects) || 0
-                    const engRate = plays > 0 ? (((likes + comments + collects) / plays) * 100).toFixed(1) : '0.0'
-                    return (
-                      <div key={r.id} className="border border-gray-100 rounded-xl p-3 animate-fade-in-up" style={{animationDelay:`${i*50}ms`}}>
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <div className="text-xs font-semibold text-gray-800 flex-1 line-clamp-1">{r.title || '未命名视频'}</div>
-                          <span className="text-[10px] bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded-full font-medium flex-shrink-0">{r.platform || '抖音'}</span>
-                        </div>
-                        <div className="grid grid-cols-5 gap-1 mb-1.5">
-                          {[{label:'播放',val:plays,color:'text-blue-600'},{label:'点赞',val:likes,color:'text-red-500'},{label:'评论',val:comments,color:'text-orange-500'},{label:'收藏',val:collects,color:'text-yellow-500'},{label:'互动率',val:engRate+'%',color:'text-green-600'}].map((d: any) => (
-                            <div key={d.label} className="text-center">
-                              <div className={`text-xs font-bold ${d.color}`}>{typeof d.val === 'number' && d.val >= 10000 ? (d.val/10000).toFixed(1)+'w' : d.val}</div>
-                              <div className="text-[9px] text-gray-400">{d.label}</div>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="text-[10px] text-gray-400">{r.publishDate || r.createdAt}</div>
-                      </div>
-                    )
-                  })}
-                  {videoRecords.length > 5 && (
-                    <div className="text-center py-2">
-                      <span className="text-xs text-gray-400">还有 {videoRecords.length - 5} 条记录，在数据绑定中查看全部</span>
-                    </div>
-                  )}
-                </div>
-              </div>
+            {/* Goals Tab */}
+            {opsTab === 'goals' && (
+              <GoalsTab
+                acc={acc}
+                platformStats={platformStats}
+                schedule={schedule}
+                savedContents={savedContents}
+                videoRecords={videoRecords}
+              />
             )}
-
-            {/* 数据说明 */}
-            <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100">
-              <div className="flex items-start gap-2">
-                <span className="text-sm flex-shrink-0">💡</span>
-                <div>
-                  <div className="text-xs font-semibold text-gray-600 mb-1">关于平台数据</div>
-                  <div className="text-[10px] text-gray-400 leading-relaxed">
-                    点击"绑定"手动录入真实数据，或使用 AI 生成趋势数据。抖音/小红书官方 API 需企业资质，后续版本将支持 Cookie 方式自动同步。
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Goals Tab */}
-        {opsTab === 'goals' && (
-          <>
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-4">🎯 本月目标</div>
-              {[
-                { label: '粉丝增长', current: 234, target: 500, unit: '人', color: 'from-blue-400 to-cyan-400' },
-                { label: '视频发布', current: 8, target: 20, unit: '条', color: 'from-purple-400 to-pink-400' },
-                { label: '总播放量', current: 24000, target: 50000, unit: '', color: 'from-orange-400 to-amber-400' },
-              ].map((g, i) => (
-                <div key={i} className="mb-4 last:mb-0">
-                  <div className="flex justify-between text-xs mb-2">
-                    <span className="font-semibold text-gray-700">{g.label}</span>
-                    <span className="text-gray-400">{g.current.toLocaleString()}{g.unit} / {g.target.toLocaleString()}{g.unit}</span>
-                  </div>
-                  <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full bg-gradient-to-r ${g.color} rounded-full transition-all`}
-                      style={{ width: `${Math.min(100, (g.current / g.target) * 100)}%` }}
-                    />
-                  </div>
-                  <div className="text-[10px] text-gray-400 mt-1">{Math.round((g.current / g.target) * 100)}% 完成</div>
-                </div>
-              ))}
-            </div>
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-3">📋 成长阶段</div>
-              {[
-                { phase: '第一阶段', desc: '建立账号基础，每周发布3-5条内容', status: '进行中', color: 'bg-blue-400' },
-                { phase: '第二阶段', desc: '打造爆款内容，粉丝突破1万', status: '未开始', color: 'bg-gray-300' },
-                { phase: '第三阶段', desc: '商业变现，开通橱窗/接广告', status: '未开始', color: 'bg-gray-300' },
-              ].map((p, i) => (
-                <div key={i} className="flex gap-3 py-3 border-b border-gray-50 last:border-0">
-                  <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${p.color}`} />
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="text-sm font-semibold text-gray-800">{p.phase}</span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${p.status === '进行中' ? 'bg-blue-50 text-blue-500' : 'bg-gray-100 text-gray-400'}`}>{p.status}</span>
-                    </div>
-                    <div className="text-xs text-gray-400">{p.desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
       </div>
     </div>
   )
