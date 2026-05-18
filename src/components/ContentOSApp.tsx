@@ -486,6 +486,22 @@ export default function ContentOSApp() {
   const [subtitleLines, setSubtitleLines] = useState<string[]>([])
   const [currentSubLine, setCurrentSubLine] = useState(0)
 
+  // Theme / Appearance
+  const [theme, setTheme] = React.useState('light')
+  const [accentColor, setAccentColor] = React.useState('blue')
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    document.documentElement.setAttribute('data-accent', accentColor)
+  }, [theme, accentColor])
+
+  // Theme / Appearance
+  const [theme, setTheme] = React.useState('light')
+  const [accentColor, setAccentColor] = React.useState('blue')
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    document.documentElement.setAttribute('data-accent', accentColor)
+  }, [theme, accentColor])
+
   // Profile / AI Settings
   const [aiModel, setAiModel] = useState('deepseek-chat')
   const [aiApiKey, setAiApiKey] = useState('')
@@ -1423,6 +1439,8 @@ export default function ContentOSApp() {
             showDeleteConfirm={showDeleteConfirm} setShowDeleteConfirm={setShowDeleteConfirm}
             editingAccount={editingAccount} setEditingAccount={setEditingAccount}
             saveToLocal={saveToLocal}
+            theme={theme} setTheme={setTheme}
+            accentColor={accentColor} setAccentColor={setAccentColor}
           />
         )}
       </div>
@@ -3003,257 +3021,312 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
 }
 
 
-function ContentCenter({ acc, step, setStep, topic, setTopic, style, setStyle, userInput, setUserInput, versions, loading, error, copiedIdx, expandedCopy, setExpandedCopy, generate, copy, save, showToast, setTab, hotspots, savedContents, setVideoCopy, copyHistory, compareMode, setCompareMode, showHistory, setShowHistory, setShowAiPanel }: any) {
-  const STYLES = ['犀利观点', '温情故事', '干货教程', '幽默搞笑', '励志正能量', '悬念钩子']
-  const STYLE_COLORS: Record<string, string> = {
-    '犀利观点': 'from-red-400 to-orange-400',
-    '温情故事': 'from-pink-400 to-rose-400',
-    '干货教程': 'from-blue-400 to-cyan-400',
-    '幽默搞笑': 'from-yellow-400 to-amber-400',
-    '励志正能量': 'from-green-400 to-emerald-400',
-    '悬念钩子': 'from-purple-400 to-violet-400',
-  }
 
-  async function copyAll() {
-    const text = versions.map((v: any, i: number) =>
-      `【版本${i+1} · ${v.style}】\n钩子：${v.hook}\n\n${v.content}`
-    ).join('\n\n' + '─'.repeat(20) + '\n\n')
-    try { await navigator.clipboard.writeText(text); showToast('✅ 已复制全部版本') }
-    catch { showToast('复制失败，请手动复制') }
-  }
+    function ContentCenter({ acc, showToast, savedContents, setSavedContents, savedTopics, setTab }: any) {
+      const [step, setStep] = React.useState(1)
+      const [selectedTopic, setSelectedTopic] = React.useState('')
+      const [style, setStyle] = React.useState('犀利观点')
+      const [loading, setLoading] = React.useState(false)
+      const [versions, setVersions] = React.useState<any[]>([])
+      const [history, setHistory] = React.useState<any[]>([])
+      const [compareMode, setCompareMode] = React.useState(false)
+      const [showTemplates, setShowTemplates] = React.useState(false)
+      const [showStyleAnalysis, setShowStyleAnalysis] = React.useState(false)
+      const [analysisInput, setAnalysisInput] = React.useState('')
+      const [analysisResult, setAnalysisResult] = React.useState<any>(null)
+      const [analysisLoading, setAnalysisLoading] = React.useState(false)
+      const [customTemplates, setCustomTemplates] = React.useState<any[]>([])
+      const [newTemplateName, setNewTemplateName] = React.useState('')
+      const [newTemplatePrompt, setNewTemplatePrompt] = React.useState('')
+      const [showAddTemplate, setShowAddTemplate] = React.useState(false)
 
-  return (
-    <div className="flex flex-col h-full bg-[#F2F2F7]">
-      <div className="px-5 pt-12 pb-3 flex-shrink-0">
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-black text-gray-900">内容中心</h1>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setShowHistory(!showHistory)} className={`relative flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-xl transition-all ${showHistory ? 'bg-blue-500 text-white' : 'bg-white text-gray-500 shadow-sm'}`}>
-              🕐 历史
-              {copyHistory.length > 0 && <span className={`absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center ${showHistory ? 'bg-white text-blue-500' : 'bg-red-400 text-white'}`}>{copyHistory.length > 9 ? '9+' : copyHistory.length}</span>}
-            </button>
-            <button
-              onClick={() => setShowAiPanel(true)}
-              className="w-9 h-9 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-400 shadow-sm flex items-center justify-center text-base active:scale-95 transition-transform relative"
-            >
-              🤖
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white" />
-            </button>
-          </div>
-        </div>
-        <div className="flex items-center gap-1">
-          {['选题', '配置', '文案'].map((s, i) => (
-            <div key={i} className="flex items-center gap-1">
-              <button onClick={() => { if (i + 1 < step) setStep(i + 1 as any) }} className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${step > i + 1 ? 'bg-green-400 text-white' : step === i + 1 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'}`}>{step > i + 1 ? '✓' : i + 1}</button>
-              <span className={`text-xs font-medium ${step === i + 1 ? 'text-blue-500' : step > i + 1 ? 'text-green-500' : 'text-gray-400'}`}>{s}</span>
-              {i < 2 && <div className={`w-6 h-px ${step > i + 1 ? 'bg-green-400' : 'bg-gray-200'}`} />}
-            </div>
-          ))}
-        </div>
-      </div>
+      const BUILTIN_TEMPLATES = [
+        { id: 'hook', name: '问题钩子', icon: '🎣', desc: '用问题开头，引发好奇', prompt: '用一个尖锐的问题开头，引发读者强烈好奇心，然后给出意想不到的答案' },
+        { id: 'contrast', name: '对比故事', icon: '⚡', desc: '前后对比，制造反差', prompt: '用"以前...现在..."的对比结构，制造强烈反差感，让读者产生共鸣' },
+        { id: 'list', name: '干货清单', icon: '📋', desc: '数字列表，清晰实用', prompt: '用"X个方法/技巧/秘诀"的清单形式，每条简洁有力，让读者觉得干货满满' },
+        { id: 'sharp', name: '犀利观点', icon: '🔥', desc: '直接表达，有争议性', prompt: '用犀利、有争议的观点开头，敢于说别人不敢说的，引发讨论' },
+        { id: 'humor', name: '幽默自嘲', icon: '😄', desc: '自嘲拉近距离', prompt: '用幽默自嘲的方式开头，让读者觉得真实可爱，拉近距离后再给出干货' },
+        { id: 'inspire', name: '励志行动', icon: '💪', desc: '激励行动，正能量', prompt: '用激励性的语言，让读者感受到紧迫感和行动力，结尾给出明确的行动指引' },
+      ]
 
-      {showHistory && (
-        <div className="absolute inset-0 bg-black/40 z-40 flex flex-col rounded-[50px] overflow-hidden" onClick={() => setShowHistory(false)}>
-          <div className="flex-1" />
-          <div className="bg-white rounded-t-3xl p-5 pb-8 max-h-[75%] flex flex-col" onClick={(e: any) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <div><h3 className="font-black text-gray-900">生成历史</h3><p className="text-xs text-gray-400 mt-0.5">最近 {copyHistory.length} 条记录</p></div>
-              <button onClick={() => setShowHistory(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-sm">✕</button>
-            </div>
-            <div className="overflow-y-auto flex-1 space-y-2">
-              {copyHistory.length === 0 ? (
-                <div className="text-center py-10 animate-fade-in-up">
-                  <div className="text-4xl mb-3 animate-float">📝</div>
-                  <div className="font-bold text-gray-700 text-sm mb-1">还没有生成记录</div>
-                  <div className="text-xs text-gray-400">生成文案后自动保存到这里</div>
-                </div>
-              ) : copyHistory.map((h: any) => (
-                <div key={h.id} className="bg-gray-50 rounded-2xl p-3 cursor-pointer active:bg-gray-100 transition-colors" onClick={() => { setTopic(h.topic); setStyle(h.style); setStep(3); setShowHistory(false); showToast('✅ 已恢复历史记录') }}>
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <div className="text-sm font-semibold text-gray-800 leading-snug flex-1">{h.topic}</div>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full text-white font-medium flex-shrink-0 bg-gradient-to-r ${STYLE_COLORS[h.style] || 'from-gray-400 to-gray-500'}`}>{h.style}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-gray-400">{h.createdAt}</span>
-                    <div className="flex items-center gap-2"><span className="text-[10px] text-gray-400">{h.versions?.length || 0} 个版本</span><span className="text-[10px] text-blue-400 font-semibold">恢复 →</span></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      async function generateCopy() {
+        if (!selectedTopic.trim()) { showToast('请先输入选题'); return }
+        setLoading(true)
+        try {
+          const selectedTemplate = [...BUILTIN_TEMPLATES, ...customTemplates].find(t => t.name === style)
+          const stylePrompt = selectedTemplate ? selectedTemplate.prompt : style
+          const res = await fetch('/api/generate-copy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              topicTitle: selectedTopic, style: stylePrompt,
+              accountName: acc?.name || '', industry: acc?.industry || '',
+              positioning: acc?.positioning || '', targetAudience: acc?.targetAudience || '',
+            })
+          })
+          const data = await res.json()
+          if (data.versions) {
+            setVersions(data.versions)
+            setHistory((prev: any[]) => [{ topic: selectedTopic, style, versions: data.versions, time: Date.now() }, ...prev.slice(0, 9)])
+            setStep(2); showToast('✅ 文案生成成功')
+          } else { showToast(data.error || '生成失败，请重试') }
+        } catch { showToast('网络错误，请重试') } finally { setLoading(false) }
+      }
 
-      <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4">
-        {step === 1 && (
-          <div className="space-y-3">
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-2">✏️ 自定义选题</div>
-              <textarea value={topic} onChange={e => setTopic(e.target.value)} placeholder="输入你的选题标题..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20" />
-              <button onClick={() => { if (!topic.trim()) { showToast('请输入选题'); return }; setStep(2) }} className="w-full mt-2 py-2.5 bg-blue-500 text-white text-sm font-bold rounded-xl active:scale-[0.98] transition-transform">使用此选题 →</button>
+      async function analyzeStyle() {
+        if (!analysisInput.trim()) { showToast('请粘贴文案内容'); return }
+        setAnalysisLoading(true)
+        try {
+          const res = await fetch('/api/generate-copy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              topicTitle: '分析以下文案的风格特征', style: '风格分析',
+              userInput: `请分析以下文案的风格特征，返回JSON格式：\n{"style":"风格名称","tone":"语气特点","structure":"结构特点","hookType":"钩子类型","strengths":["优势1"],"suggestions":["建议1"],"score":85}\n\n文案内容：\n${analysisInput}`,
+              accountName: acc?.name || '',
+            })
+          })
+          const data = await res.json()
+          if (data.versions?.[0]?.content) {
+            try {
+              const jsonMatch = data.versions[0].content.match(/\{[\s\S]*\}/)
+              if (jsonMatch) { setAnalysisResult(JSON.parse(jsonMatch[0])); showToast('✅ 风格分析完成') }
+              else { setAnalysisResult({ style: '分析完成', tone: '见下方', structure: '见下方', hookType: '见下方', strengths: [data.versions[0].content], suggestions: [], score: 80 }); showToast('✅ 分析完成') }
+            } catch { setAnalysisResult({ style: '分析完成', tone: '见下方', structure: '见下方', hookType: '见下方', strengths: [data.versions[0].content], suggestions: [], score: 80 }); showToast('✅ 分析完成') }
+          } else { showToast('分析失败，请重试') }
+        } catch { showToast('网络错误') } finally { setAnalysisLoading(false) }
+      }
+
+      function saveContent(v: any) {
+        setSavedContents((prev: any[]) => [{ id: Date.now(), topic: selectedTopic, content: v.content, style: v.style, hook: v.hook, time: Date.now() }, ...prev])
+        showToast('✅ 已保存到素材库')
+      }
+
+      const allTemplates = [...BUILTIN_TEMPLATES, ...customTemplates]
+
+      return (
+        <div className="flex flex-col h-full bg-[#F2F2F7]">
+          <div className="px-5 pt-12 pb-3 flex-shrink-0">
+            <div className="flex items-center justify-between mb-1">
+              <h1 className="text-xl font-black text-gray-900">内容中心</h1>
+              <button onClick={() => setShowTemplates(true)} className="flex items-center gap-1 px-3 py-1.5 bg-purple-50 text-purple-600 text-xs font-bold rounded-xl active:scale-95">📋 模板</button>
             </div>
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-3">🔥 热点选题（点击使用）</div>
-              {hotspots.map((h: any, i: number) => (
-                <div key={i} onClick={() => { setTopic(h.title); setStep(2) }} className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0 cursor-pointer active:bg-gray-50 rounded-xl px-1 transition-colors">
-                  <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-white font-black text-xs flex-shrink-0 ${i < 3 ? 'bg-gradient-to-br from-red-400 to-orange-400' : 'bg-gradient-to-br from-orange-300 to-amber-300'}`}>{i + 1}</div>
-                  <div className="flex-1 min-w-0"><div className="text-sm font-medium text-gray-800">{h.title}</div><div className="text-xs text-gray-400">{h.tag}</div></div>
-                  <span className="text-xs text-blue-500 font-semibold flex-shrink-0">选用 →</span>
-                </div>
-              ))}
+            <div className="flex items-center gap-2 text-xs text-gray-400">
+              <span className={step >= 1 ? 'text-purple-500 font-semibold' : ''}>① 选题</span>
+              <span>→</span>
+              <span className={step >= 2 ? 'text-purple-500 font-semibold' : ''}>② 文案</span>
             </div>
           </div>
-        )}
-
-        {step === 2 && (
-          <div className="space-y-3">
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-2"><div className="font-bold text-gray-900 text-sm">📌 当前选题</div><button onClick={() => setStep(1)} className="text-xs text-gray-400 active:text-gray-600">← 重选</button></div>
-              <div className="text-sm text-blue-600 font-medium bg-blue-50 rounded-xl px-3 py-2.5 leading-snug">{topic}</div>
-            </div>
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-3">🎨 文案风格</div>
-              <div className="grid grid-cols-3 gap-2">
-                {STYLES.map(s => (<button key={s} onClick={() => setStyle(s)} className={`py-2.5 rounded-xl text-xs font-semibold transition-all active:scale-95 ${style === s ? 'bg-blue-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600'}`}>{s}</button>))}
-              </div>
-            </div>
-            <div className="bg-white rounded-2xl p-3 shadow-sm flex items-center gap-3">
-              <div className="text-2xl">{acc.emoji}</div>
-              <div className="flex-1 min-w-0"><div className="text-xs font-bold text-gray-700">{acc.name}</div><div className="text-xs text-gray-400 truncate">{acc.positioning}</div></div>
-              <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">{acc.industry}</span>
-            </div>
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-2">💬 补充说明（可选）</div>
-              <textarea value={userInput} onChange={e => setUserInput(e.target.value)} placeholder="有什么特别要求？如：突出价格优惠、强调食材新鲜..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20" />
-            </div>
-            {error && <div className="bg-red-50 rounded-2xl p-3 flex items-start gap-2"><span className="text-red-400 text-sm flex-shrink-0">⚠️</span><p className="text-xs text-red-500">{error}</p></div>}
-            <button onClick={generate} disabled={loading} className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-sm font-black rounded-2xl shadow-lg active:scale-[0.98] transition-transform disabled:opacity-60 disabled:scale-100">
-              {loading ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>AI 生成中...</span> : '✨ 生成3个版本文案'}
-            </button>
-          </div>
-        )}
-
-        {step === 3 && loading && (
-          <div className="space-y-3 animate-fade-in px-0">
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="skeleton h-4 w-1/2 rounded-lg mb-3" />
-              <div className="flex gap-2 mb-3">
-                <div className="skeleton h-6 w-16 rounded-full" />
-                <div className="skeleton h-6 w-12 rounded-full" />
-              </div>
-            </div>
-            {[1,2,3].map((i: number) => (
-              <div key={i} className="bg-white rounded-2xl p-4 shadow-sm">
-                <div className="skeleton h-4 w-1/3 rounded-lg mb-3" />
-                <div className="skeleton h-3 w-full rounded-lg mb-2" />
-                <div className="skeleton h-3 w-full rounded-lg mb-2" />
-                <div className="skeleton h-3 w-4/5 rounded-lg mb-2" />
-                <div className="skeleton h-3 w-3/4 rounded-lg mb-4" />
-                <div className="flex gap-2">
-                  <div className="skeleton h-7 w-16 rounded-xl" />
-                  <div className="skeleton h-7 w-20 rounded-xl" />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {step === 3 && !loading && (
-          <div className="space-y-3">
-            <div className="bg-white rounded-2xl p-3 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xs font-bold text-gray-800 truncate max-w-[160px]">{topic}</div>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full text-white font-medium bg-gradient-to-r ${STYLE_COLORS[style] || 'from-gray-400 to-gray-500'}`}>{style}</span>
-                    <span className="text-[10px] text-gray-400">{versions.length} 个版本</span>
+          <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-3">
+            {step === 1 && (
+              <>
+                <div onClick={() => setShowStyleAnalysis(true)} className="bg-gradient-to-r from-violet-500 to-purple-400 rounded-2xl p-4 text-white cursor-pointer active:scale-[0.98] transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl flex-shrink-0">🔍</div>
+                    <div className="flex-1"><div className="font-bold text-sm">AI 风格分析</div><div className="text-white/80 text-xs mt-0.5">粘贴任意文案，AI 分析风格特征并生成模板</div></div>
+                    <span className="text-white/60 text-lg">›</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <button onClick={() => setCompareMode(!compareMode)} className={`text-[10px] font-semibold px-2.5 py-1.5 rounded-xl transition-all ${compareMode ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'}`}>{compareMode ? '📊 对比中' : '📊 对比'}</button>
-                  <button onClick={copyAll} className="text-[10px] font-semibold px-2.5 py-1.5 rounded-xl bg-blue-50 text-blue-500 active:scale-95">📋 全部</button>
-                  <button onClick={() => setStep(2)} className="text-[10px] font-semibold px-2.5 py-1.5 rounded-xl bg-gray-100 text-gray-500">🔄 重生成</button>
+                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                  <div className="font-bold text-gray-900 text-sm mb-2">💡 选题</div>
+                  <textarea value={selectedTopic} onChange={e => setSelectedTopic(e.target.value)} placeholder="输入选题，例如：普通人如何用 AI 副业月入过万..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20 leading-relaxed" />
+                  {savedTopics?.length > 0 && (
+                    <div className="mt-2">
+                      <div className="text-[10px] text-gray-400 mb-1.5">📌 已保存选题</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {savedTopics.slice(0, 4).map((t: any, i: number) => (
+                          <button key={i} onClick={() => setSelectedTopic(t.title || t)} className="text-[11px] bg-blue-50 text-blue-500 px-2.5 py-1 rounded-lg font-medium active:scale-95 max-w-[140px] truncate">{t.title || t}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </div>
-
-            {compareMode && versions.length >= 2 && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
-                <div className="font-bold text-gray-900 text-sm mb-3">📊 风格对比分析</div>
+                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-bold text-gray-900 text-sm">🎨 文案风格</div>
+                    <button onClick={() => setShowTemplates(true)} className="text-[11px] text-purple-500 font-semibold">更多模板 ›</button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {allTemplates.slice(0, 6).map((t: any) => (
+                      <button key={t.id || t.name} onClick={() => setStyle(t.name)} className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-medium transition-all active:scale-95 ${style === t.name ? 'bg-purple-50 border-2 border-purple-400 text-purple-700' : 'bg-gray-50 border-2 border-transparent text-gray-600'}`}>
+                        <span className="text-base">{t.icon || '✍️'}</span><span>{t.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {history.length > 0 && (
+                  <div className="bg-white rounded-2xl p-4 shadow-sm">
+                    <div className="font-bold text-gray-900 text-sm mb-2">🕐 最近生成</div>
+                    <div className="space-y-2">
+                      {history.slice(0, 3).map((h: any, i: number) => (
+                        <button key={i} onClick={() => { setSelectedTopic(h.topic); setStyle(h.style); setVersions(h.versions); setStep(2) }} className="w-full text-left px-3 py-2.5 bg-gray-50 rounded-xl active:scale-[0.98]">
+                          <div className="text-xs font-semibold text-gray-800 truncate">{h.topic}</div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-gray-400">{h.style}</span>
+                            <span className="text-[10px] text-gray-400">{h.versions?.length || 0} 个版本</span>
+                            <span className="text-[10px] text-blue-400 font-semibold ml-auto">恢复 →</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <button onClick={generateCopy} disabled={loading || !selectedTopic.trim()} className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm disabled:opacity-50 active:scale-[0.98] transition-all shadow-md">
+                  {loading ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>AI 生成中...</span> : '✨ 生成3个版本文案'}
+                </button>
+              </>
+            )}
+            {step === 2 && (
+              <>
+                <div className="flex items-center justify-between">
+                  <button onClick={() => setStep(1)} className="text-sm text-gray-400">← 返回</button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setCompareMode(!compareMode)} className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-all ${compareMode ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'}`}>{compareMode ? '退出对比' : '对比模式'}</button>
+                    <button onClick={() => { const text = versions.map((v: any, i: number) => `【版本${i+1} · ${v.style}】\n钩子：${v.hook}\n\n${v.content}`).join('\n\n---\n\n'); try { navigator.clipboard.writeText(text); showToast('✅ 已复制全部版本') } catch {} }} className="text-xs font-bold px-3 py-1.5 rounded-xl bg-gray-100 text-gray-500">复制全部</button>
+                  </div>
+                </div>
+                <div className="bg-blue-50 rounded-2xl px-4 py-2.5 flex items-center gap-2">
+                  <span className="text-sm">💡</span><span className="text-xs text-blue-700 font-medium truncate">{selectedTopic}</span>
+                </div>
                 <div className="space-y-3">
                   {versions.map((v: any, i: number) => (
-                    <div key={i} className="rounded-xl overflow-hidden border border-gray-100">
-                      <div className={`px-3 py-2 bg-gradient-to-r ${STYLE_COLORS[v.style] || 'from-gray-400 to-gray-500'} flex items-center justify-between`}>
-                        <span className="text-white text-xs font-bold">版本 {i+1} · {v.style}</span>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-white/80 text-[10px]">{v.content?.length || 0}字</span>
-                          <button onClick={() => copy(v.content, i)} className="text-[10px] bg-white/20 text-white px-2 py-0.5 rounded-lg font-semibold">{copiedIdx === i ? '✅' : '复制'}</button>
+                    <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-sm">
+                      <div className="bg-gradient-to-r from-purple-500 to-pink-400 px-4 py-2.5 flex items-center justify-between">
+                        <div className="flex items-center gap-2"><span className="text-white font-black text-sm">版本 {i + 1}</span><span className="text-white/80 text-xs">{v.style}</span></div>
+                        <div className="flex gap-2">
+                          <button onClick={() => saveContent(v)} className="text-[10px] font-bold text-white bg-white/20 px-2.5 py-1 rounded-lg active:scale-95">保存</button>
+                          <button onClick={() => { try { navigator.clipboard.writeText(v.content); showToast('✅ 已复制') } catch {} }} className="text-[10px] font-bold text-white bg-white/20 px-2.5 py-1 rounded-lg active:scale-95">复制</button>
                         </div>
                       </div>
-                      <div className="px-3 py-2 bg-amber-50 border-b border-gray-100"><span className="text-[10px] text-amber-500 font-bold">🎣 钩子：</span><span className="text-xs text-amber-700">{v.hook}</span></div>
-                      <div className="px-3 py-2"><p className="text-xs text-gray-600 leading-relaxed line-clamp-3">{v.content}</p></div>
-                      <div className="px-3 pb-2 flex gap-2">
-                        <button onClick={() => save(v.content, v.style, v.hook)} className="text-[10px] text-blue-500 font-semibold bg-blue-50 px-2.5 py-1 rounded-lg">保存</button>
-                        <button onClick={() => { setVideoCopy(v.content); setTab('video') }} className="text-[10px] text-purple-500 font-semibold bg-purple-50 px-2.5 py-1 rounded-lg">🎬 生成视频</button>
+                      <div className="p-4">
+                        {v.hook && <div className="flex items-start gap-2 mb-3 bg-orange-50 rounded-xl px-3 py-2"><span className="text-sm flex-shrink-0">🎣</span><span className="text-xs text-orange-600 font-medium leading-relaxed">{v.hook}</span></div>}
+                        <p className="text-sm text-gray-800 leading-relaxed">{v.content}</p>
+                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
+                          <div className="flex items-center gap-3"><span className="text-[11px] text-gray-400">{v.content?.length || 0} 字</span><span className="text-[11px] text-gray-400">≈ {Math.ceil((v.content?.length || 0) / 4)} 秒</span></div>
+                          <button onClick={() => { setTab('video'); showToast('✅ 已跳转到视频生成') }} className="text-[11px] font-bold text-purple-500 bg-purple-50 px-3 py-1.5 rounded-xl active:scale-95">去生成视频 →</button>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {!compareMode && versions.map((v: any, i: number) => (
-              <div key={i} className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                <div className={`px-4 py-3 bg-gradient-to-r ${STYLE_COLORS[v.style] || 'from-gray-400 to-gray-500'} flex items-center justify-between`}>
-                  <div className="flex items-center gap-2"><span className="text-white font-black text-sm">版本 {i + 1}</span><span className="text-white/80 text-xs">{v.style}</span></div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-white/70 text-[10px]">{v.content?.length || 0} 字</span>
-                    <button onClick={() => copy(v.content, i)} className={`text-xs font-bold px-3 py-1 rounded-xl transition-all active:scale-95 ${copiedIdx === i ? 'bg-green-400 text-white' : 'bg-white/20 text-white'}`}>{copiedIdx === i ? '✅ 已复制' : '📋 复制'}</button>
-                  </div>
-                </div>
-                {v.hook && (
-                  <div className="mx-4 mt-3 mb-2 px-3 py-2 bg-amber-50 rounded-xl border border-amber-100">
-                    <div className="flex items-start gap-1.5">
-                      <span className="text-amber-400 text-sm flex-shrink-0">🎣</span>
-                      <div><span className="text-[10px] text-amber-500 font-bold block mb-0.5">开场钩子</span><span className="text-xs text-amber-700 leading-relaxed">{v.hook}</span></div>
-                    </div>
-                  </div>
-                )}
-                <div className="px-4 pb-3 pt-1">
-                  <p className={`text-sm text-gray-700 leading-relaxed whitespace-pre-wrap ${expandedCopy === i ? '' : 'line-clamp-4'}`}>{v.content}</p>
-                  {v.content?.length > 150 && <button onClick={() => setExpandedCopy(expandedCopy === i ? null : i)} className="text-xs text-blue-400 mt-1.5 font-medium">{expandedCopy === i ? '收起 ↑' : '展开全文 ↓'}</button>}
-                  <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-gray-50">
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => save(v.content, v.style, v.hook)} className="text-xs text-blue-500 font-semibold bg-blue-50 px-3 py-1.5 rounded-xl active:scale-95 transition-transform">💾 保存</button>
-                      <button onClick={() => { setVideoCopy(v.content); setTab('video') }} className="text-xs text-purple-500 font-semibold bg-purple-50 px-3 py-1.5 rounded-xl active:scale-95 transition-transform">🎬 生成视频</button>
-                    </div>
-                    <button onClick={async () => { const t = `【${v.style}】\n\n钩子：${v.hook}\n\n${v.content}`; try { await navigator.clipboard.writeText(t); showToast('✅ 已复制（含钩子）') } catch { showToast('复制失败') } }} className="text-[10px] text-gray-400 font-medium">含钩子复制</button>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {loading && (
-              <div className="bg-white rounded-2xl p-8 shadow-sm flex flex-col items-center gap-3">
-                <div className="w-10 h-10 border-2 border-blue-100 border-t-blue-500 rounded-full animate-spin"/>
-                <p className="text-sm text-gray-500 font-medium">AI 正在创作中...</p>
-                <p className="text-xs text-gray-400">通常需要 5-10 秒</p>
-              </div>
+                <button onClick={() => { setStep(1); setVersions([]) }} className="w-full py-3 bg-white rounded-2xl text-sm font-bold text-gray-500 shadow-sm active:scale-[0.98]">🔄 重新生成</button>
+              </>
             )}
           </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-
-// ═══════════════════════════════════════════════════════════
-// VIDEO STUDIO
-// ═══════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════
-// VIDEO STUDIO v2 — 视频生成（TTS 实际可用 + 音频播放）
-// ═══════════════════════════════════════════════════════════
+          {showTemplates && (
+            <div className="fixed inset-0 z-50 flex flex-col" style={{background:'rgba(0,0,0,0.5)'}}>
+              <div className="flex-1" onClick={() => setShowTemplates(false)} />
+              <div className="bg-white rounded-t-3xl max-h-[80vh] flex flex-col">
+                <div className="px-5 pt-5 pb-3 flex items-center justify-between flex-shrink-0">
+                  <div className="font-black text-gray-900 text-base">📋 文案模板库</div>
+                  <button onClick={() => setShowTemplates(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-sm">✕</button>
+                </div>
+                <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-3">
+                  <div className="text-xs text-gray-400 mb-1">内置模板</div>
+                  {BUILTIN_TEMPLATES.map((t: any) => (
+                    <div key={t.id} className="bg-gray-50 rounded-2xl p-4">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2"><span className="text-xl">{t.icon}</span><span className="font-bold text-gray-900 text-sm">{t.name}</span></div>
+                        <button onClick={() => { setStyle(t.name); setShowTemplates(false); showToast(`✅ 已选择 ${t.name} 模板`) }} className="text-[11px] font-bold text-white bg-purple-500 px-3 py-1.5 rounded-xl active:scale-95">套用</button>
+                      </div>
+                      <div className="text-xs text-gray-500 mb-1">{t.desc}</div>
+                      <div className="text-[11px] text-gray-400 leading-relaxed bg-white rounded-xl px-3 py-2">{t.prompt}</div>
+                    </div>
+                  ))}
+                  {customTemplates.length > 0 && (
+                    <>
+                      <div className="text-xs text-gray-400 mt-2 mb-1">自定义模板</div>
+                      {customTemplates.map((t: any, i: number) => (
+                        <div key={i} className="bg-purple-50 rounded-2xl p-4">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-2"><span className="text-xl">✍️</span><span className="font-bold text-gray-900 text-sm">{t.name}</span></div>
+                            <div className="flex gap-1.5">
+                              <button onClick={() => { setStyle(t.name); setShowTemplates(false); showToast(`✅ 已选择 ${t.name} 模板`) }} className="text-[11px] font-bold text-white bg-purple-500 px-2.5 py-1.5 rounded-xl active:scale-95">套用</button>
+                              <button onClick={() => setCustomTemplates((prev: any[]) => prev.filter((_: any, j: number) => j !== i))} className="text-[11px] font-bold text-red-400 bg-red-50 px-2.5 py-1.5 rounded-xl active:scale-95">删除</button>
+                            </div>
+                          </div>
+                          <div className="text-[11px] text-gray-500 leading-relaxed">{t.prompt}</div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  {showAddTemplate ? (
+                    <div className="bg-white rounded-2xl p-4 border-2 border-purple-200">
+                      <div className="font-bold text-gray-900 text-sm mb-3">新建模板</div>
+                      <input value={newTemplateName} onChange={e => setNewTemplateName(e.target.value)} placeholder="模板名称（如：专业干货）" className="w-full px-3 py-2 rounded-xl bg-gray-100 text-sm outline-none mb-2" />
+                      <textarea value={newTemplatePrompt} onChange={e => setNewTemplatePrompt(e.target.value)} placeholder="描述这个风格的写作要求..." className="w-full px-3 py-2 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20 mb-3" />
+                      <div className="flex gap-2">
+                        <button onClick={() => { if (!newTemplateName.trim() || !newTemplatePrompt.trim()) { showToast('请填写完整'); return } setCustomTemplates((prev: any[]) => [...prev, { id: Date.now(), name: newTemplateName, icon: '✍️', desc: '自定义模板', prompt: newTemplatePrompt }]); setNewTemplateName(''); setNewTemplatePrompt(''); setShowAddTemplate(false); showToast('✅ 模板已保存') }} className="flex-1 py-2.5 bg-purple-500 text-white text-xs font-bold rounded-xl active:scale-95">保存模板</button>
+                        <button onClick={() => setShowAddTemplate(false)} className="flex-1 py-2.5 bg-gray-100 text-gray-500 text-xs font-bold rounded-xl active:scale-95">取消</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setShowAddTemplate(true)} className="w-full py-3 border-2 border-dashed border-purple-200 rounded-2xl text-sm font-bold text-purple-400 active:scale-[0.98]">+ 新建自定义模板</button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          {showStyleAnalysis && (
+            <div className="fixed inset-0 z-50 flex flex-col" style={{background:'rgba(0,0,0,0.5)'}}>
+              <div className="flex-1" onClick={() => { if (!analysisLoading) setShowStyleAnalysis(false) }} />
+              <div className="bg-white rounded-t-3xl max-h-[85vh] flex flex-col">
+                <div className="px-5 pt-5 pb-3 flex items-center justify-between flex-shrink-0">
+                  <div className="font-black text-gray-900 text-base">🔍 AI 风格分析</div>
+                  <button onClick={() => setShowStyleAnalysis(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-sm">✕</button>
+                </div>
+                <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-3">
+                  {!analysisResult ? (
+                    <>
+                      <div className="text-xs text-gray-500 leading-relaxed bg-blue-50 rounded-xl px-3 py-2.5">💡 粘贴任意博主的文案，AI 将分析其风格特征，帮你快速掌握爆款写作套路</div>
+                      <textarea value={analysisInput} onChange={e => setAnalysisInput(e.target.value)} placeholder="粘贴要分析的文案内容（建议 100 字以上）..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-40 leading-relaxed" />
+                      <button onClick={analyzeStyle} disabled={analysisLoading || !analysisInput.trim()} className="w-full py-3.5 bg-gradient-to-r from-violet-500 to-purple-400 text-white font-bold rounded-2xl text-sm disabled:opacity-50 active:scale-[0.98] transition-all">
+                        {analysisLoading ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>AI 分析中...</span> : '🔍 开始分析'}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="bg-gradient-to-br from-violet-500 to-purple-400 rounded-2xl p-4 text-white">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="font-bold text-sm">分析结果</div>
+                          <div className="flex items-center gap-1.5"><span className="text-white/80 text-xs">综合评分</span><span className="font-black text-lg">{analysisResult.score || 85}</span></div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[{ label: '风格', value: analysisResult.style }, { label: '语气', value: analysisResult.tone }, { label: '结构', value: analysisResult.structure }, { label: '钩子', value: analysisResult.hookType }].map((item: any, i: number) => (
+                            <div key={i} className="bg-white/20 rounded-xl px-3 py-2"><div className="text-white/70 text-[10px]">{item.label}</div><div className="text-white font-bold text-xs mt-0.5">{item.value}</div></div>
+                          ))}
+                        </div>
+                      </div>
+                      {analysisResult.strengths?.length > 0 && (
+                        <div className="bg-green-50 rounded-2xl p-4">
+                          <div className="font-bold text-green-700 text-sm mb-2">✅ 优势特点</div>
+                          {analysisResult.strengths.map((s: string, i: number) => (
+                            <div key={i} className="flex items-start gap-2 mb-1.5"><span className="w-4 h-4 rounded-full bg-green-200 text-green-700 text-[9px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i+1}</span><span className="text-xs text-green-700 leading-relaxed">{s}</span></div>
+                          ))}
+                        </div>
+                      )}
+                      {analysisResult.suggestions?.length > 0 && (
+                        <div className="bg-orange-50 rounded-2xl p-4">
+                          <div className="font-bold text-orange-700 text-sm mb-2">💡 优化建议</div>
+                          {analysisResult.suggestions.map((s: string, i: number) => (
+                            <div key={i} className="flex items-start gap-2 mb-1.5"><span className="text-orange-400 flex-shrink-0">→</span><span className="text-xs text-orange-700 leading-relaxed">{s}</span></div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <button onClick={() => { const sn = analysisResult.style || '分析风格'; setCustomTemplates((prev: any[]) => [...prev, { id: Date.now(), name: sn, icon: '🔍', desc: '从分析中提取的风格：' + analysisResult.tone, prompt: '模仿以下风格特征写作：风格=' + analysisResult.style + '，语气=' + analysisResult.tone + '，结构=' + analysisResult.structure + '，钩子类型=' + analysisResult.hookType }]); setStyle(sn); setShowStyleAnalysis(false); showToast('✅ 已保存并套用 ' + sn + ' 风格') }} className="flex-1 py-3 bg-gradient-to-r from-violet-500 to-purple-400 text-white text-xs font-bold rounded-2xl active:scale-95">💾 保存并套用风格</button>
+                        <button onClick={() => { setAnalysisResult(null); setAnalysisInput('') }} className="flex-1 py-3 bg-gray-100 text-gray-500 text-xs font-bold rounded-2xl active:scale-95">重新分析</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )
+    }
+    
 function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCopy, voiceId, setVoiceId, speed, setSpeed, avatarType, setAvatarType, avatarPreset, setAvatarPreset, bgType, setBgType, bgColor, setBgColor, loading, audioB64, error, generateTTS, showToast, savedContents, setTab, setShowAiPanel, setQuickRecordData, setShowVideoRecord, videoSegments, setVideoSegments, segmentMode, setSegmentMode, activeSegment, setActiveSegment, segmentAudios, setSegmentAudios, segmentLoading, setSegmentLoading, subtitlePreview, setSubtitlePreview, subtitleLines, setSubtitleLines, currentSubLine, setCurrentSubLine }: any) {
   const VOICES = [
     { id: 'female-shaonv', label: '少女音', emoji: '👧', desc: '清甜活泼，适合生活类' },
@@ -3293,6 +3366,8 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
   // 视频风格和字幕
   const [videoRatio, setVideoRatio] = React.useState<'9:16' | '16:9' | '1:1'>('9:16')
   const [subtitleStyle, setSubtitleStyle] = React.useState<'none' | 'bottom' | 'karaoke' | 'highlight'>('bottom')
+  const [subtitleFontSize, setSubtitleFontSize] = React.useState<'sm' | 'md' | 'lg'>('md')
+  const [subtitleColor, setSubtitleColor] = React.useState<'white' | 'yellow' | 'cyan' | 'green'>('white')
   const [isOptimizing, setIsOptimizing] = React.useState(false)
   const [showOptimized, setShowOptimized] = React.useState(false)
   const [optimizedCopy, setOptimizedCopy] = React.useState('')
@@ -3307,6 +3382,17 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
     { id: 'bottom', label: '底部字幕', icon: '📝' },
     { id: 'karaoke', label: '卡拉OK', icon: '🎤' },
     { id: 'highlight', label: '高亮词', icon: '✨' },
+  ]
+  const SUBTITLE_FONT_SIZES = [
+    { id: 'sm', label: '小', size: '12px' },
+    { id: 'md', label: '中', size: '15px' },
+    { id: 'lg', label: '大', size: '18px' },
+  ]
+  const SUBTITLE_COLORS = [
+    { id: 'white', label: '白色', hex: '#FFFFFF' },
+    { id: 'yellow', label: '黄色', hex: '#FFE066' },
+    { id: 'cyan', label: '青色', hex: '#67E8F9' },
+    { id: 'green', label: '绿色', hex: '#86EFAC' },
   ]
 
   async function optimizeCopy() {
@@ -3676,6 +3762,41 @@ ${line}
               </div>
             </div>
 
+            {/* 字幕字号 & 颜色 */}
+            {subtitleStyle !== 'none' && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="font-bold text-gray-900 text-sm mb-3">🎨 字幕样式细节</div>
+                <div className="mb-3">
+                  <div className="text-xs text-gray-500 mb-2">字体大小</div>
+                  <div className="flex gap-2">
+                    {SUBTITLE_FONT_SIZES.map(f => (
+                      <button
+                        key={f.id}
+                        onClick={() => setSubtitleFontSize(f.id as any)}
+                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all active:scale-[0.97] ${subtitleFontSize === f.id ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-600'}`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-2">字体颜色</div>
+                  <div className="flex gap-3">
+                    {SUBTITLE_COLORS.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => setSubtitleColor(c.id as any)}
+                        className={`w-8 h-8 rounded-full border-2 transition-all active:scale-[0.9] ${subtitleColor === c.id ? 'border-purple-500 scale-110' : 'border-gray-200'}`}
+                        style={{ backgroundColor: c.hex }}
+                        title={c.label}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <button
               onClick={() => { if (!videoCopy.trim()) { showToast('请先输入文案'); return }; setStep('voice') }}
               className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md"
@@ -3754,20 +3875,77 @@ ${line}
               </div>
             )}
 
-            <button
-              onClick={generateTTS}
-              disabled={loading}
-              className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white font-bold rounded-2xl text-sm disabled:opacity-60 active:scale-[0.98] transition-all shadow-md"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  {segmentMode ? `合成中 (${videoSegments.length}段)...` : '合成中...'}
-                </span>
-              ) : segmentMode ? `🎙️ 合成 ${videoSegments.length} 段语音` : '🎙️ 合成语音'}
-            </button>
-            <button onClick={() => setStep('input')} className="w-full py-2 text-sm text-gray-400">← 返回</button>
-          </>
+                {/* TTS 错误提示 */}
+                {error && !loading && (
+                  <div className="bg-red-50 rounded-2xl p-3 border border-red-100 flex items-start gap-2">
+                    <span className="text-base flex-shrink-0 mt-0.5">❌</span>
+                    <div>
+                      <div className="text-xs font-bold text-red-600 mb-0.5">语音合成失败</div>
+                      <div className="text-[11px] text-red-500 leading-relaxed">{error}</div>
+                      <button onClick={generateTTS} className="mt-2 text-[11px] font-bold text-red-500 bg-red-100 px-3 py-1 rounded-lg active:scale-95">重新合成</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* TTS 生成中进度动画 */}
+                {loading && (
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-4 border border-purple-100">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="relative w-10 h-10 flex-shrink-0">
+                        <div className="absolute inset-0 rounded-full border-[3px] border-purple-100"/>
+                        <div className="absolute inset-0 rounded-full border-[3px] border-t-purple-500 border-r-purple-300 border-b-transparent border-l-transparent animate-spin"/>
+                        <div className="absolute inset-0 flex items-center justify-center text-base">🎙️</div>
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-purple-700">
+                          {segmentMode ? `正在合成 ${videoSegments.length} 段语音...` : '正在合成语音...'}
+                        </div>
+                        <div className="text-[11px] text-purple-400">MiniMax TTS 处理中，请稍候</div>
+                      </div>
+                    </div>
+                    <div className="flex items-end justify-center gap-1 h-7">
+                      {[0.4,0.7,1,0.8,0.5,0.9,0.6,1,0.7,0.4,0.8,0.5].map((h: number, i: number) => (
+                        <div key={i} className="w-1.5 bg-purple-400 rounded-full animate-pulse" style={{ height: `${h * 100}%`, opacity: 0.5 + h * 0.5, animationDelay: `${i * 0.07}s` }} />
+                      ))}
+                    </div>
+                    {segmentMode && (
+                      <div className="mt-3 flex flex-wrap gap-1">
+                        {videoSegments.map((_: any, i: number) => (
+                          <span key={i} className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-all ${segmentAudios[i] ? 'bg-green-100 text-green-600' : i === Object.keys(segmentAudios).length ? 'bg-purple-100 text-purple-500 animate-pulse' : 'bg-gray-100 text-gray-400'}`}>
+                            段{i+1} {segmentAudios[i] ? '✅' : i === Object.keys(segmentAudios).length ? '⏳' : '○'}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TTS 成功提示 */}
+                {audioB64 && !loading && (
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-3 border border-green-100 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center text-lg flex-shrink-0">✅</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-bold text-green-700">语音合成成功！</div>
+                      <div className="text-[11px] text-green-500 truncate">
+                        {VOICES.find((v: any) => v.id === voiceId)?.label} · {speed}x 语速
+                        {segmentMode ? ` · ${videoSegments.length} 段` : ''}
+                      </div>
+                    </div>
+                    <button onClick={() => setStep('avatar')} className="text-[11px] font-bold text-white bg-green-500 px-3 py-1.5 rounded-xl active:scale-95 flex-shrink-0">下一步 →</button>
+                  </div>
+                )}
+
+                <button
+                  onClick={generateTTS}
+                  disabled={loading}
+                  className={`w-full py-3.5 font-bold rounded-2xl text-sm disabled:opacity-60 active:scale-[0.98] transition-all shadow-md ${audioB64 && !loading ? 'bg-gray-100 text-gray-600' : 'bg-gradient-to-r from-purple-500 to-pink-400 text-white'}`}
+                >
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2 opacity-0">占位</span>
+                  ) : audioB64 ? '🔄 重新合成' : segmentMode ? `🎙️ 合成 ${videoSegments.length} 段语音` : '🎙️ 合成语音'}
+                </button>
+                <button onClick={() => setStep('input')} className="w-full py-2 text-sm text-gray-400">← 返回</button>
+              </>
         )}
 
         {/* ── Step 3: 形象选择 ── */}
@@ -4081,7 +4259,7 @@ ${line}
             </div>
 
             {/* MiniMax 视频生成 */}
-            <VideoGeneratePanel videoCopy={videoCopy} showToast={showToast} videoRatio={videoRatio} subtitleStyle={subtitleStyle} />
+            <VideoGeneratePanel videoCopy={videoCopy} showToast={showToast} videoRatio={videoRatio} subtitleStyle={subtitleStyle} subtitleFontSize={subtitleFontSize} subtitleColor={subtitleColor} />
             {/* 操作按钮组 */}
             <div className="grid grid-cols-2 gap-2">
               {/* 录入发布数据 */}
@@ -4126,7 +4304,7 @@ ${line}
 // ═══════════════════════════════════════════════════════════
 // VIDEO GENERATE PANEL — MiniMax 视频合成面板
 // ═══════════════════════════════════════════════════════════
-function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle }: any) {
+function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, subtitleFontSize, subtitleColor }: any) {
   const [videoPrompt, setVideoPrompt] = React.useState('')
   const [videoTaskId, setVideoTaskId] = React.useState('')
   const [videoStatus, setVideoStatus] = React.useState<'idle' | 'generating' | 'polling' | 'done' | 'error' | 'demo'>('idle')
@@ -4282,11 +4460,32 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle }:
 
       {(videoStatus === 'generating' || videoStatus === 'polling') && (
         <div className="bg-white rounded-2xl p-5 shadow-sm">
+          {/* 阶段指示器 */}
+          <div className="flex items-center justify-between mb-5">
+            {[
+              { label: '提交任务', icon: '📤', active: true },
+              { label: 'AI 渲染', icon: '🎬', active: videoStatus === 'polling' },
+              { label: '完成', icon: '✅', active: false },
+            ].map((stage, i) => (
+              <React.Fragment key={i}>
+                <div className="flex flex-col items-center gap-1">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-base transition-all ${stage.active ? 'bg-purple-500 shadow-md shadow-purple-200' : i === 0 ? 'bg-purple-100' : 'bg-gray-100'}`}>
+                    {stage.icon}
+                  </div>
+                  <span className={`text-[9px] font-semibold ${stage.active ? 'text-purple-600' : 'text-gray-400'}`}>{stage.label}</span>
+                </div>
+                {i < 2 && (
+                  <div className={`flex-1 h-0.5 mx-1 rounded-full ${i === 0 && videoStatus === 'polling' ? 'bg-purple-400' : 'bg-gray-200'}`} />
+                )}
+              </React.Fragment>
+            ))}
+          </div>
           <div className="flex flex-col items-center gap-4">
-            {/* 进度动画 */}
+            {/* 双层旋转动画 */}
             <div className="relative w-20 h-20">
               <div className="absolute inset-0 rounded-full border-4 border-purple-100"/>
-              <div className="absolute inset-0 rounded-full border-4 border-t-purple-500 border-r-purple-300 animate-spin"/>
+              <div className="absolute inset-0 rounded-full border-4 border-t-purple-500 border-r-transparent animate-spin"/>
+              <div className="absolute inset-2 rounded-full border-4 border-b-pink-400 border-l-transparent animate-spin" style={{animationDirection:'reverse', animationDuration:'1.5s'}}/>
               <div className="absolute inset-0 flex items-center justify-center">
                 <span className="text-2xl animate-pulse">🎬</span>
               </div>
@@ -4297,14 +4496,14 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle }:
               </p>
               <p className="text-xs text-gray-400 mb-3">MiniMax T2V 正在生成，通常需要 1-3 分钟</p>
               {/* 进度条 */}
-              <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+              <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-purple-400 to-pink-400 rounded-full transition-all duration-1000"
                   style={{ width: `${Math.min(pollCount * 2, 90)}%` }}
                 />
               </div>
-              <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-                <span>0s</span>
+              <div className="flex justify-between text-[10px] text-gray-400 mt-1.5">
+                <span>已用 {pollCount * 5}s</span>
                 <span>预计 60-180s</span>
               </div>
             </div>
@@ -5754,6 +5953,8 @@ function Profile({
   showDeleteConfirm, setShowDeleteConfirm,
   editingAccount, setEditingAccount,
   saveToLocal,
+  theme, setTheme,
+  accentColor, setAccentColor,
 }: any) {
   const TABS = [
     { id: 'ai', label: '🤖 AI 设置' },
@@ -6138,7 +6339,52 @@ function Profile({
               <div className="w-16 h-16 rounded-[22px] bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-3xl mx-auto mb-3 shadow-lg">🎬</div>
               <div className="font-black text-gray-900 text-lg">ContentOS</div>
               <div className="text-xs text-gray-400 mt-1">AI 内容增长工作台</div>
-              <div className="text-xs text-gray-300 mt-0.5">v6.1.0</div>
+              <div className="text-xs text-gray-300 mt-0.5">v9.2.0</div>
+            </div>
+
+            {/* 外观设置 */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">🎨 外观设置</div>
+              <div className="mb-4">
+                <div className="text-xs text-gray-500 mb-2 font-medium">界面模式</div>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { id: 'light', label: '浅色', icon: '☀️' },
+                    { id: 'dark', label: '深色', icon: '🌙' },
+                    { id: 'purple', label: '紫色', icon: '💜' },
+                    { id: 'green', label: '绿色', icon: '🌿' },
+                  ].map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => setTheme(t.id)}
+                      className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-medium transition-all active:scale-95 ${theme === t.id ? 'bg-blue-50 border-2 border-blue-400 text-blue-600' : 'bg-gray-50 border-2 border-transparent text-gray-500'}`}
+                    >
+                      <span className="text-lg">{t.icon}</span>
+                      <span>{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-2 font-medium">主题色</div>
+                <div className="flex gap-3 justify-center">
+                  {[
+                    { id: 'blue', color: '#3B82F6', label: '蓝色' },
+                    { id: 'purple', color: '#8B5CF6', label: '紫色' },
+                    { id: 'green', color: '#10B981', label: '绿色' },
+                    { id: 'orange', color: '#F59E0B', label: '橙色' },
+                    { id: 'red', color: '#EF4444', label: '红色' },
+                  ].map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => setAccentColor(c.id)}
+                      title={c.label}
+                      className={`w-8 h-8 rounded-full transition-all active:scale-90 ${accentColor === c.id ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''}`}
+                      style={{ backgroundColor: c.color }}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="bg-white rounded-2xl p-4 shadow-sm">
