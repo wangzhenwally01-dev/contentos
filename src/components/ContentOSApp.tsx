@@ -114,6 +114,9 @@ export default function ContentOSApp() {
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
   const [savedContents, setSavedContents] = useState<SavedContent[]>([])
   const [expandedCopy, setExpandedCopy] = useState<number | null>(null)
+  const [copyHistory, setCopyHistory] = useState<any[]>([])
+  const [compareMode, setCompareMode] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
 
   // Materials
   const [matTab, setMatTab] = useState<MatTab>('hotspot')
@@ -260,6 +263,8 @@ export default function ContentOSApp() {
       if (data.versions) {
         setCopyVersions(data.versions)
         setContentStep(3)
+        const histItem = { id: Date.now().toString(), topic: selectedTopic, style: copyStyle, versions: data.versions, createdAt: new Date().toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }), tokens: data.tokens || 0 }
+        setCopyHistory((prev: any[]) => [histItem, ...prev].slice(0, 20))
         showToast('✅ 文案生成成功')
       } else {
         setCopyError(data.error || '生成失败，请重试')
@@ -815,6 +820,8 @@ export default function ContentOSApp() {
             generate={generateCopy} copy={copyText} save={saveCopy}
             showToast={showToast} setTab={setTab} hotspots={HOTSPOTS}
             savedContents={savedContents} setVideoCopy={setVideoCopy}
+            copyHistory={copyHistory} compareMode={compareMode} setCompareMode={setCompareMode}
+            showHistory={showHistory} setShowHistory={setShowHistory}
           />
         )}
         {tab === 'video' && (
@@ -1885,23 +1892,39 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
 }
 
 
-function ContentCenter({ acc, step, setStep, topic, setTopic, style, setStyle, userInput, setUserInput, versions, loading, error, copiedIdx, expandedCopy, setExpandedCopy, generate, copy, save, showToast, setTab, hotspots, savedContents, setVideoCopy }: any) {
+function ContentCenter({ acc, step, setStep, topic, setTopic, style, setStyle, userInput, setUserInput, versions, loading, error, copiedIdx, expandedCopy, setExpandedCopy, generate, copy, save, showToast, setTab, hotspots, savedContents, setVideoCopy, copyHistory, compareMode, setCompareMode, showHistory, setShowHistory }: any) {
   const STYLES = ['犀利观点', '温情故事', '干货教程', '幽默搞笑', '励志正能量', '悬念钩子']
+  const STYLE_COLORS: Record<string, string> = {
+    '犀利观点': 'from-red-400 to-orange-400',
+    '温情故事': 'from-pink-400 to-rose-400',
+    '干货教程': 'from-blue-400 to-cyan-400',
+    '幽默搞笑': 'from-yellow-400 to-amber-400',
+    '励志正能量': 'from-green-400 to-emerald-400',
+    '悬念钩子': 'from-purple-400 to-violet-400',
+  }
+
+  async function copyAll() {
+    const text = versions.map((v: any, i: number) =>
+      `【版本${i+1} · ${v.style}】\n钩子：${v.hook}\n\n${v.content}`
+    ).join('\n\n' + '─'.repeat(20) + '\n\n')
+    try { await navigator.clipboard.writeText(text); showToast('✅ 已复制全部版本') }
+    catch { showToast('复制失败，请手动复制') }
+  }
 
   return (
     <div className="flex flex-col h-full bg-[#F2F2F7]">
-      {/* Header with Steps */}
       <div className="px-5 pt-12 pb-3 flex-shrink-0">
-        <h1 className="text-xl font-black text-gray-900 mb-3">内容中心</h1>
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="text-xl font-black text-gray-900">内容中心</h1>
+          <button onClick={() => setShowHistory(!showHistory)} className={`relative flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-xl transition-all ${showHistory ? 'bg-blue-500 text-white' : 'bg-white text-gray-500 shadow-sm'}`}>
+            🕐 历史
+            {copyHistory.length > 0 && <span className={`absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center ${showHistory ? 'bg-white text-blue-500' : 'bg-red-400 text-white'}`}>{copyHistory.length > 9 ? '9+' : copyHistory.length}</span>}
+          </button>
+        </div>
         <div className="flex items-center gap-1">
           {['选题', '配置', '文案'].map((s, i) => (
             <div key={i} className="flex items-center gap-1">
-              <button
-                onClick={() => { if (i + 1 < step) setStep(i + 1 as any) }}
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${step > i + 1 ? 'bg-green-400 text-white' : step === i + 1 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'}`}
-              >
-                {step > i + 1 ? '✓' : i + 1}
-              </button>
+              <button onClick={() => { if (i + 1 < step) setStep(i + 1 as any) }} className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${step > i + 1 ? 'bg-green-400 text-white' : step === i + 1 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'}`}>{step > i + 1 ? '✓' : i + 1}</button>
               <span className={`text-xs font-medium ${step === i + 1 ? 'text-blue-500' : step > i + 1 ? 'text-green-500' : 'text-gray-400'}`}>{s}</span>
               {i < 2 && <div className={`w-6 h-px ${step > i + 1 ? 'bg-green-400' : 'bg-gray-200'}`} />}
             </div>
@@ -1909,38 +1932,48 @@ function ContentCenter({ acc, step, setStep, topic, setTopic, style, setStyle, u
         </div>
       </div>
 
+      {showHistory && (
+        <div className="absolute inset-0 bg-black/40 z-40 flex flex-col rounded-[50px] overflow-hidden" onClick={() => setShowHistory(false)}>
+          <div className="flex-1" />
+          <div className="bg-white rounded-t-3xl p-5 pb-8 max-h-[75%] flex flex-col" onClick={(e: any) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div><h3 className="font-black text-gray-900">生成历史</h3><p className="text-xs text-gray-400 mt-0.5">最近 {copyHistory.length} 条记录</p></div>
+              <button onClick={() => setShowHistory(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-sm">✕</button>
+            </div>
+            <div className="overflow-y-auto flex-1 space-y-2">
+              {copyHistory.length === 0 ? (
+                <div className="text-center py-8 text-gray-400 text-sm">暂无历史记录</div>
+              ) : copyHistory.map((h: any) => (
+                <div key={h.id} className="bg-gray-50 rounded-2xl p-3 cursor-pointer active:bg-gray-100 transition-colors" onClick={() => { setTopic(h.topic); setStyle(h.style); setStep(3); setShowHistory(false); showToast('✅ 已恢复历史记录') }}>
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <div className="text-sm font-semibold text-gray-800 leading-snug flex-1">{h.topic}</div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full text-white font-medium flex-shrink-0 bg-gradient-to-r ${STYLE_COLORS[h.style] || 'from-gray-400 to-gray-500'}`}>{h.style}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-gray-400">{h.createdAt}</span>
+                    <div className="flex items-center gap-2"><span className="text-[10px] text-gray-400">{h.versions?.length || 0} 个版本</span><span className="text-[10px] text-blue-400 font-semibold">恢复 →</span></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4">
-        {/* Step 1: Topic Selection */}
         {step === 1 && (
           <div className="space-y-3">
             <div className="bg-white rounded-2xl p-4 shadow-sm">
               <div className="font-bold text-gray-900 text-sm mb-2">✏️ 自定义选题</div>
-              <textarea
-                value={topic}
-                onChange={e => setTopic(e.target.value)}
-                placeholder="输入你的选题标题..."
-                className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20"
-              />
-              <button
-                onClick={() => { if (!topic.trim()) { showToast('请输入选题'); return }; setStep(2) }}
-                className="w-full mt-2 py-2.5 bg-blue-500 text-white text-sm font-bold rounded-xl active:scale-[0.98] transition-transform"
-              >
-                使用此选题 →
-              </button>
+              <textarea value={topic} onChange={e => setTopic(e.target.value)} placeholder="输入你的选题标题..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20" />
+              <button onClick={() => { if (!topic.trim()) { showToast('请输入选题'); return }; setStep(2) }} className="w-full mt-2 py-2.5 bg-blue-500 text-white text-sm font-bold rounded-xl active:scale-[0.98] transition-transform">使用此选题 →</button>
             </div>
             <div className="bg-white rounded-2xl p-4 shadow-sm">
               <div className="font-bold text-gray-900 text-sm mb-3">🔥 热点选题（点击使用）</div>
               {hotspots.map((h: any, i: number) => (
-                <div
-                  key={i}
-                  onClick={() => { setTopic(h.title); setStep(2) }}
-                  className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0 cursor-pointer active:bg-gray-50 rounded-xl px-1 transition-colors"
-                >
+                <div key={i} onClick={() => { setTopic(h.title); setStep(2) }} className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0 cursor-pointer active:bg-gray-50 rounded-xl px-1 transition-colors">
                   <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-white font-black text-xs flex-shrink-0 ${i < 3 ? 'bg-gradient-to-br from-red-400 to-orange-400' : 'bg-gradient-to-br from-orange-300 to-amber-300'}`}>{i + 1}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-800">{h.title}</div>
-                    <div className="text-xs text-gray-400">{h.tag}</div>
-                  </div>
+                  <div className="flex-1 min-w-0"><div className="text-sm font-medium text-gray-800">{h.title}</div><div className="text-xs text-gray-400">{h.tag}</div></div>
                   <span className="text-xs text-blue-500 font-semibold flex-shrink-0">选用 →</span>
                 </div>
               ))}
@@ -1948,143 +1981,123 @@ function ContentCenter({ acc, step, setStep, topic, setTopic, style, setStyle, u
           </div>
         )}
 
-        {/* Step 2: Config */}
         {step === 2 && (
           <div className="space-y-3">
-            {/* Current Topic */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-2">
-                <div className="font-bold text-gray-900 text-sm">📌 当前选题</div>
-                <button onClick={() => setStep(1)} className="text-xs text-gray-400 active:text-gray-600">← 重选</button>
-              </div>
+              <div className="flex items-center justify-between mb-2"><div className="font-bold text-gray-900 text-sm">📌 当前选题</div><button onClick={() => setStep(1)} className="text-xs text-gray-400 active:text-gray-600">← 重选</button></div>
               <div className="text-sm text-blue-600 font-medium bg-blue-50 rounded-xl px-3 py-2.5 leading-snug">{topic}</div>
             </div>
-
-            {/* Style Selection */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
               <div className="font-bold text-gray-900 text-sm mb-3">🎨 文案风格</div>
               <div className="grid grid-cols-3 gap-2">
-                {STYLES.map(s => (
-                  <button
-                    key={s}
-                    onClick={() => setStyle(s)}
-                    className={`py-2.5 rounded-xl text-xs font-semibold transition-all active:scale-95 ${style === s ? 'bg-blue-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600'}`}
-                  >{s}</button>
-                ))}
+                {STYLES.map(s => (<button key={s} onClick={() => setStyle(s)} className={`py-2.5 rounded-xl text-xs font-semibold transition-all active:scale-95 ${style === s ? 'bg-blue-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600'}`}>{s}</button>))}
               </div>
             </div>
-
-            {/* Account Info */}
             <div className="bg-white rounded-2xl p-3 shadow-sm flex items-center gap-3">
               <div className="text-2xl">{acc.emoji}</div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-bold text-gray-700">{acc.name}</div>
-                <div className="text-xs text-gray-400 truncate">{acc.positioning}</div>
-              </div>
+              <div className="flex-1 min-w-0"><div className="text-xs font-bold text-gray-700">{acc.name}</div><div className="text-xs text-gray-400 truncate">{acc.positioning}</div></div>
               <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">{acc.industry}</span>
             </div>
-
-            {/* Extra Input */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
               <div className="font-bold text-gray-900 text-sm mb-2">💬 补充说明（可选）</div>
-              <textarea
-                value={userInput}
-                onChange={e => setUserInput(e.target.value)}
-                placeholder="有什么特别要求？如：突出价格优惠、强调食材新鲜、加入最近的热点事件..."
-                className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20"
-              />
+              <textarea value={userInput} onChange={e => setUserInput(e.target.value)} placeholder="有什么特别要求？如：突出价格优惠、强调食材新鲜..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20" />
             </div>
-
-            {error && (
-              <div className="bg-red-50 rounded-2xl p-3 flex items-start gap-2">
-                <span className="text-red-400 flex-shrink-0">⚠️</span>
-                <span className="text-xs text-red-500 leading-relaxed">{error}</span>
-              </div>
-            )}
-
-            <button
-              onClick={generate}
-              disabled={loading}
-              className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm disabled:opacity-60 active:scale-[0.98] transition-all shadow-md"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  AI 生成中...
-                </span>
-              ) : '✨ 生成文案（3个版本）'}
+            {error && <div className="bg-red-50 rounded-2xl p-3 flex items-start gap-2"><span className="text-red-400 text-sm flex-shrink-0">⚠️</span><p className="text-xs text-red-500">{error}</p></div>}
+            <button onClick={generate} disabled={loading} className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-sm font-black rounded-2xl shadow-lg active:scale-[0.98] transition-transform disabled:opacity-60 disabled:scale-100">
+              {loading ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>AI 生成中...</span> : '✨ 生成3个版本文案'}
             </button>
           </div>
         )}
 
-        {/* Step 3: Results */}
         {step === 3 && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-bold text-gray-900">✅ 生成完成 · {versions.length} 个版本</div>
-              <button onClick={() => setStep(2)} className="text-xs text-blue-500 font-semibold">重新生成</button>
-            </div>
-            {versions.map((v: any, i: number) => (
-              <div key={i} className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                {/* Version Header */}
-                <div className="flex items-center justify-between px-4 pt-3 pb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">版本 {i + 1}</span>
-                    <span className="text-xs text-gray-400">{v.style}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => copy(v.content, i)}
-                      className={`text-xs font-semibold px-2 py-0.5 rounded-lg transition-colors ${copiedIdx === i ? 'text-green-500 bg-green-50' : 'text-gray-400 bg-gray-100'}`}
-                    >
-                      {copiedIdx === i ? '✅ 已复制' : '复制'}
-                    </button>
-                    <button
-                      onClick={() => save(v.content, v.style, v.hook)}
-                      className="text-xs text-blue-500 font-semibold px-2 py-0.5 bg-blue-50 rounded-lg"
-                    >保存</button>
+            <div className="bg-white rounded-2xl p-3 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-gray-800 truncate max-w-[160px]">{topic}</div>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full text-white font-medium bg-gradient-to-r ${STYLE_COLORS[style] || 'from-gray-400 to-gray-500'}`}>{style}</span>
+                    <span className="text-[10px] text-gray-400">{versions.length} 个版本</span>
                   </div>
                 </div>
+                <div className="flex items-center gap-1.5">
+                  <button onClick={() => setCompareMode(!compareMode)} className={`text-[10px] font-semibold px-2.5 py-1.5 rounded-xl transition-all ${compareMode ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'}`}>{compareMode ? '📊 对比中' : '📊 对比'}</button>
+                  <button onClick={copyAll} className="text-[10px] font-semibold px-2.5 py-1.5 rounded-xl bg-blue-50 text-blue-500 active:scale-95">📋 全部</button>
+                  <button onClick={() => setStep(2)} className="text-[10px] font-semibold px-2.5 py-1.5 rounded-xl bg-gray-100 text-gray-500">🔄 重生成</button>
+                </div>
+              </div>
+            </div>
 
-                {/* Hook */}
+            {compareMode && versions.length >= 2 && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="font-bold text-gray-900 text-sm mb-3">📊 风格对比分析</div>
+                <div className="space-y-3">
+                  {versions.map((v: any, i: number) => (
+                    <div key={i} className="rounded-xl overflow-hidden border border-gray-100">
+                      <div className={`px-3 py-2 bg-gradient-to-r ${STYLE_COLORS[v.style] || 'from-gray-400 to-gray-500'} flex items-center justify-between`}>
+                        <span className="text-white text-xs font-bold">版本 {i+1} · {v.style}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-white/80 text-[10px]">{v.content?.length || 0}字</span>
+                          <button onClick={() => copy(v.content, i)} className="text-[10px] bg-white/20 text-white px-2 py-0.5 rounded-lg font-semibold">{copiedIdx === i ? '✅' : '复制'}</button>
+                        </div>
+                      </div>
+                      <div className="px-3 py-2 bg-amber-50 border-b border-gray-100"><span className="text-[10px] text-amber-500 font-bold">🎣 钩子：</span><span className="text-xs text-amber-700">{v.hook}</span></div>
+                      <div className="px-3 py-2"><p className="text-xs text-gray-600 leading-relaxed line-clamp-3">{v.content}</p></div>
+                      <div className="px-3 pb-2 flex gap-2">
+                        <button onClick={() => save(v.content, v.style, v.hook)} className="text-[10px] text-blue-500 font-semibold bg-blue-50 px-2.5 py-1 rounded-lg">保存</button>
+                        <button onClick={() => { setVideoCopy(v.content); setTab('video') }} className="text-[10px] text-purple-500 font-semibold bg-purple-50 px-2.5 py-1 rounded-lg">🎬 生成视频</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!compareMode && versions.map((v: any, i: number) => (
+              <div key={i} className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className={`px-4 py-3 bg-gradient-to-r ${STYLE_COLORS[v.style] || 'from-gray-400 to-gray-500'} flex items-center justify-between`}>
+                  <div className="flex items-center gap-2"><span className="text-white font-black text-sm">版本 {i + 1}</span><span className="text-white/80 text-xs">{v.style}</span></div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-white/70 text-[10px]">{v.content?.length || 0} 字</span>
+                    <button onClick={() => copy(v.content, i)} className={`text-xs font-bold px-3 py-1 rounded-xl transition-all active:scale-95 ${copiedIdx === i ? 'bg-green-400 text-white' : 'bg-white/20 text-white'}`}>{copiedIdx === i ? '✅ 已复制' : '📋 复制'}</button>
+                  </div>
+                </div>
                 {v.hook && (
-                  <div className="mx-4 mb-2 px-3 py-2 bg-orange-50 rounded-xl">
-                    <span className="text-[10px] text-orange-400 font-bold">🎣 钩子：</span>
-                    <span className="text-xs text-orange-600">{v.hook}</span>
+                  <div className="mx-4 mt-3 mb-2 px-3 py-2 bg-amber-50 rounded-xl border border-amber-100">
+                    <div className="flex items-start gap-1.5">
+                      <span className="text-amber-400 text-sm flex-shrink-0">🎣</span>
+                      <div><span className="text-[10px] text-amber-500 font-bold block mb-0.5">开场钩子</span><span className="text-xs text-amber-700 leading-relaxed">{v.hook}</span></div>
+                    </div>
                   </div>
                 )}
-
-                {/* Content */}
-                <div className="px-4 pb-3">
-                  <p className={`text-sm text-gray-700 leading-relaxed whitespace-pre-wrap ${expandedCopy === i ? '' : 'line-clamp-4'}`}>
-                    {v.content}
-                  </p>
-                  {v.content?.length > 150 && (
-                    <button
-                      onClick={() => setExpandedCopy(expandedCopy === i ? null : i)}
-                      className="text-xs text-blue-400 mt-1"
-                    >
-                      {expandedCopy === i ? '收起 ↑' : '展开全文 ↓'}
-                    </button>
-                  )}
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-[10px] text-gray-300">{v.content?.length || 0} 字</span>
-                    <button
-                      onClick={() => { setVideoCopy(v.content); setTab('video') }}
-                      className="text-xs text-purple-500 font-semibold bg-purple-50 px-3 py-1 rounded-xl active:scale-95 transition-transform"
-                    >
-                      🎬 生成视频
-                    </button>
+                <div className="px-4 pb-3 pt-1">
+                  <p className={`text-sm text-gray-700 leading-relaxed whitespace-pre-wrap ${expandedCopy === i ? '' : 'line-clamp-4'}`}>{v.content}</p>
+                  {v.content?.length > 150 && <button onClick={() => setExpandedCopy(expandedCopy === i ? null : i)} className="text-xs text-blue-400 mt-1.5 font-medium">{expandedCopy === i ? '收起 ↑' : '展开全文 ↓'}</button>}
+                  <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-gray-50">
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => save(v.content, v.style, v.hook)} className="text-xs text-blue-500 font-semibold bg-blue-50 px-3 py-1.5 rounded-xl active:scale-95 transition-transform">💾 保存</button>
+                      <button onClick={() => { setVideoCopy(v.content); setTab('video') }} className="text-xs text-purple-500 font-semibold bg-purple-50 px-3 py-1.5 rounded-xl active:scale-95 transition-transform">🎬 生成视频</button>
+                    </div>
+                    <button onClick={async () => { const t = `【${v.style}】\n\n钩子：${v.hook}\n\n${v.content}`; try { await navigator.clipboard.writeText(t); showToast('✅ 已复制（含钩子）') } catch { showToast('复制失败') } }} className="text-[10px] text-gray-400 font-medium">含钩子复制</button>
                   </div>
                 </div>
               </div>
             ))}
+
+            {loading && (
+              <div className="bg-white rounded-2xl p-8 shadow-sm flex flex-col items-center gap-3">
+                <div className="w-10 h-10 border-2 border-blue-100 border-t-blue-500 rounded-full animate-spin"/>
+                <p className="text-sm text-gray-500 font-medium">AI 正在创作中...</p>
+                <p className="text-xs text-gray-400">通常需要 5-10 秒</p>
+              </div>
+            )}
           </div>
         )}
       </div>
     </div>
   )
 }
+
 
 // ═══════════════════════════════════════════════════════════
 // VIDEO STUDIO
@@ -2496,21 +2509,8 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
               </button>
             )}
 
-            {/* 视频合成（开发中） */}
-            <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100">
-              <div className="font-bold text-amber-700 text-sm mb-1">🚧 视频合成开发中</div>
-              <div className="text-xs text-amber-600 leading-relaxed">
-                完整视频合成（LatentSync 对口型 + FFmpeg 合成）正在开发中。<br />
-                当前已完成：✅ 语音合成 · ✅ 音频播放 · ✅ 音频下载
-              </div>
-            </div>
-
-            <button
-              onClick={() => showToast('🚀 视频合成任务已提交，完成后通知你')}
-              className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md opacity-70"
-            >
-              🎬 生成视频（开发中）
-            </button>
+            {/* MiniMax 视频生成 */}
+            <VideoGeneratePanel videoCopy={videoCopy} showToast={showToast} />
             <button onClick={() => setStep('input')} className="w-full py-2 text-sm text-gray-400">← 重新开始</button>
           </>
         )}
@@ -2518,6 +2518,192 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
     </div>
   )
 }
+
+// ═══════════════════════════════════════════════════════════
+// VIDEO GENERATE PANEL — MiniMax 视频合成面板
+// ═══════════════════════════════════════════════════════════
+function VideoGeneratePanel({ videoCopy, showToast }: any) {
+  const [videoPrompt, setVideoPrompt] = React.useState('')
+  const [videoTaskId, setVideoTaskId] = React.useState('')
+  const [videoStatus, setVideoStatus] = React.useState<'idle' | 'generating' | 'polling' | 'done' | 'error' | 'demo'>('idle')
+  const [videoUrl, setVideoUrl] = React.useState('')
+  const [videoError, setVideoError] = React.useState('')
+  const [pollCount, setPollCount] = React.useState(0)
+  const pollRef = React.useRef<any>(null)
+
+  // 根据文案自动生成视频描述
+  React.useEffect(() => {
+    if (videoCopy) {
+      const preview = videoCopy.slice(0, 80).replace(/\n/g, ' ')
+      setVideoPrompt(`一位专业主播正在讲述：${preview}，竖屏视频，真实感强，光线明亮`)
+    }
+  }, [videoCopy])
+
+  async function startGenerate() {
+    if (!videoPrompt.trim()) { showToast('请输入视频描述'); return }
+    setVideoStatus('generating')
+    setVideoError('')
+    setVideoUrl('')
+    setPollCount(0)
+    try {
+      const res = await fetch('/api/generate-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: videoPrompt, duration: 6 })
+      })
+      const data = await res.json()
+      if (data.status === 'demo') {
+        setVideoStatus('demo')
+        setVideoTaskId(data.taskId)
+        showToast('⚠️ 演示模式：MiniMax API 未配置')
+        return
+      }
+      if (data.taskId) {
+        setVideoTaskId(data.taskId)
+        setVideoStatus('polling')
+        startPolling(data.taskId)
+        showToast('🎬 视频生成任务已提交，正在生成...')
+      } else {
+        setVideoStatus('error')
+        setVideoError(data.error || '提交失败')
+      }
+    } catch (e: any) {
+      setVideoStatus('error')
+      setVideoError(e.message)
+    }
+  }
+
+  function startPolling(taskId: string) {
+    let count = 0
+    pollRef.current = setInterval(async () => {
+      count++
+      setPollCount(count)
+      if (count > 60) { // 最多轮询 5 分钟
+        clearInterval(pollRef.current)
+        setVideoStatus('error')
+        setVideoError('生成超时，请重试')
+        return
+      }
+      try {
+        const res = await fetch(`/api/video-status?taskId=${taskId}`)
+        const data = await res.json()
+        if (data.status === 'Success' || data.status === 'success' || data.videoUrl) {
+          clearInterval(pollRef.current)
+          setVideoStatus('done')
+          setVideoUrl(data.videoUrl || '')
+          showToast('✅ 视频生成完成！')
+        } else if (data.status === 'Fail' || data.status === 'fail') {
+          clearInterval(pollRef.current)
+          setVideoStatus('error')
+          setVideoError('视频生成失败，请重试')
+        }
+      } catch {}
+    }, 5000)
+  }
+
+  React.useEffect(() => {
+    return () => { if (pollRef.current) clearInterval(pollRef.current) }
+  }, [])
+
+  return (
+    <div className="space-y-3">
+      {/* 视频描述输入 */}
+      <div className="bg-white rounded-2xl p-4 shadow-sm">
+        <div className="flex items-center justify-between mb-2">
+          <div className="font-bold text-gray-900 text-sm">🎬 AI 视频合成</div>
+          <span className="text-[10px] px-2 py-0.5 bg-purple-50 text-purple-500 rounded-full font-medium">MiniMax T2V</span>
+        </div>
+        <div className="text-xs text-gray-400 mb-3 leading-relaxed">基于文案自动生成视频描述，或手动修改后生成</div>
+        <textarea
+          value={videoPrompt}
+          onChange={e => setVideoPrompt(e.target.value)}
+          placeholder="描述你想要的视频画面，如：一位女主播在明亮的直播间讲述美食探店经历..."
+          className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20 text-gray-700"
+        />
+        <div className="flex items-center justify-between mt-1">
+          <span className="text-[10px] text-gray-400">{videoPrompt.length} 字</span>
+          <button
+            onClick={() => {
+              if (videoCopy) {
+                const preview = videoCopy.slice(0, 80).replace(/\n/g, ' ')
+                setVideoPrompt(`一位专业主播正在讲述：${preview}，竖屏视频，真实感强，光线明亮`)
+              }
+            }}
+            className="text-[10px] text-blue-400 font-medium"
+          >↺ 从文案重新生成</button>
+        </div>
+      </div>
+
+      {/* 生成状态 */}
+      {videoStatus === 'idle' && (
+        <button
+          onClick={startGenerate}
+          className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md"
+        >
+          🎬 开始生成视频
+        </button>
+      )}
+
+      {(videoStatus === 'generating' || videoStatus === 'polling') && (
+        <div className="bg-white rounded-2xl p-5 shadow-sm">
+          <div className="flex flex-col items-center gap-3">
+            <div className="relative w-14 h-14">
+              <div className="absolute inset-0 rounded-full border-4 border-purple-100"/>
+              <div className="absolute inset-0 rounded-full border-4 border-t-purple-500 animate-spin"/>
+              <div className="absolute inset-0 flex items-center justify-center text-lg">🎬</div>
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-bold text-gray-800">{videoStatus === 'generating' ? '提交任务中...' : `视频生成中 (${pollCount * 5}s)`}</p>
+              <p className="text-xs text-gray-400 mt-1">MiniMax T2V 正在渲染，通常需要 1-3 分钟</p>
+            </div>
+            {videoTaskId && <div className="text-[10px] text-gray-300 font-mono">任务ID: {videoTaskId.slice(0, 20)}...</div>}
+          </div>
+        </div>
+      )}
+
+      {videoStatus === 'demo' && (
+        <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100">
+          <div className="font-bold text-amber-700 text-sm mb-2">⚠️ 演示模式</div>
+          <div className="text-xs text-amber-600 leading-relaxed mb-3">
+            MiniMax API 未配置，无法生成真实视频。<br/>
+            请在 Vercel 环境变量中添加 <code className="bg-amber-100 px-1 rounded">MINIMAX_API_KEY</code>
+          </div>
+          <div className="bg-white rounded-xl p-3 space-y-1.5">
+            <div className="text-xs font-semibold text-gray-700">配置步骤：</div>
+            {['1. 登录 platform.minimaxi.com 获取 API Key', '2. 进入 Vercel 项目 → Settings → Environment Variables', '3. 添加 MINIMAX_API_KEY = 你的密钥', '4. 重新部署即可'].map((s, i) => (
+              <div key={i} className="text-xs text-gray-500">{s}</div>
+            ))}
+          </div>
+          <button onClick={() => setVideoStatus('idle')} className="w-full mt-3 py-2 bg-amber-100 text-amber-700 text-xs font-semibold rounded-xl">重新尝试</button>
+        </div>
+      )}
+
+      {videoStatus === 'done' && (
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="font-bold text-gray-900 text-sm mb-3">✅ 视频生成完成</div>
+          {videoUrl ? (
+            <div className="space-y-3">
+              <video src={videoUrl} controls className="w-full rounded-xl bg-black" style={{maxHeight: '200px'}} />
+              <a href={videoUrl} download={`contentos_video_${Date.now()}.mp4`} className="block w-full py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold rounded-2xl text-sm text-center active:scale-[0.98] transition-all">⬇️ 下载视频</a>
+            </div>
+          ) : (
+            <div className="text-xs text-gray-500 text-center py-4">视频已生成，但下载链接获取失败</div>
+          )}
+          <button onClick={() => { setVideoStatus('idle'); setVideoUrl(''); setVideoTaskId('') }} className="w-full mt-2 py-2 text-xs text-gray-400">重新生成</button>
+        </div>
+      )}
+
+      {videoStatus === 'error' && (
+        <div className="bg-red-50 rounded-2xl p-4 border border-red-100">
+          <div className="font-bold text-red-600 text-sm mb-1">❌ 生成失败</div>
+          <div className="text-xs text-red-500 mb-3">{videoError}</div>
+          <button onClick={() => setVideoStatus('idle')} className="w-full py-2 bg-red-100 text-red-600 text-xs font-semibold rounded-xl">重试</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 
 
 function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedContents, showToast, insights, insightsLoading, fetchInsights, showAddSchedule, setShowAddSchedule, newScheduleTitle, setNewScheduleTitle, newSchedulePlatform, setNewSchedulePlatform, addScheduleItem }: any) {
