@@ -144,6 +144,27 @@ export default function ContentOSApp() {
   ])
   const [insights, setInsights] = useState<any[]>([])
   const [insightsLoading, setInsightsLoading] = useState(false)
+  // 平台数据状态
+  const [platformStats, setPlatformStats] = useState<any>({
+    fans: [1200, 1350, 1480, 1620, 1750, 1890, 2050],
+    plays: [3200, 5800, 4100, 8900, 6200, 11000, 7800],
+    likes: [180, 320, 240, 560, 380, 720, 450],
+    comments: [45, 88, 62, 145, 98, 210, 120],
+    collects: [92, 165, 118, 280, 195, 380, 240],
+    totalFans: 2050,
+    totalPlays: 47000,
+    avgEngagement: 8.4,
+    weeklyPosts: 3,
+    lastSync: null,
+    platform: '抖音',
+  })
+  const [statsRange, setStatsRange] = useState<'7d' | '30d'>('7d')
+  const [showDataBind, setShowDataBind] = useState(false)
+  const [dataBindTab, setDataBindTab] = useState<'manual' | 'import'>('manual')
+  const [manualFans, setManualFans] = useState('')
+  const [manualPlays, setManualPlays] = useState('')
+  const [manualLikes, setManualLikes] = useState('')
+  const [statsLoading, setStatsLoading] = useState(false)
   const [showAddSchedule, setShowAddSchedule] = useState(false)
   const [newScheduleTitle, setNewScheduleTitle] = useState('')
   const [newSchedulePlatform, setNewSchedulePlatform] = useState('抖音')
@@ -368,6 +389,56 @@ export default function ContentOSApp() {
     } finally {
       setStyleLoading(false)
     }
+  }
+
+  // 获取平台数据（AI 生成真实感数据 + 预留真实 API 接口）
+  async function fetchPlatformStats() {
+    setStatsLoading(true)
+    try {
+      const res = await fetch('/api/platform-stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform: platformStats.platform,
+          industry: acc.industry,
+          positioning: acc.positioning,
+          currentFans: platformStats.totalFans,
+        })
+      })
+      const data = await res.json()
+      if (data.stats) {
+        setPlatformStats((prev: any) => ({ ...prev, ...data.stats, lastSync: new Date().toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }))
+        showToast('✅ 数据已更新')
+      }
+    } catch {
+      showToast('数据获取失败，请重试')
+    } finally {
+      setStatsLoading(false)
+    }
+  }
+
+  // 手动更新数据
+  function updateManualStats() {
+    const fans = parseInt(manualFans) || platformStats.totalFans
+    const plays = parseInt(manualPlays) || platformStats.totalPlays
+    const likes = parseInt(manualLikes) || platformStats.likes[platformStats.likes.length - 1]
+    // 生成趋势数据（基于当前值反推7天趋势）
+    const genTrend = (current: number, variance: number) =>
+      Array.from({ length: 7 }, (_, i) => Math.max(0, Math.round(current * (0.7 + i * 0.05) + (Math.random() - 0.5) * variance)))
+    setPlatformStats((prev: any) => ({
+      ...prev,
+      totalFans: fans,
+      totalPlays: plays,
+      fans: genTrend(fans, fans * 0.05),
+      plays: genTrend(plays / 7, plays * 0.1),
+      likes: genTrend(likes, likes * 0.3),
+      lastSync: new Date().toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    }))
+    setManualFans('')
+    setManualPlays('')
+    setManualLikes('')
+    setShowDataBind(false)
+    showToast('✅ 数据已更新')
   }
 
   async function fetchInsights() {
@@ -846,6 +917,15 @@ export default function ContentOSApp() {
             savedContents={savedContents} showToast={showToast}
             insights={insights} insightsLoading={insightsLoading}
             fetchInsights={fetchInsights}
+            platformStats={platformStats} setPlatformStats={setPlatformStats}
+            statsRange={statsRange} setStatsRange={setStatsRange}
+            showDataBind={showDataBind} setShowDataBind={setShowDataBind}
+            dataBindTab={dataBindTab} setDataBindTab={setDataBindTab}
+            manualFans={manualFans} setManualFans={setManualFans}
+            manualPlays={manualPlays} setManualPlays={setManualPlays}
+            manualLikes={manualLikes} setManualLikes={setManualLikes}
+            statsLoading={statsLoading} fetchPlatformStats={fetchPlatformStats}
+            updateManualStats={updateManualStats}
             showAddSchedule={showAddSchedule} setShowAddSchedule={setShowAddSchedule}
             newScheduleTitle={newScheduleTitle} setNewScheduleTitle={setNewScheduleTitle}
             newSchedulePlatform={newSchedulePlatform} setNewSchedulePlatform={setNewSchedulePlatform}
@@ -2706,7 +2786,7 @@ function VideoGeneratePanel({ videoCopy, showToast }: any) {
 
 
 
-function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedContents, showToast, insights, insightsLoading, fetchInsights, showAddSchedule, setShowAddSchedule, newScheduleTitle, setNewScheduleTitle, newSchedulePlatform, setNewSchedulePlatform, addScheduleItem }: any) {
+function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedContents, showToast, insights, insightsLoading, fetchInsights, showAddSchedule, setShowAddSchedule, newScheduleTitle, setNewScheduleTitle, newSchedulePlatform, setNewSchedulePlatform, addScheduleItem, platformStats, setPlatformStats, statsRange, setStatsRange, showDataBind, setShowDataBind, dataBindTab, setDataBindTab, manualFans, setManualFans, manualPlays, setManualPlays, manualLikes, setManualLikes, statsLoading, fetchPlatformStats, updateManualStats }: any) {
   const TABS = [{ id: 'schedule', label: '📅 排期' }, { id: 'stats', label: '📊 数据' }, { id: 'goals', label: '🎯 目标' }]
   const STATS = [
     { label: '本周发布', value: '3', unit: '条', trend: '+1', up: true },
@@ -2847,150 +2927,234 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
         {/* Stats Tab */}
         {opsTab === 'stats' && (
           <>
-            {/* 核心数据卡片 */}
+            {/* 数据绑定弹窗 */}
+            {showDataBind && (
+              <div className="absolute inset-0 bg-black/40 z-40 flex flex-col rounded-[50px] overflow-hidden" onClick={() => setShowDataBind(false)}>
+                <div className="flex-1" />
+                <div className="bg-white rounded-t-3xl p-5 pb-8" onClick={(e: any) => e.stopPropagation()}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-black text-gray-900">数据绑定</h3>
+                      <p className="text-xs text-gray-400 mt-0.5">手动录入或导入平台数据</p>
+                    </div>
+                    <button onClick={() => setShowDataBind(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
+                  </div>
+                  <div className="flex gap-2 mb-4">
+                    {[{id:'manual',label:'✏️ 手动录入'},{id:'import',label:'🤖 AI 生成'}].map((t: any) => (
+                      <button key={t.id} onClick={() => setDataBindTab(t.id)} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${dataBindTab === t.id ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500'}`}>{t.label}</button>
+                    ))}
+                  </div>
+                  {dataBindTab === 'manual' && (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { label: '当前粉丝数', placeholder: `当前: ${platformStats.totalFans.toLocaleString()}`, value: manualFans, set: setManualFans },
+                          { label: '总播放量', placeholder: `当前: ${platformStats.totalPlays.toLocaleString()}`, value: manualPlays, set: setManualPlays },
+                          { label: '本周点赞', placeholder: `当前: ${platformStats.likes[6]}`, value: manualLikes, set: setManualLikes },
+                        ].map((f: any, i: number) => (
+                          <div key={i} className={i === 2 ? 'col-span-2' : ''}>
+                            <div className="text-xs text-gray-500 mb-1 font-medium">{f.label}</div>
+                            <input value={f.value} onChange={(e: any) => f.set(e.target.value)} placeholder={f.placeholder} className="w-full px-3 py-2 rounded-xl bg-gray-100 text-sm outline-none" type="number" />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="bg-blue-50 rounded-xl p-3">
+                        <div className="text-xs text-blue-600 font-semibold mb-1">📊 数据来源</div>
+                        <div className="text-xs text-blue-500 leading-relaxed">从抖音/小红书创作者后台复制数据填入，系统将自动生成趋势图表</div>
+                      </div>
+                      <button onClick={updateManualStats} className="w-full py-3 bg-blue-500 text-white text-sm font-bold rounded-2xl active:scale-[0.98] transition-transform">✅ 更新数据</button>
+                    </div>
+                  )}
+                  {dataBindTab === 'import' && (
+                    <div className="space-y-3">
+                      <div className="bg-purple-50 rounded-xl p-3">
+                        <div className="text-xs text-purple-700 font-semibold mb-1">🤖 AI 智能生成</div>
+                        <div className="text-xs text-purple-600 leading-relaxed">基于你的账号定位和行业，AI 将生成符合真实规律的数据趋势，用于图表展示和运营分析</div>
+                      </div>
+                      <div className="bg-white border border-gray-100 rounded-xl p-3 space-y-1.5">
+                        <div className="text-xs font-semibold text-gray-700">将基于以下信息生成：</div>
+                        {[`账号：${acc.name}`, `行业：${acc.industry}`, `定位：${acc.positioning?.slice(0,30) || '未设置'}...`].map((s: string, i: number) => (
+                          <div key={i} className="text-xs text-gray-500 flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0"/>{s}</div>
+                        ))}
+                      </div>
+                      <button onClick={() => { fetchPlatformStats(); setShowDataBind(false) }} disabled={statsLoading} className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-400 text-white text-sm font-bold rounded-2xl active:scale-[0.98] transition-transform disabled:opacity-60">
+                        {statsLoading ? '生成中...' : '🤖 AI 生成数据'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 顶部操作栏 */}
+            <div className="bg-white rounded-2xl p-3 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-black text-gray-900">{platformStats.platform} 数据</span>
+                    {platformStats.lastSync && <span className="text-[10px] text-green-500 bg-green-50 px-2 py-0.5 rounded-full">已同步 {platformStats.lastSync}</span>}
+                  </div>
+                  <div className="text-xs text-gray-400 mt-0.5">点击"绑定"录入真实数据</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {/* 平台切换 */}
+                  <select
+                    value={platformStats.platform}
+                    onChange={(e: any) => setPlatformStats((prev: any) => ({ ...prev, platform: e.target.value }))}
+                    className="text-xs bg-gray-100 text-gray-600 px-2 py-1.5 rounded-xl outline-none font-medium"
+                  >
+                    {['抖音', '小红书', 'B站', '视频号'].map((p: string) => <option key={p}>{p}</option>)}
+                  </select>
+                  <button onClick={() => setShowDataBind(true)} className="text-xs font-bold px-3 py-1.5 bg-blue-500 text-white rounded-xl active:scale-95 transition-transform">绑定</button>
+                </div>
+              </div>
+            </div>
+
+            {/* 核心数据卡片（动态） */}
             <div className="grid grid-cols-2 gap-3">
-              {STATS.map((s, i) => (
+              {[
+                { label: '总粉丝数', value: platformStats.totalFans >= 10000 ? (platformStats.totalFans/10000).toFixed(1)+'万' : platformStats.totalFans.toLocaleString(), unit: '', trend: `+${Math.round((platformStats.fans[6]-platformStats.fans[0])/platformStats.fans[0]*100)}%`, up: platformStats.fans[6] > platformStats.fans[0] },
+                { label: '总播放量', value: platformStats.totalPlays >= 10000 ? (platformStats.totalPlays/10000).toFixed(1)+'万' : platformStats.totalPlays.toLocaleString(), unit: '', trend: `+${Math.round((platformStats.plays[6]-platformStats.plays[0])/platformStats.plays[0]*100)}%`, up: platformStats.plays[6] > platformStats.plays[0] },
+                { label: '本周互动', value: (platformStats.likes[6]+platformStats.comments[6]+platformStats.collects[6]).toLocaleString(), unit: '', trend: `+${Math.round(((platformStats.likes[6]+platformStats.comments[6])-(platformStats.likes[0]+platformStats.comments[0]))/(platformStats.likes[0]+platformStats.comments[0])*100)}%`, up: true },
+                { label: '平均互动率', value: platformStats.avgEngagement.toFixed(1), unit: '%', trend: '+0.8%', up: true },
+              ].map((s: any, i: number) => (
                 <div key={i} className="bg-white rounded-2xl p-4 shadow-sm">
                   <div className="text-xs text-gray-400 mb-1">{s.label}</div>
-                  <div className="text-2xl font-black text-gray-900">
-                    {s.value}<span className="text-sm font-medium text-gray-400 ml-0.5">{s.unit}</span>
-                  </div>
-                  <div className={`text-xs font-semibold mt-1 ${s.up ? 'text-green-500' : 'text-red-400'}`}>
-                    {s.up ? '↑' : '↓'} {s.trend} 较上周
-                  </div>
+                  <div className="text-2xl font-black text-gray-900">{s.value}<span className="text-sm font-medium text-gray-400 ml-0.5">{s.unit}</span></div>
+                  <div className={`text-xs font-semibold mt-1 ${s.up ? 'text-green-500' : 'text-red-400'}`}>{s.up ? '↑' : '↓'} {s.trend} 较上周</div>
                 </div>
               ))}
             </div>
 
-            {/* 粉丝增长折线图 */}
+            {/* 粉丝增长折线图（动态数据） */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <div className="font-bold text-gray-900 text-sm">👥 粉丝增长趋势</div>
                 <div className="flex gap-1">
-                  {['7天', '30天'].map((t, i) => (
-                    <button key={i} className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-all ${i === 0 ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-400'}`}>{t}</button>
+                  {(['7d','30d'] as const).map((t) => (
+                    <button key={t} onClick={() => setStatsRange(t)} className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-all ${statsRange === t ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-400'}`}>{t === '7d' ? '7天' : '30天'}</button>
                   ))}
                 </div>
               </div>
-              <svg viewBox="0 0 300 100" className="w-full" style={{height: '90px'}}>
-                <defs>
-                  <linearGradient id="fanGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.3"/>
-                    <stop offset="100%" stopColor="#3B82F6" stopOpacity="0"/>
-                  </linearGradient>
-                </defs>
-                {/* 网格线 */}
-                {[0,1,2,3].map(i => (
-                  <line key={i} x1="30" y1={10 + i * 22} x2="295" y2={10 + i * 22} stroke="#F3F4F6" strokeWidth="1"/>
-                ))}
-                {/* Y轴标签 */}
-                {['1.2k','900','600','300'].map((v, i) => (
-                  <text key={i} x="25" y={14 + i * 22} textAnchor="end" fontSize="7" fill="#9CA3AF">{v}</text>
-                ))}
-                {/* 面积填充 */}
-                <path d="M30,76 L75,68 L120,55 L165,48 L210,38 L255,28 L295,18 L295,88 L30,88 Z" fill="url(#fanGrad)"/>
-                {/* 折线 */}
-                <polyline points="30,76 75,68 120,55 165,48 210,38 255,28 295,18" fill="none" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                {/* 数据点 */}
-                {[[30,76],[75,68],[120,55],[165,48],[210,38],[255,28],[295,18]].map(([x,y],i) => (
-                  <circle key={i} cx={x} cy={y} r="3" fill="white" stroke="#3B82F6" strokeWidth="2"/>
-                ))}
-                {/* X轴标签 */}
-                {['周一','周二','周三','周四','周五','周六','周日'].map((d, i) => (
-                  <text key={i} x={30 + i * 44} y="98" textAnchor="middle" fontSize="7" fill="#9CA3AF">{d}</text>
-                ))}
-              </svg>
+              {(() => {
+                const data = platformStats.fans
+                const min = Math.min(...data)
+                const max = Math.max(...data)
+                const range = max - min || 1
+                const pts = data.map((v: number, i: number) => [30 + i * 44, 88 - ((v - min) / range) * 70])
+                const polyline = pts.map((p: number[]) => p.join(',')).join(' ')
+                const area = `M${pts[0][0]},${pts[0][1]} ` + pts.slice(1).map((p: number[]) => `L${p[0]},${p[1]}`).join(' ') + ` L${pts[pts.length-1][0]},88 L${pts[0][0]},88 Z`
+                return (
+                  <svg viewBox="0 0 300 100" className="w-full" style={{height:'90px'}}>
+                    <defs>
+                      <linearGradient id="fanGrad2" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.3"/>
+                        <stop offset="100%" stopColor="#3B82F6" stopOpacity="0"/>
+                      </linearGradient>
+                    </defs>
+                    {[0,1,2,3].map((i: number) => <line key={i} x1="30" y1={10+i*22} x2="295" y2={10+i*22} stroke="#F3F4F6" strokeWidth="1"/>)}
+                    {[max, Math.round(min+(max-min)*0.67), Math.round(min+(max-min)*0.33), min].map((v: number, i: number) => (
+                      <text key={i} x="25" y={14+i*22} textAnchor="end" fontSize="7" fill="#9CA3AF">{v>=10000?(v/10000).toFixed(1)+'w':v}</text>
+                    ))}
+                    <path d={area} fill="url(#fanGrad2)"/>
+                    <polyline points={polyline} fill="none" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    {pts.map((p: number[], i: number) => <circle key={i} cx={p[0]} cy={p[1]} r="3" fill="white" stroke="#3B82F6" strokeWidth="2"/>)}
+                    {['周一','周二','周三','周四','周五','周六','周日'].map((d: string, i: number) => (
+                      <text key={i} x={30+i*44} y="98" textAnchor="middle" fontSize="7" fill="#9CA3AF">{d}</text>
+                    ))}
+                  </svg>
+                )
+              })()}
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
+                <div className="text-xs text-gray-400">本周新增 <span className="font-bold text-blue-500">+{platformStats.fans[6]-platformStats.fans[0]}</span></div>
+                <div className="text-xs text-gray-400">总计 <span className="font-bold text-gray-700">{platformStats.totalFans >= 10000 ? (platformStats.totalFans/10000).toFixed(1)+'万' : platformStats.totalFans.toLocaleString()}</span></div>
+              </div>
             </div>
 
-            {/* 播放量趋势折线图 */}
+            {/* 播放量趋势（动态） */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <div className="font-bold text-gray-900 text-sm">▶️ 播放量趋势</div>
                 <div className="text-[10px] text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">近7天</div>
               </div>
-              <svg viewBox="0 0 300 100" className="w-full" style={{height: '90px'}}>
-                <defs>
-                  <linearGradient id="playGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.3"/>
-                    <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0"/>
-                  </linearGradient>
-                </defs>
-                {[0,1,2,3].map(i => (
-                  <line key={i} x1="30" y1={10 + i * 22} x2="295" y2={10 + i * 22} stroke="#F3F4F6" strokeWidth="1"/>
-                ))}
-                {['8k','6k','4k','2k'].map((v, i) => (
-                  <text key={i} x="25" y={14 + i * 22} textAnchor="end" fontSize="7" fill="#9CA3AF">{v}</text>
-                ))}
-                <path d="M30,72 L75,58 L120,65 L165,35 L210,42 L255,22 L295,30 L295,88 L30,88 Z" fill="url(#playGrad)"/>
-                <polyline points="30,72 75,58 120,65 165,35 210,42 255,22 295,30" fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                {[[30,72],[75,58],[120,65],[165,35],[210,42],[255,22],[295,30]].map(([x,y],i) => (
-                  <circle key={i} cx={x} cy={y} r="3" fill="white" stroke="#8B5CF6" strokeWidth="2"/>
-                ))}
-                {['周一','周二','周三','周四','周五','周六','周日'].map((d, i) => (
-                  <text key={i} x={30 + i * 44} y="98" textAnchor="middle" fontSize="7" fill="#9CA3AF">{d}</text>
-                ))}
-              </svg>
+              {(() => {
+                const data = platformStats.plays
+                const min = Math.min(...data)
+                const max = Math.max(...data)
+                const range = max - min || 1
+                const pts = data.map((v: number, i: number) => [30 + i * 44, 88 - ((v - min) / range) * 70])
+                const polyline = pts.map((p: number[]) => p.join(',')).join(' ')
+                const area = `M${pts[0][0]},${pts[0][1]} ` + pts.slice(1).map((p: number[]) => `L${p[0]},${p[1]}`).join(' ') + ` L${pts[pts.length-1][0]},88 L${pts[0][0]},88 Z`
+                return (
+                  <svg viewBox="0 0 300 100" className="w-full" style={{height:'90px'}}>
+                    <defs>
+                      <linearGradient id="playGrad2" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.3"/>
+                        <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0"/>
+                      </linearGradient>
+                    </defs>
+                    {[0,1,2,3].map((i: number) => <line key={i} x1="30" y1={10+i*22} x2="295" y2={10+i*22} stroke="#F3F4F6" strokeWidth="1"/>)}
+                    {[max, Math.round(min+(max-min)*0.67), Math.round(min+(max-min)*0.33), min].map((v: number, i: number) => (
+                      <text key={i} x="25" y={14+i*22} textAnchor="end" fontSize="7" fill="#9CA3AF">{v>=10000?(v/10000).toFixed(1)+'w':v}</text>
+                    ))}
+                    <path d={area} fill="url(#playGrad2)"/>
+                    <polyline points={polyline} fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    {pts.map((p: number[], i: number) => <circle key={i} cx={p[0]} cy={p[1]} r="3" fill="white" stroke="#8B5CF6" strokeWidth="2"/>)}
+                    {['周一','周二','周三','周四','周五','周六','周日'].map((d: string, i: number) => (
+                      <text key={i} x={30+i*44} y="98" textAnchor="middle" fontSize="7" fill="#9CA3AF">{d}</text>
+                    ))}
+                  </svg>
+                )
+              })()}
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
+                <div className="text-xs text-gray-400">峰值 <span className="font-bold text-purple-500">{Math.max(...platformStats.plays).toLocaleString()}</span></div>
+                <div className="text-xs text-gray-400">总计 <span className="font-bold text-gray-700">{platformStats.totalPlays >= 10000 ? (platformStats.totalPlays/10000).toFixed(1)+'万' : platformStats.totalPlays.toLocaleString()}</span></div>
+              </div>
             </div>
 
-            {/* 互动率对比条形图 */}
+            {/* 互动数据柱状图（动态） */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-3">❤️ 互动率分析</div>
-              {[
-                { label: '点赞率', value: 8.4, max: 15, color: 'from-red-400 to-pink-400', icon: '👍' },
-                { label: '评论率', value: 3.2, max: 15, color: 'from-blue-400 to-cyan-400', icon: '💬' },
-                { label: '收藏率', value: 5.7, max: 15, color: 'from-amber-400 to-orange-400', icon: '⭐' },
-                { label: '分享率', value: 2.1, max: 15, color: 'from-green-400 to-emerald-400', icon: '🔗' },
-              ].map((item, i) => (
-                <div key={i} className="mb-3 last:mb-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs">{item.icon}</span>
-                      <span className="text-xs font-medium text-gray-700">{item.label}</span>
+              <div className="font-bold text-gray-900 text-sm mb-3">❤️ 互动数据（近7天）</div>
+              <div className="flex items-end gap-1 h-28 mb-2">
+                {platformStats.likes.map((v: number, i: number) => {
+                  const maxVal = Math.max(...platformStats.likes, ...platformStats.comments, ...platformStats.collects)
+                  const likeH = Math.max(4, (v / maxVal) * 88)
+                  const cmtH = Math.max(4, (platformStats.comments[i] / maxVal) * 88)
+                  const colH = Math.max(4, (platformStats.collects[i] / maxVal) * 88)
+                  return (
+                    <div key={i} className="flex-1 flex items-end gap-0.5">
+                      <div className="flex-1 bg-gradient-to-t from-red-400 to-pink-300 rounded-t-sm" style={{height:`${likeH}px`}}/>
+                      <div className="flex-1 bg-gradient-to-t from-blue-400 to-cyan-300 rounded-t-sm" style={{height:`${cmtH}px`}}/>
+                      <div className="flex-1 bg-gradient-to-t from-amber-400 to-yellow-300 rounded-t-sm" style={{height:`${colH}px`}}/>
                     </div>
-                    <span className="text-xs font-bold text-gray-900">{item.value}%</span>
-                  </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full bg-gradient-to-r ${item.color} rounded-full`}
-                      style={{ width: `${(item.value / item.max) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+                  )
+                })}
+              </div>
+              <div className="flex items-center gap-3 text-[10px] text-gray-500">
+                {[{color:'bg-red-400',label:'点赞'},{color:'bg-blue-400',label:'评论'},{color:'bg-amber-400',label:'收藏'}].map((l: any) => (
+                  <div key={l.label} className="flex items-center gap-1"><div className={`w-2 h-2 rounded-sm ${l.color}`}/>{l.label}</div>
+                ))}
+                <div className="ml-auto text-gray-400">本周总互动 <span className="font-bold text-gray-700">{(platformStats.likes.reduce((a: number,b: number)=>a+b,0)+platformStats.comments.reduce((a: number,b: number)=>a+b,0)+platformStats.collects.reduce((a: number,b: number)=>a+b,0)).toLocaleString()}</span></div>
+              </div>
             </div>
 
             {/* 内容类型分布 */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
               <div className="font-bold text-gray-900 text-sm mb-3">🎬 内容类型分布</div>
               <div className="flex items-center gap-4">
-                {/* SVG 饼图 */}
                 <svg viewBox="0 0 100 100" className="w-24 h-24 flex-shrink-0">
-                  {/* 口播类 45% */}
                   <path d="M50,50 L50,5 A45,45 0 0,1 92.5,72.5 Z" fill="#3B82F6"/>
-                  {/* 剧情类 25% */}
                   <path d="M50,50 L92.5,72.5 A45,45 0 0,1 27.5,90 Z" fill="#8B5CF6"/>
-                  {/* 教程类 20% */}
                   <path d="M50,50 L27.5,90 A45,45 0 0,1 7.5,27.5 Z" fill="#F59E0B"/>
-                  {/* 其他 10% */}
                   <path d="M50,50 L7.5,27.5 A45,45 0 0,1 50,5 Z" fill="#10B981"/>
-                  {/* 中心白圆 */}
                   <circle cx="50" cy="50" r="28" fill="white"/>
                   <text x="50" y="47" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#1F2937">内容</text>
                   <text x="50" y="58" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#1F2937">分布</text>
                 </svg>
-                {/* 图例 */}
                 <div className="flex-1 space-y-2">
-                  {[
-                    { label: '口播类', pct: '45%', color: 'bg-blue-500' },
-                    { label: '剧情类', pct: '25%', color: 'bg-purple-500' },
-                    { label: '教程类', pct: '20%', color: 'bg-amber-500' },
-                    { label: '其他', pct: '10%', color: 'bg-emerald-500' },
-                  ].map((item, i) => (
+                  {[{label:'口播类',pct:'45%',color:'bg-blue-500'},{label:'剧情类',pct:'25%',color:'bg-purple-500'},{label:'教程类',pct:'20%',color:'bg-amber-500'},{label:'其他',pct:'10%',color:'bg-emerald-500'}].map((item: any, i: number) => (
                     <div key={i} className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <div className={`w-2 h-2 rounded-full ${item.color}`}/>
-                        <span className="text-xs text-gray-600">{item.label}</span>
-                      </div>
+                      <div className="flex items-center gap-1.5"><div className={`w-2 h-2 rounded-full ${item.color}`}/><span className="text-xs text-gray-600">{item.label}</span></div>
                       <span className="text-xs font-bold text-gray-900">{item.pct}</span>
                     </div>
                   ))}
@@ -3004,9 +3168,7 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
               {savedContents.length > 0 ? (
                 savedContents.slice(0, 3).map((c: any, i: number) => (
                   <div key={c.id} className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-black flex-shrink-0 ${i === 0 ? 'bg-gradient-to-br from-amber-400 to-orange-500' : i === 1 ? 'bg-gradient-to-br from-gray-400 to-gray-500' : 'bg-gradient-to-br from-orange-400 to-red-400'}`}>
-                      {i + 1}
-                    </div>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-black flex-shrink-0 ${i === 0 ? 'bg-gradient-to-br from-amber-400 to-orange-500' : i === 1 ? 'bg-gradient-to-br from-gray-400 to-gray-500' : 'bg-gradient-to-br from-orange-400 to-red-400'}`}>{i + 1}</div>
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-semibold text-gray-800 truncate">{c.topic}</div>
                       <div className="text-[10px] text-gray-400 mt-0.5">{c.style} · {c.savedAt}</div>
@@ -3017,6 +3179,19 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
               ) : (
                 <div className="text-xs text-gray-400 text-center py-4">暂无数据，先去生成文案吧</div>
               )}
+            </div>
+
+            {/* 数据说明 */}
+            <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100">
+              <div className="flex items-start gap-2">
+                <span className="text-sm flex-shrink-0">💡</span>
+                <div>
+                  <div className="text-xs font-semibold text-gray-600 mb-1">关于平台数据</div>
+                  <div className="text-[10px] text-gray-400 leading-relaxed">
+                    点击"绑定"手动录入真实数据，或使用 AI 生成趋势数据。抖音/小红书官方 API 需企业资质，后续版本将支持 Cookie 方式自动同步。
+                  </div>
+                </div>
+              </div>
             </div>
           </>
         )}
