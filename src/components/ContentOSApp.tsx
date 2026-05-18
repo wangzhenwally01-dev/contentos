@@ -158,6 +158,17 @@ export default function ContentOSApp() {
   const [videoAudioB64, setVideoAudioB64] = useState('')
   const [videoError, setVideoError] = useState('')
 
+  // Profile / AI Settings
+  const [aiModel, setAiModel] = useState('deepseek-chat')
+  const [aiApiKey, setAiApiKey] = useState('')
+  const [aiApiBase, setAiApiBase] = useState('')
+  const [aiSystemPrompt, setAiSystemPrompt] = useState('')
+  const [aiTemperature, setAiTemperature] = useState(0.85)
+  const [credits, setCredits] = useState(1000)
+  const [profileTab, setProfileTab] = useState<'ai' | 'accounts' | 'credits' | 'about'>('ai')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+  const [editingAccount, setEditingAccount] = useState<any>(null)
+
   // Positioning Wizard
   const [showPositioning, setShowPositioning] = useState(false)
   const [posStep, setPosStep] = useState(1)
@@ -189,6 +200,16 @@ export default function ContentOSApp() {
       const c = localStorage.getItem('contentos_creators'); if (c) setTrackedCreators(JSON.parse(c))
       const st = localStorage.getItem('contentos_saved_topics'); if (st) setSavedTopics(JSON.parse(st))
       const ac = localStorage.getItem('contentos_accounts'); if (ac) setAccounts(JSON.parse(ac))
+      const ai = localStorage.getItem('contentos_ai_settings')
+      if (ai) {
+        const s = JSON.parse(ai)
+        if (s.model) setAiModel(s.model)
+        if (s.apiKey) setAiApiKey(s.apiKey)
+        if (s.apiBase) setAiApiBase(s.apiBase)
+        if (s.systemPrompt) setAiSystemPrompt(s.systemPrompt)
+        if (s.temperature) setAiTemperature(s.temperature)
+      }
+      const cr = localStorage.getItem('contentos_credits'); if (cr) setCredits(parseInt(cr) || 1000)
     } catch {}
   }, [])
 
@@ -726,10 +747,11 @@ export default function ContentOSApp() {
   // ─── Nav ──────────────────────────────────────────────────
   const NAV_TABS = [
     { id: 'dashboard', icon: '🏠', label: '工作台' },
-    { id: 'materials', icon: '📦', label: '素材中心' },
-    { id: 'content', icon: '✍️', label: '内容中心' },
-    { id: 'video', icon: '🎬', label: '视频生成' },
-    { id: 'operations', icon: '📊', label: '运营中心' },
+    { id: 'materials', icon: '📦', label: '素材' },
+    { id: 'content', icon: '✍️', label: '内容' },
+    { id: 'video', icon: '🎬', label: '视频' },
+    { id: 'operations', icon: '📊', label: '运营' },
+    { id: 'profile', icon: '👤', label: '我的' },
   ]
 
   return (
@@ -814,6 +836,24 @@ export default function ContentOSApp() {
             newScheduleTitle={newScheduleTitle} setNewScheduleTitle={setNewScheduleTitle}
             newSchedulePlatform={newSchedulePlatform} setNewSchedulePlatform={setNewSchedulePlatform}
             addScheduleItem={addScheduleItem}
+          />
+        )}
+        {tab === 'profile' && (
+          <Profile
+            user={user} onLogout={handleLogout} showToast={showToast}
+            profileTab={profileTab} setProfileTab={setProfileTab}
+            aiModel={aiModel} setAiModel={setAiModel}
+            aiApiKey={aiApiKey} setAiApiKey={setAiApiKey}
+            aiApiBase={aiApiBase} setAiApiBase={setAiApiBase}
+            aiSystemPrompt={aiSystemPrompt} setAiSystemPrompt={setAiSystemPrompt}
+            aiTemperature={aiTemperature} setAiTemperature={setAiTemperature}
+            credits={credits} setCredits={setCredits}
+            accounts={accounts} setAccounts={setAccounts}
+            accountIdx={accountIdx} setAccountIdx={setAccountIdx}
+            savedContents={savedContents} savedTopics={savedTopics}
+            showDeleteConfirm={showDeleteConfirm} setShowDeleteConfirm={setShowDeleteConfirm}
+            editingAccount={editingAccount} setEditingAccount={setEditingAccount}
+            saveToLocal={saveToLocal}
           />
         )}
       </div>
@@ -2004,6 +2044,480 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
                 </div>
               ))}
             </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// PROFILE — 个人中心
+// ═══════════════════════════════════════════════════════════
+function Profile({
+  user, onLogout, showToast,
+  profileTab, setProfileTab,
+  aiModel, setAiModel,
+  aiApiKey, setAiApiKey,
+  aiApiBase, setAiApiBase,
+  aiSystemPrompt, setAiSystemPrompt,
+  aiTemperature, setAiTemperature,
+  credits, setCredits,
+  accounts, setAccounts,
+  accountIdx, setAccountIdx,
+  savedContents, savedTopics,
+  showDeleteConfirm, setShowDeleteConfirm,
+  editingAccount, setEditingAccount,
+  saveToLocal,
+}: any) {
+  const TABS = [
+    { id: 'ai', label: '🤖 AI 设置' },
+    { id: 'accounts', label: '📱 账号管理' },
+    { id: 'credits', label: '💎 积分' },
+    { id: 'about', label: 'ℹ️ 关于' },
+  ]
+
+  const AI_MODELS = [
+    { id: 'deepseek-chat', label: 'DeepSeek Chat', desc: '性价比最高，推荐', badge: '推荐', badgeColor: 'bg-green-100 text-green-600' },
+    { id: 'deepseek-reasoner', label: 'DeepSeek R1', desc: '深度推理，适合复杂任务', badge: '强推理', badgeColor: 'bg-blue-100 text-blue-600' },
+    { id: 'gpt-4o-mini', label: 'GPT-4o Mini', desc: '速度快，效果稳定', badge: 'OpenAI', badgeColor: 'bg-purple-100 text-purple-600' },
+    { id: 'gpt-4o', label: 'GPT-4o', desc: '最强效果，消耗积分多', badge: '高级', badgeColor: 'bg-orange-100 text-orange-600' },
+    { id: 'custom', label: '自定义模型', desc: '填写下方 API 地址使用', badge: '自定义', badgeColor: 'bg-gray-100 text-gray-500' },
+  ]
+
+  const CREDIT_PACKAGES = [
+    { credits: 500, price: '¥9.9', bonus: '', popular: false },
+    { credits: 1500, price: '¥19.9', bonus: '+200', popular: true },
+    { credits: 5000, price: '¥49.9', bonus: '+1000', popular: false },
+  ]
+
+  const ACCOUNT_COLORS = [
+    'from-orange-400 to-amber-500',
+    'from-blue-500 to-cyan-400',
+    'from-purple-500 to-pink-400',
+    'from-green-400 to-emerald-500',
+    'from-rose-400 to-red-500',
+    'from-indigo-500 to-blue-400',
+  ]
+
+  function saveAiSettings() {
+    saveToLocal('contentos_ai_settings', {
+      model: aiModel, apiKey: aiApiKey,
+      apiBase: aiApiBase, systemPrompt: aiSystemPrompt,
+      temperature: aiTemperature,
+    })
+    showToast('✅ AI 设置已保存')
+  }
+
+  function deleteAccount(id: string) {
+    if (accounts.length <= 1) { showToast('至少保留一个账号'); return }
+    const updated = accounts.filter((a: any) => a.id !== id)
+    setAccounts(updated)
+    saveToLocal('contentos_accounts', updated)
+    if (accountIdx >= updated.length) setAccountIdx(updated.length - 1)
+    setShowDeleteConfirm(null)
+    showToast('已删除账号')
+  }
+
+  function saveEditingAccount() {
+    if (!editingAccount?.name?.trim()) { showToast('账号名称不能为空'); return }
+    const updated = accounts.map((a: any) => a.id === editingAccount.id ? editingAccount : a)
+    setAccounts(updated)
+    saveToLocal('contentos_accounts', updated)
+    setEditingAccount(null)
+    showToast('✅ 账号信息已更新')
+  }
+
+  const isGuest = user?.id === 'guest'
+
+  return (
+    <div className="flex flex-col h-full bg-[#F2F2F7]">
+      {/* Delete Confirm Modal */}
+      {showDeleteConfirm && (
+        <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center rounded-[50px] overflow-hidden px-8">
+          <div className="bg-white rounded-3xl p-6 w-full shadow-2xl">
+            <div className="text-center mb-4">
+              <div className="text-4xl mb-2">⚠️</div>
+              <div className="font-black text-gray-900 text-base">确认删除账号？</div>
+              <div className="text-xs text-gray-400 mt-1">此操作不可撤销，账号数据将被清除</div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowDeleteConfirm(null)} className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-2xl text-sm">取消</button>
+              <button onClick={() => deleteAccount(showDeleteConfirm)} className="flex-1 py-3 bg-red-500 text-white font-bold rounded-2xl text-sm">确认删除</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Account Modal */}
+      {editingAccount && (
+        <div className="absolute inset-0 bg-black/50 z-50 flex items-end rounded-[50px] overflow-hidden">
+          <div className="w-full bg-white rounded-t-3xl p-5 pb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-black text-gray-900">编辑账号</h3>
+              <button onClick={() => setEditingAccount(null)} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">✕</button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-gray-400 font-medium mb-1.5 block">账号名称</label>
+                <input value={editingAccount.name} onChange={e => setEditingAccount({ ...editingAccount, name: e.target.value })} className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 font-medium mb-1.5 block">行业</label>
+                <input value={editingAccount.industry} onChange={e => setEditingAccount({ ...editingAccount, industry: e.target.value })} className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 font-medium mb-1.5 block">账号定位</label>
+                <input value={editingAccount.positioning} onChange={e => setEditingAccount({ ...editingAccount, positioning: e.target.value })} className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 font-medium mb-1.5 block">目标受众</label>
+                <input value={editingAccount.targetAudience} onChange={e => setEditingAccount({ ...editingAccount, targetAudience: e.target.value })} className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 font-medium mb-1.5 block">卡片颜色</label>
+                <div className="flex gap-2">
+                  {ACCOUNT_COLORS.map(c => (
+                    <button key={c} onClick={() => setEditingAccount({ ...editingAccount, color: c })} className={`w-8 h-8 rounded-xl bg-gradient-to-br ${c} flex-shrink-0 transition-transform ${editingAccount.color === c ? 'scale-125 ring-2 ring-offset-1 ring-gray-400' : ''}`} />
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button onClick={() => setEditingAccount(null)} className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-2xl text-sm">取消</button>
+                <button onClick={saveEditingAccount} className="flex-1 py-3 bg-blue-500 text-white font-bold rounded-2xl text-sm">保存</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="px-5 pt-12 pb-3 flex-shrink-0">
+        {/* User Card */}
+        <div className="bg-gradient-to-br from-blue-500 to-cyan-400 rounded-3xl p-4 text-white mb-4 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-2xl font-black flex-shrink-0">
+              {isGuest ? '👤' : (user?.email?.[0]?.toUpperCase() || '?')}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-black text-base truncate">{isGuest ? '游客模式' : (user?.email || '未知用户')}</div>
+              <div className="text-white/70 text-xs mt-0.5">{isGuest ? '登录后数据云端同步' : '已登录 · 数据云端同步'}</div>
+            </div>
+            <div className="flex flex-col items-end gap-1.5">
+              <div className="bg-white/20 rounded-xl px-2.5 py-1 text-xs font-bold">💎 {credits}</div>
+              {!isGuest && <button onClick={onLogout} className="text-white/60 text-[10px] font-medium">退出登录</button>}
+            </div>
+          </div>
+          {isGuest && (
+            <button onClick={onLogout} className="w-full mt-3 py-2 bg-white/20 rounded-xl text-xs font-bold text-white active:scale-[0.98] transition-transform">
+              🔑 立即登录 / 注册
+            </button>
+          )}
+        </div>
+        {/* Tab Switcher */}
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setProfileTab(t.id as any)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${profileTab === t.id ? 'bg-blue-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>{t.label}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4 space-y-3">
+
+        {/* ── AI 设置 ── */}
+        {profileTab === 'ai' && (
+          <>
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">🤖 AI 模型选择</div>
+              <div className="space-y-2">
+                {AI_MODELS.map(m => (
+                  <button key={m.id} onClick={() => setAiModel(m.id)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all active:scale-[0.98] ${aiModel === m.id ? 'bg-blue-50 border-2 border-blue-400' : 'bg-gray-50 border-2 border-transparent'}`}>
+                    <div className="flex-1 text-left">
+                      <div className={`text-sm font-semibold ${aiModel === m.id ? 'text-blue-700' : 'text-gray-800'}`}>{m.label}</div>
+                      <div className="text-xs text-gray-400 mt-0.5">{m.desc}</div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${m.badgeColor}`}>{m.badge}</span>
+                      {aiModel === m.id && <span className="text-blue-500 font-bold">✓</span>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">🔑 API 配置</div>
+              <div className="space-y-2.5">
+                <div>
+                  <label className="text-xs text-gray-400 font-medium mb-1.5 block">API Key</label>
+                  <input type="password" value={aiApiKey} onChange={e => setAiApiKey(e.target.value)} placeholder="sk-xxxxxxxxxxxxxxxx" className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none font-mono" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 font-medium mb-1.5 block">API Base URL（可选）</label>
+                  <input value={aiApiBase} onChange={e => setAiApiBase(e.target.value)} placeholder="https://api.deepseek.com/v1" className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none font-mono" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">⚙️ 高级设置</div>
+              <div className="space-y-3">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs text-gray-400 font-medium">创意度（Temperature）</label>
+                    <span className="text-sm font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-lg">{aiTemperature}</span>
+                  </div>
+                  <input type="range" min="0.1" max="1.5" step="0.05" value={aiTemperature} onChange={e => setAiTemperature(parseFloat(e.target.value))} className="w-full accent-blue-500" />
+                  <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+                    <span>保守 0.1</span><span>均衡 0.85</span><span>创意 1.5</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 font-medium mb-1.5 block">系统提示词（可选）</label>
+                  <textarea value={aiSystemPrompt} onChange={e => setAiSystemPrompt(e.target.value)} placeholder="自定义 AI 角色，如：你是专注于本地餐饮的短视频文案专家..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20" />
+                </div>
+              </div>
+            </div>
+
+            <button onClick={saveAiSettings} className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md">
+              💾 保存 AI 设置
+            </button>
+
+            <div className="bg-blue-50 rounded-2xl p-4">
+              <div className="font-bold text-blue-700 text-xs mb-2">💡 使用提示</div>
+              <div className="space-y-1.5 text-xs text-blue-600 leading-relaxed">
+                <div>• DeepSeek 性价比最高，适合日常文案生成</div>
+                <div>• API Key 仅存储在本地，不会上传服务器</div>
+                <div>• 自定义 API Base 可接入任何 OpenAI 兼容接口</div>
+                <div>• 创意度越高，文案越有创意但可能不稳定</div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── 账号管理 ── */}
+        {profileTab === 'accounts' && (
+          <>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: '管理账号', value: accounts.length, unit: '个' },
+                { label: '已保存文案', value: savedContents.length, unit: '条' },
+                { label: '收藏选题', value: savedTopics.length, unit: '个' },
+              ].map((s, i) => (
+                <div key={i} className="bg-white rounded-2xl p-3 shadow-sm text-center">
+                  <div className="text-xl font-black text-gray-900">{s.value}<span className="text-xs font-medium text-gray-400 ml-0.5">{s.unit}</span></div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">📱 我的账号</div>
+              <div className="space-y-3">
+                {accounts.map((a: any, i: number) => (
+                  <div key={a.id} className={`rounded-2xl overflow-hidden border-2 transition-all ${i === accountIdx ? 'border-blue-400' : 'border-transparent'}`}>
+                    <div className={`bg-gradient-to-br ${a.color} p-3 text-white`}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">{a.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-black text-sm">{a.name}</div>
+                          <div className="text-white/70 text-[10px] truncate">{a.positioning}</div>
+                        </div>
+                        {i === accountIdx && <span className="text-[10px] bg-white/30 px-2 py-0.5 rounded-full font-bold flex-shrink-0">当前</span>}
+                      </div>
+                      <div className="flex gap-3 mt-2 text-[10px] text-white/70">
+                        <span>行业：{a.industry}</span>
+                        <span>受众：{a.targetAudience}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 p-2 bg-gray-50">
+                      <button onClick={() => setAccountIdx(i)} className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${i === accountIdx ? 'bg-blue-500 text-white' : 'bg-white text-gray-600 shadow-sm'}`}>
+                        {i === accountIdx ? '✓ 使用中' : '切换'}
+                      </button>
+                      <button onClick={() => setEditingAccount({ ...a })} className="flex-1 py-1.5 rounded-xl text-xs font-bold bg-white text-gray-600 shadow-sm">编辑</button>
+                      <button onClick={() => setShowDeleteConfirm(a.id)} className="px-3 py-1.5 rounded-xl text-xs font-bold bg-red-50 text-red-400">删除</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {savedContents.length > 0 && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="font-bold text-gray-900 text-sm">💾 已保存文案</div>
+                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{savedContents.length} 条</span>
+                </div>
+                {savedContents.slice(0, 3).map((c: any) => (
+                  <div key={c.id} className="py-2.5 border-b border-gray-50 last:border-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full font-medium">{c.style}</span>
+                      <span className="text-[10px] text-gray-300">{new Date(c.createdAt).toLocaleDateString('zh-CN')}</span>
+                    </div>
+                    <div className="text-xs font-medium text-gray-700 truncate">{c.topic}</div>
+                    <div className="text-[10px] text-gray-400 line-clamp-1 mt-0.5">{c.content}</div>
+                  </div>
+                ))}
+                {savedContents.length > 3 && <div className="text-xs text-gray-400 text-center pt-2">还有 {savedContents.length - 3} 条...</div>}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── 积分 ── */}
+        {profileTab === 'credits' && (
+          <>
+            <div className="bg-gradient-to-br from-amber-400 to-orange-500 rounded-3xl p-5 text-white shadow-lg">
+              <div className="text-white/70 text-xs font-medium mb-1">当前积分余额</div>
+              <div className="text-4xl font-black mb-1">{credits.toLocaleString()}</div>
+              <div className="text-white/70 text-xs">每次 AI 生成消耗约 10-50 积分</div>
+              <div className="mt-3 flex gap-2">
+                {[{ label: '文案生成', cost: '~20' }, { label: '选题生成', cost: '~15' }, { label: '情报雷达', cost: '~30' }].map(item => (
+                  <div key={item.label} className="flex-1 bg-white/20 rounded-xl p-2 text-center">
+                    <div className="text-xs font-bold">{item.cost}</div>
+                    <div className="text-[10px] text-white/70">{item.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">💎 充值套餐</div>
+              <div className="space-y-2">
+                {CREDIT_PACKAGES.map((pkg, i) => (
+                  <div key={i} className={`flex items-center gap-3 p-3 rounded-2xl border-2 ${pkg.popular ? 'border-orange-400 bg-orange-50' : 'border-gray-100 bg-gray-50'}`}>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-gray-900 text-base">{pkg.credits.toLocaleString()} 积分</span>
+                        {pkg.bonus && <span className="text-xs text-orange-500 font-bold bg-orange-100 px-1.5 py-0.5 rounded-full">{pkg.bonus}</span>}
+                        {pkg.popular && <span className="text-[10px] bg-orange-400 text-white px-1.5 py-0.5 rounded-full font-bold">最划算</span>}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-0.5">约可生成 {Math.floor(pkg.credits / 20)} 次文案</div>
+                    </div>
+                    <button onClick={() => showToast('支付功能开发中，敬请期待')} className={`px-4 py-2 rounded-xl text-sm font-bold active:scale-95 transition-transform ${pkg.popular ? 'bg-orange-400 text-white shadow-md' : 'bg-gray-200 text-gray-700'}`}>
+                      {pkg.price}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">📋 消耗记录</div>
+              {[
+                { action: '文案生成', cost: -20, time: '今天 08:32', desc: '犀利观点 · 3个版本' },
+                { action: '选题生成', cost: -15, time: '昨天 19:45', desc: '餐饮行业 · 8个选题' },
+                { action: '情报雷达', cost: -30, time: '昨天 10:12', desc: '今日热点获取' },
+                { action: '充值', cost: 1000, time: '3天前', desc: '基础套餐' },
+              ].map((r, i) => (
+                <div key={i} className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${r.cost > 0 ? 'bg-green-100' : 'bg-gray-100'}`}>
+                    {r.cost > 0 ? '💰' : '⚡'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold text-gray-800">{r.action}</div>
+                    <div className="text-[10px] text-gray-400">{r.desc} · {r.time}</div>
+                  </div>
+                  <span className={`text-sm font-black flex-shrink-0 ${r.cost > 0 ? 'text-green-500' : 'text-gray-500'}`}>
+                    {r.cost > 0 ? '+' : ''}{r.cost}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-amber-50 rounded-2xl p-4">
+              <div className="text-xs text-amber-700 font-bold mb-2">🎁 免费获取积分</div>
+              <div className="space-y-2 text-xs text-amber-600">
+                <div className="flex items-center justify-between">
+                  <span>每日签到</span>
+                  <button onClick={() => { setCredits((c: number) => c + 10); showToast('✅ 签到成功 +10 积分') }} className="text-xs font-bold text-amber-700 bg-amber-200 px-2.5 py-1 rounded-lg active:scale-95 transition-transform">+10 签到</button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>邀请好友注册</span>
+                  <span className="text-xs font-bold text-amber-700">+200/人</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>完善账号定位</span>
+                  <span className="text-xs font-bold text-amber-700">+50</span>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── 关于 ── */}
+        {profileTab === 'about' && (
+          <>
+            <div className="bg-white rounded-2xl p-5 shadow-sm text-center">
+              <div className="w-16 h-16 rounded-[22px] bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-3xl mx-auto mb-3 shadow-lg">🎬</div>
+              <div className="font-black text-gray-900 text-lg">ContentOS</div>
+              <div className="text-xs text-gray-400 mt-1">AI 内容增长工作台</div>
+              <div className="text-xs text-gray-300 mt-0.5">v6.1.0</div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">🚀 功能列表</div>
+              {[
+                { icon: '✍️', label: '文案生成', desc: 'AI 一键生成3版口播文案' },
+                { icon: '💡', label: '选题生成', desc: '基于账号定位的高完播率选题' },
+                { icon: '📡', label: '内容情报', desc: '每日热点 + 爆款形式分析' },
+                { icon: '🎯', label: '博主追踪', desc: '抓取竞品博主爆款内容' },
+                { icon: '🎨', label: '风格模板', desc: '分析博主文案风格并复用' },
+                { icon: '🎬', label: '视频生成', desc: 'TTS 语音合成（视频合成开发中）' },
+                { icon: '📊', label: '运营中心', desc: '排期管理 + AI 运营诊断' },
+                { icon: '🎯', label: '账号定位', desc: 'AI 生成完整定位方案' },
+                { icon: '👤', label: '个人中心', desc: 'AI设置 + 账号管理 + 积分' },
+              ].map((f, i) => (
+                <div key={i} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
+                  <span className="text-base w-6 text-center flex-shrink-0">{f.icon}</span>
+                  <div className="flex-1">
+                    <span className="text-xs font-semibold text-gray-800">{f.label}</span>
+                    <span className="text-xs text-gray-400 ml-2">{f.desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">🛠️ 技术栈</div>
+              {[
+                ['前端框架', 'Next.js 14 + React 18'],
+                ['样式', 'Tailwind CSS'],
+                ['数据库', 'Supabase (PostgreSQL)'],
+                ['AI 模型', 'DeepSeek / OpenAI'],
+                ['语音合成', 'MiniMax TTS'],
+                ['部署', 'Vercel'],
+              ].map(([k, v]) => (
+                <div key={k} className="flex justify-between py-1.5 border-b border-gray-50 last:border-0">
+                  <span className="text-xs text-gray-400">{k}</span>
+                  <span className="text-xs font-medium text-gray-700">{v}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">📅 更新日志</div>
+              {[
+                { version: 'v6.1', date: '2026-05-18', desc: '个人中心、AI设置、积分系统、账号编辑' },
+                { version: 'v6.0', date: '2026-05-18', desc: '账号定位向导、多账号管理、选题收藏' },
+                { version: 'v5.0', date: '2026-05-17', desc: 'Tailwind CSS 重构，全新设计系统' },
+                { version: 'v4.0', date: '2026-05-16', desc: '视频生成模块、TTS 语音合成' },
+              ].map((log, i) => (
+                <div key={i} className="flex items-start gap-3 py-2 border-b border-gray-50 last:border-0">
+                  <span className="text-xs font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full flex-shrink-0">{log.version}</span>
+                  <div className="flex-1">
+                    <div className="text-xs font-medium text-gray-800">{log.desc}</div>
+                    <div className="text-[10px] text-gray-400 mt-0.5">{log.date}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button onClick={onLogout} className="w-full py-3.5 bg-white rounded-2xl text-sm font-bold text-red-400 shadow-sm active:scale-[0.98] transition-transform">
+              {isGuest ? '🔑 去登录 / 注册' : '🚪 退出登录'}
+            </button>
           </>
         )}
       </div>
