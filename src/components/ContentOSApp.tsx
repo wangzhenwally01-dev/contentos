@@ -92,7 +92,7 @@ function AiQuickPanel({
   const currentPrompt = modulePrompts[moduleKey] || ''
 
   // 快捷模板也用 moduleKey
-  const tplKey = moduleKey''
+  const tplKey = moduleKey
 
   function saveAll() {
     saveToLocal('contentos_ai_settings', { model: aiModel, apiKey: aiApiKey, apiBase: aiApiBase, temperature: aiTemperature })
