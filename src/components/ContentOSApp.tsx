@@ -760,17 +760,20 @@ export default function ContentOSApp() {
       <div className="flex-1 overflow-hidden flex flex-col">
         {tab === 'dashboard' && (
           <Dashboard
-            acc={acc} accounts={accounts} accountIdx={accountIdx}
-            setAccountIdx={setAccountIdx} setTab={setTab} showToast={showToast}
-            user={user} onLogout={handleLogout} savedContents={savedContents}
-            schedule={schedule} onPositioning={() => setShowPositioning(true)}
-            showAddAccount={showAddAccount} setShowAddAccount={setShowAddAccount}
-            newAccName={newAccName} setNewAccName={setNewAccName}
-            newAccIndustry={newAccIndustry} setNewAccIndustry={setNewAccIndustry}
-            newAccEmoji={newAccEmoji} setNewAccEmoji={setNewAccEmoji}
-            addAccount={addAccount}
-          />
-        )}
+                acc={acc} accounts={accounts} accountIdx={accountIdx}
+                setAccountIdx={setAccountIdx} setTab={setTab} setMatTab={setMatTab} showToast={showToast}
+                user={user} onLogout={handleLogout} savedContents={savedContents}
+                schedule={schedule} onPositioning={() => setShowPositioning(true)}
+                showAddAccount={showAddAccount} setShowAddAccount={setShowAddAccount}
+                newAccName={newAccName} setNewAccName={setNewAccName}
+                newAccIndustry={newAccIndustry} setNewAccIndustry={setNewAccIndustry}
+                newAccEmoji={newAccEmoji} setNewAccEmoji={setNewAccEmoji}
+                addAccount={addAccount}
+                hotspots={HOTSPOTS}
+                radarData={radarData} fetchRadar={fetchRadar} radarLoading={radarLoading}
+                savedTopics={savedTopics}
+              />
+            )}
         {tab === 'materials' && (
           <Materials
                 acc={acc} matTab={matTab} setMatTab={setMatTab}
@@ -878,165 +881,294 @@ export default function ContentOSApp() {
 // ═══════════════════════════════════════════════════════════
 // DASHBOARD
 // ═══════════════════════════════════════════════════════════
-function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, showToast, user, onLogout, savedContents, schedule, onPositioning, showAddAccount, setShowAddAccount, newAccName, setNewAccName, newAccIndustry, setNewAccIndustry, newAccEmoji, setNewAccEmoji, addAccount }: any) {
+// ═══════════════════════════════════════════════════════════
+// DASHBOARD v2 — 工作台首页（每日任务+快捷入口+数据概览）
+// ═══════════════════════════════════════════════════════════
+function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab, showToast, user, onLogout, savedContents, schedule, onPositioning, showAddAccount, setShowAddAccount, newAccName, setNewAccName, newAccIndustry, setNewAccIndustry, newAccEmoji, setNewAccEmoji, addAccount, hotspots, radarData, fetchRadar, radarLoading, savedTopics }: any) {
   const EMOJIS = ['🏪', '🍜', '💪', '💄', '📚', '🏠', '🚗', '🎵', '🌿', '☕']
+
+  // 今日任务清单（基于账号状态动态生成）
+  const todayTasks = React.useMemo(() => {
+    const tasks = []
+    const today = new Date().toDateString()
+    const todaySchedule = schedule.filter((s: any) => {
+      const d = new Date(s.time || s.date || '')
+      return d.toDateString() === today
+    })
+
+    if (acc.positioning === '待完善') {
+      tasks.push({ id: 'positioning', icon: '🎯', label: '完善账号定位', desc: '生成专属定位方案', priority: 'high', action: 'positioning' })
+    }
+    if (todaySchedule.length > 0) {
+      todaySchedule.forEach((s: any) => {
+        tasks.push({ id: s.id, icon: '📤', label: `发布：${s.title}`, desc: `${s.platform} · ${s.time}`, priority: 'high', action: 'operations' })
+      })
+    }
+    if (savedContents.length === 0) {
+      tasks.push({ id: 'copy', icon: '✍️', label: '生成今日文案', desc: '选择选题，AI 一键生成', priority: 'medium', action: 'content' })
+    } else {
+      tasks.push({ id: 'copy2', icon: '✍️', label: '继续创作文案', desc: `已有 ${savedContents.length} 条，继续生产`, priority: 'low', action: 'content' })
+    }
+    if (!radarData) {
+      tasks.push({ id: 'radar', icon: '📡', label: '获取今日情报', desc: '热点 · 爆款形式 · 关键词', priority: 'medium', action: 'radar' })
+    }
+    tasks.push({ id: 'topic', icon: '💡', label: '生成今日选题', desc: '基于账号定位的高完播率选题', priority: 'low', action: 'topics' })
+
+    return tasks.slice(0, 5)
+  }, [acc, schedule, savedContents, radarData])
+
+  const completedCount = todayTasks.filter((t: any) => t.priority === 'low').length
+  const totalCount = todayTasks.length
+
+  function handleTaskAction(action: string) {
+    if (action === 'positioning') { onPositioning(); return }
+    if (action === 'operations') { setTab('operations'); return }
+    if (action === 'content') { setTab('content'); return }
+    if (action === 'radar') { setTab('materials'); setMatTab('radar'); fetchRadar?.(); return }
+    if (action === 'topics') { setTab('materials'); setMatTab('topics'); return }
+  }
+
+  // 数据概览（模拟数据，后续接真实数据）
+  const stats = [
+    { label: '已保存文案', value: savedContents.length, unit: '条', icon: '📝', color: 'from-blue-400 to-cyan-400', trend: '+2' },
+    { label: '本周排期', value: schedule.filter((s: any) => {
+      const d = new Date(s.time || s.date || '')
+      const now = new Date()
+      const weekStart = new Date(now.setDate(now.getDate() - now.getDay()))
+      return d >= weekStart
+    }).length, unit: '条', icon: '📅', color: 'from-purple-400 to-pink-400', trend: '' },
+    { label: '收藏选题', value: savedTopics?.length || 0, unit: '个', icon: '💡', color: 'from-orange-400 to-amber-400', trend: '' },
+    { label: '管理账号', value: accounts.length, unit: '个', icon: '📱', color: 'from-green-400 to-emerald-400', trend: '' },
+  ]
+
+  const QUICK_ACTIONS = [
+    { icon: '✍️', label: '写文案', desc: 'AI 生成', color: 'from-blue-500 to-cyan-400', tab: 'content' },
+    { icon: '📡', label: '看情报', desc: '今日热点', color: 'from-orange-400 to-amber-400', tab: 'materials', matTab: 'radar' },
+    { icon: '🎯', label: '追博主', desc: '竞品分析', color: 'from-green-400 to-emerald-500', tab: 'materials', matTab: 'creator' },
+    { icon: '🎬', label: '做视频', desc: 'TTS合成', color: 'from-purple-500 to-pink-400', tab: 'video' },
+  ]
+
   return (
     <div className="flex flex-col h-full bg-[#F2F2F7]">
-      {/* Header */}
-      <div className="px-5 pt-12 pb-3 flex-shrink-0">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <p className="text-xs text-gray-400 font-medium">AI 内容增长工作台</p>
-            <h1 className="text-xl font-black text-gray-900">ContentOS</h1>
-          </div>
-          <button
-            onClick={onLogout}
-            className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center text-base active:scale-95 transition-transform"
-          >
-            {user?.id === 'guest' ? '👤' : '👋'}
-          </button>
-        </div>
-        {/* Account Switcher */}
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-          {accounts.map((a: any, i: number) => (
-            <button
-              key={a.id}
-              onClick={() => setAccountIdx(i)}
-              className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-2xl text-sm font-semibold transition-all active:scale-95 ${i === accountIdx ? 'bg-blue-500 text-white shadow-md' : 'bg-white text-gray-600 shadow-sm'}`}
-            >
-              <span>{a.emoji}</span><span>{a.name}</span>
-            </button>
-          ))}
-          <button
-            onClick={() => setShowAddAccount(true)}
-            className="flex-shrink-0 w-9 h-9 rounded-2xl bg-white shadow-sm flex items-center justify-center text-gray-400 text-xl active:scale-95 transition-transform"
-          >+</button>
-        </div>
-      </div>
-
       {/* Add Account Modal */}
       {showAddAccount && (
-        <div className="absolute inset-0 bg-black/40 z-40 flex items-end rounded-[50px] overflow-hidden">
+        <div className="absolute inset-0 bg-black/50 z-50 flex items-end rounded-[50px] overflow-hidden">
           <div className="w-full bg-white rounded-t-3xl p-5 pb-8">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-black text-gray-900">添加账号</h3>
-              <button onClick={() => setShowAddAccount(false)} className="text-gray-400 text-xl">✕</button>
+              <h3 className="font-black text-gray-900">添加新账号</h3>
+              <button onClick={() => setShowAddAccount(false)} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">✕</button>
             </div>
             <div className="space-y-3">
+              <input value={newAccName} onChange={e => setNewAccName(e.target.value)} placeholder="账号名称（如：美食探店号）" className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none" />
+              <input value={newAccIndustry} onChange={e => setNewAccIndustry(e.target.value)} placeholder="行业（如：餐饮、美妆、教育）" className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none" />
               <div>
-                <p className="text-xs text-gray-400 mb-2">选择图标</p>
+                <div className="text-xs text-gray-400 mb-2">选择图标</div>
                 <div className="flex gap-2 flex-wrap">
                   {EMOJIS.map(e => (
-                    <button key={e} onClick={() => setNewAccEmoji(e)} className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all ${newAccEmoji === e ? 'bg-blue-100 ring-2 ring-blue-400' : 'bg-gray-100'}`}>{e}</button>
+                    <button key={e} onClick={() => setNewAccEmoji(e)} className={`w-9 h-9 rounded-xl text-xl flex items-center justify-center transition-all ${newAccEmoji === e ? 'bg-blue-100 scale-110 ring-2 ring-blue-400' : 'bg-gray-100'}`}>{e}</button>
                   ))}
                 </div>
               </div>
-              <input value={newAccName} onChange={e => setNewAccName(e.target.value)} placeholder="账号名称 *" className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none" />
-              <input value={newAccIndustry} onChange={e => setNewAccIndustry(e.target.value)} placeholder="行业（如：餐饮、健身）" className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none" />
-              <div className="flex gap-2">
-                <button onClick={() => setShowAddAccount(false)} className="flex-1 py-2.5 bg-gray-100 text-gray-600 font-bold rounded-xl text-sm">取消</button>
-                <button onClick={addAccount} className="flex-1 py-2.5 bg-blue-500 text-white font-bold rounded-xl text-sm">添加</button>
+              <div className="flex gap-3 pt-1">
+                <button onClick={() => setShowAddAccount(false)} className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-2xl text-sm">取消</button>
+                <button onClick={addAccount} className="flex-1 py-3 bg-blue-500 text-white font-bold rounded-2xl text-sm">添加</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4 space-y-3">
-        {/* Account Card */}
-        <div className={`bg-gradient-to-br ${acc.color} rounded-3xl p-5 text-white shadow-lg`}>
-          <div className="flex items-start justify-between mb-3">
-            <div>
-              <div className="text-3xl mb-1">{acc.emoji}</div>
-              <div className="font-black text-lg">{acc.name}</div>
-              <div className="text-white/70 text-xs mt-0.5">{acc.positioning}</div>
-            </div>
-            <div className="flex flex-col items-end gap-2">
-              <div className="bg-white/20 rounded-2xl px-3 py-1.5">
-                <span className="text-xs font-bold">{acc.industry}</span>
-              </div>
-              <button onClick={onPositioning} className="bg-white/20 rounded-xl px-2.5 py-1 text-[10px] font-bold active:scale-95 transition-transform">
-                ✨ 优化定位
-              </button>
-            </div>
+      {/* Header */}
+      <div className="px-5 pt-12 pb-3 flex-shrink-0">
+        {/* 顶部问候 */}
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="text-xs text-gray-400 font-medium">
+              {new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })}
+            </p>
+            <h1 className="text-xl font-black text-gray-900">
+              {new Date().getHours() < 12 ? '早上好 ☀️' : new Date().getHours() < 18 ? '下午好 🌤️' : '晚上好 🌙'}
+            </h1>
           </div>
-          <div className="grid grid-cols-3 gap-2 mt-3">
-            {[['粉丝', acc.followers || '0'], ['获赞', acc.likes || '0'], ['作品', acc.works || '0']].map(([l, v]) => (
-              <div key={l} className="bg-white/15 rounded-2xl p-2 text-center">
-                <div className="font-black text-base">{v}</div>
-                <div className="text-white/60 text-[10px]">{l}</div>
+          <button
+            onClick={onLogout}
+            className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-lg active:scale-95 transition-transform"
+          >
+            {user?.id === 'guest' ? '👤' : (user?.email?.[0]?.toUpperCase() || '👋')}
+          </button>
+        </div>
+
+        {/* 账号切换 */}
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+          {accounts.map((a: any, i: number) => (
+            <button
+              key={a.id}
+              onClick={() => setAccountIdx(i)}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-semibold transition-all active:scale-95 ${i === accountIdx ? 'bg-blue-500 text-white shadow-md' : 'bg-white text-gray-600 shadow-sm'}`}
+            >
+              <span>{a.emoji}</span><span>{a.name}</span>
+            </button>
+          ))}
+          <button
+            onClick={() => setShowAddAccount(true)}
+            className="flex-shrink-0 w-8 h-8 rounded-2xl bg-white shadow-sm flex items-center justify-center text-gray-400 text-lg active:scale-95 transition-transform"
+          >+</button>
+        </div>
+      </div>
+
+      {/* 滚动内容区 */}
+      <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4 space-y-3">
+
+        {/* 数据概览 */}
+        <div className="grid grid-cols-2 gap-2">
+          {stats.map((s, i) => (
+            <div key={i} className={`bg-gradient-to-br ${s.color} rounded-2xl p-3.5 text-white shadow-sm`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-lg">{s.icon}</span>
+                {s.trend && <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded-full font-bold">{s.trend} 今日</span>}
               </div>
+              <div className="text-2xl font-black">{s.value}<span className="text-sm font-medium ml-0.5 opacity-80">{s.unit}</span></div>
+              <div className="text-white/70 text-[10px] mt-0.5">{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* 快捷入口 */}
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="font-bold text-gray-900 text-sm mb-3">⚡ 快捷入口</div>
+          <div className="grid grid-cols-4 gap-2">
+            {QUICK_ACTIONS.map((a, i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  setTab(a.tab)
+                  if (a.matTab) setMatTab(a.matTab)
+                }}
+                className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
+              >
+                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${a.color} flex items-center justify-center text-xl shadow-sm`}>
+                  {a.icon}
+                </div>
+                <div className="text-[10px] font-bold text-gray-700">{a.label}</div>
+                <div className="text-[9px] text-gray-400">{a.desc}</div>
+              </button>
             ))}
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { icon: '✍️', label: '生成文案', sub: '一键AI创作', tab: 'content', color: 'from-blue-500 to-cyan-400' },
-            { icon: '🎬', label: '生成视频', sub: '文案转视频', tab: 'video', color: 'from-purple-500 to-pink-400' },
-            { icon: '📡', label: '内容情报', sub: '今日热点', tab: 'materials', color: 'from-orange-400 to-amber-400' },
-            { icon: '🎯', label: '博主追踪', sub: '竞品分析', tab: 'materials', color: 'from-green-400 to-emerald-500' },
-          ].map(item => (
-            <button
-              key={item.label}
-              onClick={() => setTab(item.tab)}
-              className="bg-white rounded-3xl p-4 shadow-sm text-left active:scale-[0.97] transition-transform"
-            >
-              <div className={`w-10 h-10 rounded-2xl bg-gradient-to-br ${item.color} flex items-center justify-center text-xl mb-2 shadow-sm`}>{item.icon}</div>
-              <div className="font-bold text-gray-900 text-sm">{item.label}</div>
-              <div className="text-gray-400 text-xs mt-0.5">{item.sub}</div>
-            </button>
-          ))}
+        {/* 今日任务清单 */}
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div className="font-bold text-gray-900 text-sm">📋 今日任务</div>
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-16 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-green-400 to-emerald-400 rounded-full transition-all"
+                  style={{ width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }}
+                />
+              </div>
+              <span className="text-xs text-gray-400">{completedCount}/{totalCount}</span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {todayTasks.map((task: any) => (
+              <button
+                key={task.id}
+                onClick={() => handleTaskAction(task.action)}
+                className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl bg-gray-50 active:bg-gray-100 transition-colors text-left"
+              >
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-base flex-shrink-0 ${task.priority === 'high' ? 'bg-red-50' : task.priority === 'medium' ? 'bg-orange-50' : 'bg-green-50'}`}>
+                  {task.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-semibold text-gray-800">{task.label}</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">{task.desc}</div>
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {task.priority === 'high' && <span className="text-[9px] text-red-400 bg-red-50 px-1.5 py-0.5 rounded-full font-bold">紧急</span>}
+                  {task.priority === 'medium' && <span className="text-[9px] text-orange-400 bg-orange-50 px-1.5 py-0.5 rounded-full font-bold">今日</span>}
+                  <span className="text-gray-300 text-xs">→</span>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Today's Schedule */}
-        <div className="bg-white rounded-3xl p-4 shadow-sm">
+        {/* 今日热点预览 */}
+        {hotspots && hotspots.length > 0 && (
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="font-bold text-gray-900 text-sm">🔥 今日热点</div>
+              <button
+                onClick={() => { setTab('materials'); setMatTab('hotspot') }}
+                className="text-xs text-blue-500 font-medium"
+              >查看全部 →</button>
+            </div>
+            <div className="space-y-2">
+              {hotspots.slice(0, 3).map((h: any, i: number) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span className={`text-xs font-black w-5 text-center flex-shrink-0 ${i === 0 ? 'text-red-400' : i === 1 ? 'text-orange-400' : 'text-amber-400'}`}>{i + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium text-gray-800 truncate">{h.title}</div>
+                  </div>
+                  {h.heat && <span className="text-[10px] text-red-400 font-bold flex-shrink-0">{h.heat}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 近期排期 */}
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-bold text-gray-900 text-sm">📅 今日计划</h3>
-            <button onClick={() => setTab('operations')} className="text-xs text-blue-500 font-medium">查看全部 →</button>
+            <div className="font-bold text-gray-900 text-sm">📅 近期排期</div>
+            <button onClick={() => setTab('operations')} className="text-xs text-blue-500 font-medium">管理 →</button>
           </div>
           {schedule.length === 0 ? (
-            <div className="text-center py-4">
-              <p className="text-xs text-gray-400">暂无计划，去运营中心添加</p>
+            <div className="text-center py-3">
+              <div className="text-2xl mb-1">📅</div>
+              <div className="text-xs text-gray-400">暂无排期，去运营中心添加</div>
+              <button onClick={() => setTab('operations')} className="mt-2 text-xs text-blue-500 font-medium bg-blue-50 px-3 py-1 rounded-full">+ 添加排期</button>
             </div>
           ) : (
-            schedule.slice(0, 3).map((s: any) => (
-              <div key={s.id} className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
-                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${s.status === '待发布' ? 'bg-orange-400' : s.status === '已发布' ? 'bg-green-400' : 'bg-gray-300'}`} />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-800 truncate">{s.title}</div>
-                  <div className="text-xs text-gray-400">{s.time} · {s.platform}</div>
+            <div className="space-y-2">
+              {schedule.slice(0, 3).map((s: any) => (
+                <div key={s.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${s.status === '待发布' ? 'bg-orange-400' : s.status === '已发布' ? 'bg-green-400' : 'bg-gray-300'}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium text-gray-800 truncate">{s.title}</div>
+                    <div className="text-[10px] text-gray-400">{s.time} · {s.platform}</div>
+                  </div>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${s.status === '待发布' ? 'bg-orange-50 text-orange-500' : s.status === '已发布' ? 'bg-green-50 text-green-500' : 'bg-gray-100 text-gray-400'}`}>{s.status}</span>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${s.status === '待发布' ? 'bg-orange-50 text-orange-500' : s.status === '已发布' ? 'bg-green-50 text-green-500' : 'bg-gray-100 text-gray-400'}`}>{s.status}</span>
-              </div>
-            ))
+              ))}
+            </div>
           )}
         </div>
 
-        {/* Saved Contents */}
+        {/* 已保存文案预览 */}
         {savedContents.length > 0 && (
-          <div className="bg-white rounded-3xl p-4 shadow-sm">
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-gray-900 text-sm">💾 已保存文案</h3>
+              <div className="font-bold text-gray-900 text-sm">💾 最近文案</div>
               <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{savedContents.length} 条</span>
             </div>
             {savedContents.slice(0, 2).map((c: any) => (
               <div key={c.id} className="py-2.5 border-b border-gray-50 last:border-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full font-medium">{c.style}</span>
-                  <span className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })}</span>
+                  <span className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full font-medium">{c.style}</span>
+                  <span className="text-[10px] text-gray-300">{new Date(c.createdAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })}</span>
                 </div>
-                <div className="text-sm font-medium text-gray-800 truncate">{c.topic}</div>
-                <div className="text-xs text-gray-400 mt-0.5 line-clamp-1">{c.content}</div>
+                <div className="text-xs font-medium text-gray-800 truncate">{c.topic}</div>
+                <div className="text-[10px] text-gray-400 mt-0.5 line-clamp-1">{c.content}</div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Positioning CTA */}
+        {/* 账号定位 CTA */}
         {acc.positioning === '待完善' && (
-          <button onClick={onPositioning} className="w-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-3xl p-4 text-white text-left shadow-md active:scale-[0.98] transition-transform">
+          <button onClick={onPositioning} className="w-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-2xl p-4 text-white text-left shadow-md active:scale-[0.98] transition-transform">
             <div className="font-bold text-sm mb-0.5">✨ 还没有账号定位？</div>
             <div className="text-white/70 text-xs">AI 帮你分析行业，生成专属定位方案 →</div>
           </button>
@@ -1046,12 +1178,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, showToast
   )
 }
 
-// ═══════════════════════════════════════════════════════════
-// MATERIALS
-// ═══════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════
-// MATERIALS v2 — 素材中心（情报雷达 + 博主追踪全面升级）
-// ═══════════════════════════════════════════════════════════
+
 function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy }: any) {
   const TABS = [
     { id: 'hotspot', label: '🔥 热点' },
@@ -1962,13 +2089,16 @@ function ContentCenter({ acc, step, setStep, topic, setTopic, style, setStyle, u
 // ═══════════════════════════════════════════════════════════
 // VIDEO STUDIO
 // ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// VIDEO STUDIO v2 — 视频生成（TTS 实际可用 + 音频播放）
+// ═══════════════════════════════════════════════════════════
 function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCopy, voiceId, setVoiceId, speed, setSpeed, avatarType, setAvatarType, avatarPreset, setAvatarPreset, bgType, setBgType, bgColor, setBgColor, loading, audioB64, error, generateTTS, showToast, savedContents, setTab }: any) {
   const VOICES = [
-    { id: 'female-shaonv', label: '少女音', emoji: '👧', desc: '清甜活泼' },
-    { id: 'female-yujie', label: '御姐音', emoji: '👩', desc: '成熟知性' },
-    { id: 'male-qingxin', label: '清新男声', emoji: '👦', desc: '阳光自然' },
-    { id: 'male-chunhou', label: '醇厚男声', emoji: '🧔', desc: '低沉有力' },
-    { id: 'audiobook-male-1', label: '播音腔', emoji: '🎙️', desc: '专业标准' },
+    { id: 'female-shaonv', label: '少女音', emoji: '👧', desc: '清甜活泼，适合生活类' },
+    { id: 'female-yujie', label: '御姐音', emoji: '👩', desc: '成熟知性，适合职场类' },
+    { id: 'male-qingxin', label: '清新男声', emoji: '👦', desc: '阳光自然，适合日常类' },
+    { id: 'male-chunhou', label: '醇厚男声', emoji: '🧔', desc: '低沉有力，适合干货类' },
+    { id: 'audiobook-male-1', label: '播音腔', emoji: '🎙️', desc: '专业标准，适合资讯类' },
   ]
   const AVATARS = [
     { id: 'business-female', label: '职场女性', emoji: '👩‍💼' },
@@ -1976,19 +2106,82 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
     { id: 'casual-female', label: '休闲女生', emoji: '👩' },
     { id: 'casual-male', label: '休闲男生', emoji: '👨' },
   ]
+  const BG_COLORS = [
+    { color: '#1a1a2e', label: '深夜蓝' },
+    { color: '#16213e', label: '星空蓝' },
+    { color: '#0f3460', label: '深海蓝' },
+    { color: '#533483', label: '神秘紫' },
+    { color: '#2d6a4f', label: '森林绿' },
+    { color: '#1b1b1b', label: '纯黑' },
+  ]
   const STEPS = ['文案', '声音', '形象', '预览']
   const stepIdx = ['input', 'voice', 'avatar', 'preview'].indexOf(step)
+
+  // 音频播放状态
+  const audioRef = React.useRef<HTMLAudioElement | null>(null)
+  const [isPlaying, setIsPlaying] = React.useState(false)
+  const [audioProgress, setAudioProgress] = React.useState(0)
+  const [audioDuration, setAudioDuration] = React.useState(0)
+  const [audioCurrentTime, setAudioCurrentTime] = React.useState(0)
+
+  // 字数统计
+  const charCount = videoCopy.length
+  const estimatedDuration = Math.ceil(charCount / 4) // 约每秒4字
+
+  // 初始化音频
+  React.useEffect(() => {
+    if (audioB64) {
+      const audio = new Audio(`data:audio/mp3;base64,${audioB64}`)
+      audioRef.current = audio
+      audio.onloadedmetadata = () => setAudioDuration(audio.duration)
+      audio.ontimeupdate = () => {
+        setAudioCurrentTime(audio.currentTime)
+        setAudioProgress(audio.duration > 0 ? (audio.currentTime / audio.duration) * 100 : 0)
+      }
+      audio.onended = () => { setIsPlaying(false); setAudioProgress(0); setAudioCurrentTime(0) }
+    }
+    return () => {
+      audioRef.current?.pause()
+      audioRef.current = null
+    }
+  }, [audioB64])
+
+  function togglePlay() {
+    if (!audioRef.current) return
+    if (isPlaying) {
+      audioRef.current.pause()
+      setIsPlaying(false)
+    } else {
+      audioRef.current.play()
+      setIsPlaying(true)
+    }
+  }
+
+  function formatTime(sec: number) {
+    const m = Math.floor(sec / 60)
+    const s = Math.floor(sec % 60)
+    return `${m}:${s.toString().padStart(2, '0')}`
+  }
 
   return (
     <div className="flex flex-col h-full bg-[#F2F2F7]">
       <div className="px-5 pt-12 pb-3 flex-shrink-0">
         <h1 className="text-xl font-black text-gray-900 mb-3">视频生成</h1>
+        {/* 步骤条 */}
         <div className="flex items-center gap-1">
           {STEPS.map((s, i) => (
             <div key={i} className="flex items-center gap-1">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${stepIdx > i ? 'bg-green-400 text-white' : stepIdx === i ? 'bg-purple-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+              <button
+                onClick={() => {
+                  const steps = ['input', 'voice', 'avatar', 'preview']
+                  if (i <= stepIdx || (i === 1 && videoCopy.trim()) || (i === 2 && audioB64) || (i === 3 && audioB64)) {
+                    setStep(steps[i])
+                  }
+                }}
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${stepIdx > i ? 'bg-green-400 text-white' : stepIdx === i ? 'bg-purple-500 text-white' : 'bg-gray-200 text-gray-400'}`}
+              >
                 {stepIdx > i ? '✓' : i + 1}
-              </div>
+              </button>
               <span className={`text-xs font-medium ${stepIdx === i ? 'text-purple-500' : stepIdx > i ? 'text-green-500' : 'text-gray-400'}`}>{s}</span>
               {i < 3 && <div className={`w-4 h-px ${stepIdx > i ? 'bg-green-400' : 'bg-gray-200'}`} />}
             </div>
@@ -1997,49 +2190,69 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
       </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4 space-y-3">
+
+        {/* ── Step 1: 文案输入 ── */}
         {step === 'input' && (
           <>
+            {/* 从已保存文案选择 */}
+            {savedContents.length > 0 && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="font-bold text-gray-900 text-sm mb-2">📂 从已保存文案选择</div>
+                <div className="space-y-1.5 max-h-36 overflow-y-auto scrollbar-hide">
+                  {savedContents.slice(0, 5).map((c: any) => (
+                    <button
+                      key={c.id}
+                      onClick={() => setVideoCopy(c.content)}
+                      className={`w-full text-left px-3 py-2 rounded-xl text-xs transition-all ${videoCopy === c.content ? 'bg-purple-50 border-2 border-purple-300' : 'bg-gray-50 border-2 border-transparent'}`}
+                    >
+                      <div className="font-medium text-gray-800 truncate">{c.topic}</div>
+                      <div className="text-gray-400 truncate mt-0.5">{c.content.slice(0, 50)}...</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 文案输入框 */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-2">📝 口播文案</div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-bold text-gray-900 text-sm">✍️ 口播文案</div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-medium ${charCount > 500 ? 'text-red-400' : charCount > 200 ? 'text-orange-400' : 'text-gray-400'}`}>{charCount} 字</span>
+                  {charCount > 0 && <span className="text-xs text-gray-400">≈ {estimatedDuration}秒</span>}
+                </div>
+              </div>
               <textarea
                 value={videoCopy}
                 onChange={e => setVideoCopy(e.target.value)}
-                placeholder="输入视频口播文案，或从内容中心导入..."
-                className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-32"
+                placeholder="输入或粘贴口播文案（建议 100-300 字，约 30-75 秒）..."
+                className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-36"
               />
-              <div className="flex items-center justify-between mt-1">
-                <span className="text-xs text-gray-400">{videoCopy.length} 字</span>
-                <span className="text-xs text-gray-400">预计 {Math.ceil(videoCopy.length / 4)} 秒</span>
-              </div>
-            </div>
-            {savedContents.length > 0 && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
-                <div className="font-bold text-gray-900 text-sm mb-2">💾 从已保存文案导入</div>
-                {savedContents.slice(0, 3).map((c: any) => (
-                  <div
-                    key={c.id}
-                    onClick={() => setVideoCopy(c.content)}
-                    className="py-2.5 border-b border-gray-50 last:border-0 cursor-pointer active:bg-gray-50 rounded-lg px-1 transition-colors"
-                  >
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full">{c.style}</span>
-                    </div>
-                    <div className="text-xs font-medium text-gray-700 truncate">{c.topic}</div>
-                    <div className="text-[10px] text-gray-400 line-clamp-1 mt-0.5">{c.content}</div>
+              {/* 字数建议 */}
+              <div className="flex gap-2 mt-2">
+                {[
+                  { label: '30秒', chars: '~120字', ok: charCount >= 80 && charCount <= 160 },
+                  { label: '60秒', chars: '~240字', ok: charCount >= 160 && charCount <= 320 },
+                  { label: '90秒', chars: '~360字', ok: charCount >= 320 && charCount <= 440 },
+                ].map((t, i) => (
+                  <div key={i} className={`flex-1 text-center py-1.5 rounded-xl text-[10px] font-medium ${t.ok ? 'bg-purple-50 text-purple-500 border border-purple-200' : 'bg-gray-50 text-gray-400'}`}>
+                    <div className="font-bold">{t.label}</div>
+                    <div>{t.chars}</div>
                   </div>
                 ))}
               </div>
-            )}
+            </div>
+
             <button
-              onClick={() => setStep('voice')}
-              disabled={!videoCopy.trim()}
-              className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white font-bold rounded-2xl text-sm disabled:opacity-60 active:scale-[0.98] transition-all shadow-md"
+              onClick={() => { if (!videoCopy.trim()) { showToast('请先输入文案'); return }; setStep('voice') }}
+              className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md"
             >
               下一步：选择声音 →
             </button>
           </>
         )}
 
+        {/* ── Step 2: 声音选择 ── */}
         {step === 'voice' && (
           <>
             <div className="bg-white rounded-2xl p-4 shadow-sm">
@@ -2049,21 +2262,23 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
                   <button
                     key={v.id}
                     onClick={() => setVoiceId(v.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all active:scale-[0.98] ${voiceId === v.id ? 'bg-purple-50 border-2 border-purple-400' : 'bg-gray-50 border-2 border-transparent'}`}
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all active:scale-[0.98] ${voiceId === v.id ? 'bg-purple-50 border-2 border-purple-400' : 'bg-gray-50 border-2 border-transparent'}`}
                   >
-                    <span className="text-2xl">{v.emoji}</span>
+                    <span className="text-2xl flex-shrink-0">{v.emoji}</span>
                     <div className="flex-1 text-left">
-                      <div className={`text-sm font-semibold ${voiceId === v.id ? 'text-purple-600' : 'text-gray-700'}`}>{v.label}</div>
-                      <div className="text-xs text-gray-400">{v.desc}</div>
+                      <div className={`text-sm font-bold ${voiceId === v.id ? 'text-purple-700' : 'text-gray-800'}`}>{v.label}</div>
+                      <div className="text-xs text-gray-400 mt-0.5">{v.desc}</div>
                     </div>
-                    {voiceId === v.id && <span className="text-purple-500 text-sm font-bold">✓</span>}
+                    {voiceId === v.id && <span className="text-purple-500 font-bold flex-shrink-0">✓</span>}
                   </button>
                 ))}
               </div>
             </div>
+
+            {/* 语速调节 */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <div className="font-bold text-gray-900 text-sm">⚡ 语速调节</div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-bold text-gray-900 text-sm">⚡ 语速</div>
                 <span className="text-sm font-bold text-purple-500 bg-purple-50 px-2 py-0.5 rounded-lg">{speed}x</span>
               </div>
               <input
@@ -2072,13 +2287,23 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
                 onChange={e => setSpeed(parseFloat(e.target.value))}
                 className="w-full accent-purple-500"
               />
-              <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <div className="flex justify-between text-[10px] text-gray-400 mt-1">
                 <span>慢 0.5x</span><span>正常 1.0x</span><span>快 2.0x</span>
               </div>
             </div>
+
+            {/* 文案预览 */}
+            <div className="bg-gray-50 rounded-2xl p-3">
+              <div className="text-xs text-gray-400 mb-1">文案预览（{charCount}字 · 预计{Math.ceil(estimatedDuration / speed)}秒）</div>
+              <div className="text-xs text-gray-600 leading-relaxed line-clamp-3">{videoCopy}</div>
+            </div>
+
             {error && (
-              <div className="bg-red-50 rounded-2xl p-3 text-xs text-red-500 leading-relaxed">{error}</div>
+              <div className="bg-red-50 rounded-2xl p-3 border border-red-100">
+                <div className="text-xs text-red-600 leading-relaxed">{error}</div>
+              </div>
             )}
+
             <button
               onClick={generateTTS}
               disabled={loading}
@@ -2086,110 +2311,200 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   合成中...
                 </span>
-              ) : '🎙️ 合成语音 →'}
+              ) : '🎙️ 合成语音'}
             </button>
             <button onClick={() => setStep('input')} className="w-full py-2 text-sm text-gray-400">← 返回</button>
           </>
         )}
 
+        {/* ── Step 3: 形象选择 ── */}
         {step === 'avatar' && (
           <>
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-3">🎭 选择数字形象</div>
-              <div className="flex gap-2 mb-3">
-                <button onClick={() => setAvatarType('preset')} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${avatarType === 'preset' ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'}`}>预设形象</button>
-                <button onClick={() => setAvatarType('upload')} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${avatarType === 'upload' ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'}`}>上传照片</button>
-              </div>
-              {avatarType === 'preset' ? (
-                <div className="grid grid-cols-2 gap-2">
-                  {AVATARS.map(a => (
-                    <button
-                      key={a.id}
-                      onClick={() => setAvatarPreset(a.id)}
-                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all active:scale-95 ${avatarPreset === a.id ? 'bg-purple-50 border-2 border-purple-400' : 'bg-gray-50 border-2 border-transparent'}`}
-                    >
-                      <span className="text-3xl">{a.emoji}</span>
-                      <span className={`text-xs font-semibold ${avatarPreset === a.id ? 'text-purple-600' : 'text-gray-600'}`}>{a.label}</span>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center">
-                  <div className="text-3xl mb-2">📸</div>
-                  <div className="text-sm text-gray-500 font-medium">上传你的照片</div>
-                  <div className="text-xs text-gray-400 mt-1">AI 将生成你的数字形象</div>
-                  <button onClick={() => showToast('上传功能开发中')} className="mt-3 px-4 py-2 bg-purple-100 text-purple-600 text-xs font-bold rounded-xl">选择照片</button>
-                </div>
-              )}
-            </div>
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-3">🖼️ 背景设置</div>
-              <div className="flex gap-2 mb-3">
-                {[['color', '纯色'], ['blur', '模糊'], ['image', '图片']].map(([t, l]) => (
-                  <button key={t} onClick={() => setBgType(t)} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${bgType === t ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'}`}>{l}</button>
-                ))}
-              </div>
-              {bgType === 'color' && (
-                <div className="flex items-center gap-3">
-                  <input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-10 h-10 rounded-xl border-0 cursor-pointer" />
-                  <span className="text-sm text-gray-600 font-mono">{bgColor}</span>
-                  <div className="flex gap-2 ml-auto">
-                    {['#1a1a2e', '#0f3460', '#16213e', '#ffffff', '#f8f9fa'].map(c => (
-                      <button key={c} onClick={() => setBgColor(c)} className={`w-7 h-7 rounded-lg border-2 shadow-sm transition-all ${bgColor === c ? 'border-purple-400 scale-110' : 'border-white'}`} style={{ backgroundColor: c }} />
-                    ))}
+            {/* 语音合成成功提示 + 播放器 */}
+            {audioB64 && (
+              <div className="bg-gradient-to-br from-purple-500 to-pink-400 rounded-2xl p-4 text-white shadow-lg">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg">🎙️</span>
+                  <div>
+                    <div className="font-bold text-sm">语音合成成功</div>
+                    <div className="text-white/70 text-xs">{VOICES.find(v => v.id === voiceId)?.label} · {speed}x · {audioDuration > 0 ? formatTime(audioDuration) : `≈${Math.ceil(estimatedDuration / speed)}秒`}</div>
                   </div>
                 </div>
-              )}
-              {bgType !== 'color' && <div className="text-xs text-gray-400 py-2 text-center">此功能开发中</div>}
+                {/* 播放器 */}
+                <div className="bg-white/20 rounded-xl p-3">
+                  <div className="flex items-center gap-3 mb-2">
+                    <button
+                      onClick={togglePlay}
+                      className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-purple-500 font-bold text-sm active:scale-95 transition-transform flex-shrink-0"
+                    >
+                      {isPlaying ? '⏸' : '▶'}
+                    </button>
+                    <div className="flex-1">
+                      <div className="h-1.5 bg-white/30 rounded-full overflow-hidden cursor-pointer"
+                        onClick={e => {
+                          if (!audioRef.current) return
+                          const rect = e.currentTarget.getBoundingClientRect()
+                          const pct = (e.clientX - rect.left) / rect.width
+                          audioRef.current.currentTime = pct * audioRef.current.duration
+                        }}
+                      >
+                        <div className="h-full bg-white rounded-full transition-all" style={{ width: `${audioProgress}%` }} />
+                      </div>
+                    </div>
+                    <span className="text-white/80 text-xs flex-shrink-0">
+                      {formatTime(audioCurrentTime)} / {audioDuration > 0 ? formatTime(audioDuration) : '--:--'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">🎭 选择形象</div>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                {AVATARS.map(a => (
+                  <button
+                    key={a.id}
+                    onClick={() => { setAvatarType('preset'); setAvatarPreset(a.id) }}
+                    className={`flex items-center gap-2 px-3 py-3 rounded-xl transition-all active:scale-[0.98] ${avatarPreset === a.id && avatarType === 'preset' ? 'bg-purple-50 border-2 border-purple-400' : 'bg-gray-50 border-2 border-transparent'}`}
+                  >
+                    <span className="text-2xl">{a.emoji}</span>
+                    <span className={`text-xs font-semibold ${avatarPreset === a.id && avatarType === 'preset' ? 'text-purple-700' : 'text-gray-700'}`}>{a.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-            <button onClick={() => setStep('preview')} className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md">
-              下一步：生成预览 →
+
+            {/* 背景颜色 */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">🎨 背景颜色</div>
+              <div className="grid grid-cols-3 gap-2">
+                {BG_COLORS.map(bg => (
+                  <button
+                    key={bg.color}
+                    onClick={() => setBgColor(bg.color)}
+                    className={`flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all ${bgColor === bg.color ? 'ring-2 ring-purple-400 ring-offset-1' : ''}`}
+                  >
+                    <div className="w-full h-10 rounded-xl" style={{ backgroundColor: bg.color }} />
+                    <span className="text-[10px] text-gray-500 font-medium">{bg.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setStep('preview')}
+              className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md"
+            >
+              下一步：预览 →
             </button>
             <button onClick={() => setStep('voice')} className="w-full py-2 text-sm text-gray-400">← 返回</button>
           </>
         )}
 
+        {/* ── Step 4: 预览 ── */}
         {step === 'preview' && (
           <>
+            {/* 视频预览框 */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
               <div className="font-bold text-gray-900 text-sm mb-3">🎬 视频预览</div>
-              <div className="rounded-2xl overflow-hidden aspect-[9/16] flex flex-col items-center justify-center relative" style={{ backgroundColor: bgColor }}>
-                <div className="text-7xl mb-4">{AVATARS.find(a => a.id === avatarPreset)?.emoji || '👤'}</div>
-                <div className="text-white/80 text-xs text-center px-6 leading-relaxed max-w-full">
+              <div
+                className="rounded-2xl overflow-hidden aspect-[9/16] flex flex-col items-center justify-center relative"
+                style={{ backgroundColor: bgColor }}
+              >
+                {/* 背景装饰 */}
+                <div className="absolute inset-0 opacity-10">
+                  <div className="absolute top-8 left-8 w-20 h-20 rounded-full bg-white/20" />
+                  <div className="absolute bottom-16 right-6 w-12 h-12 rounded-full bg-white/20" />
+                </div>
+                {/* 形象 */}
+                <div className="text-7xl mb-4 relative z-10">
+                  {AVATARS.find(a => a.id === avatarPreset)?.emoji || '👤'}
+                </div>
+                {/* 文案预览 */}
+                <div className="text-white/90 text-xs text-center px-6 leading-relaxed max-w-full relative z-10">
                   {videoCopy.slice(0, 80)}{videoCopy.length > 80 ? '...' : ''}
                 </div>
+                {/* 音频播放器（预览页） */}
                 {audioB64 && (
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <div className="bg-white/20 backdrop-blur-sm rounded-xl p-2.5 flex items-center gap-2">
-                      <span className="text-white text-xs font-medium">🎙️ 语音已合成</span>
-                      <div className="flex-1 h-1 bg-white/30 rounded-full">
-                        <div className="h-full w-1/3 bg-white rounded-full" />
+                  <div className="absolute bottom-4 left-4 right-4 z-10">
+                    <div className="bg-white/20 backdrop-blur-sm rounded-xl p-2.5">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <button
+                          onClick={togglePlay}
+                          className="w-7 h-7 rounded-full bg-white flex items-center justify-center text-purple-500 text-xs font-bold active:scale-95 transition-transform flex-shrink-0"
+                        >
+                          {isPlaying ? '⏸' : '▶'}
+                        </button>
+                        <div className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden cursor-pointer"
+                          onClick={e => {
+                            if (!audioRef.current) return
+                            const rect = e.currentTarget.getBoundingClientRect()
+                            const pct = (e.clientX - rect.left) / rect.width
+                            audioRef.current.currentTime = pct * audioRef.current.duration
+                          }}
+                        >
+                          <div className="h-full bg-white rounded-full transition-all" style={{ width: `${audioProgress}%` }} />
+                        </div>
+                        <span className="text-white/80 text-[10px] flex-shrink-0">{formatTime(audioCurrentTime)}</span>
+                      </div>
+                      <div className="text-white/70 text-[10px] text-center">
+                        🎙️ {VOICES.find(v => v.id === voiceId)?.label} · {speed}x
                       </div>
                     </div>
                   </div>
                 )}
               </div>
-              <div className="mt-3 space-y-1.5">
+            </div>
+
+            {/* 配置摘要 */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">📋 配置摘要</div>
+              <div className="space-y-2">
                 {[
-                  ['声音', VOICES.find((v: any) => v.id === voiceId)?.label || voiceId],
+                  ['文案字数', `${charCount} 字`],
+                  ['声音', VOICES.find(v => v.id === voiceId)?.label || voiceId],
                   ['语速', `${speed}x`],
-                  ['形象', avatarType === 'preset' ? AVATARS.find(a => a.id === avatarPreset)?.label : '自定义'],
+                  ['形象', AVATARS.find(a => a.id === avatarPreset)?.label || '自定义'],
                   ['语音状态', audioB64 ? '✅ 已合成' : '⏳ 未合成'],
+                  ['预计时长', `≈ ${Math.ceil(estimatedDuration / speed)} 秒`],
                 ].map(([k, v]) => (
-                  <div key={k} className="flex justify-between text-xs">
+                  <div key={k} className="flex justify-between text-xs py-1 border-b border-gray-50 last:border-0">
                     <span className="text-gray-400">{k}</span>
                     <span className="font-medium text-gray-700">{v}</span>
                   </div>
                 ))}
               </div>
             </div>
+
+            {/* 下载音频按钮（实际可用） */}
+            {audioB64 && (
+              <button
+                onClick={() => {
+                  const link = document.createElement('a')
+                  link.href = `data:audio/mp3;base64,${audioB64}`
+                  link.download = `contentos_audio_${Date.now()}.mp3`
+                  link.click()
+                  showToast('✅ 音频下载中...')
+                }}
+                className="w-full py-3.5 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md"
+              >
+                ⬇️ 下载音频 MP3
+              </button>
+            )}
+
+            {/* 视频合成（开发中） */}
             <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100">
               <div className="font-bold text-amber-700 text-sm mb-1">🚧 视频合成开发中</div>
-              <div className="text-xs text-amber-600 leading-relaxed">完整视频合成（LatentSync 对口型 + FFmpeg 合成）正在开发中。当前已完成语音合成，视频合成功能即将上线。</div>
+              <div className="text-xs text-amber-600 leading-relaxed">
+                完整视频合成（LatentSync 对口型 + FFmpeg 合成）正在开发中。<br />
+                当前已完成：✅ 语音合成 · ✅ 音频播放 · ✅ 音频下载
+              </div>
             </div>
+
             <button
               onClick={() => showToast('🚀 视频合成任务已提交，完成后通知你')}
               className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md opacity-70"
@@ -2204,9 +2519,7 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
   )
 }
 
-// ═══════════════════════════════════════════════════════════
-// OPERATIONS
-// ═══════════════════════════════════════════════════════════
+
 function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedContents, showToast, insights, insightsLoading, fetchInsights, showAddSchedule, setShowAddSchedule, newScheduleTitle, setNewScheduleTitle, newSchedulePlatform, setNewSchedulePlatform, addScheduleItem }: any) {
   const TABS = [{ id: 'schedule', label: '📅 排期' }, { id: 'stats', label: '📊 数据' }, { id: 'goals', label: '🎯 目标' }]
   const STATS = [
