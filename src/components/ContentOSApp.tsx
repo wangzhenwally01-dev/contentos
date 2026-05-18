@@ -3948,7 +3948,7 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
                 <button
                   key={p}
                   onClick={() => setPlatform(p)}
-                  className={}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${platform === p ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'}`}
                 >{p}</button>
               ))}
             </div>
