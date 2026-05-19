@@ -5,42 +5,25 @@ export async function POST(req: NextRequest) {
     const { url } = await req.json()
     if (!url) return NextResponse.json({ error: '请提供视频链接' }, { status: 400 })
 
-    // 路径A：抖音字幕直接提取
     if (url.includes('douyin.com') || url.includes('iesdouyin.com') || url.includes('v.douyin.com')) {
       try {
         const result = await extractDouyinScript(url)
         if (result) return NextResponse.json({ success: true, script: result, source: 'douyin_subtitle' })
-      } catch (e) {
-        console.log('抖音字幕提取失败，尝试其他方式')
-      }
+      } catch { /* ignore */ }
     }
 
-    // 路径B：小红书文案提取
     if (url.includes('xiaohongshu.com') || url.includes('xhslink.com')) {
       try {
         const result = await extractXhsScript(url)
         if (result) return NextResponse.json({ success: true, script: result, source: 'xhs_content' })
-      } catch (e) {
-        console.log('小红书提取失败')
-      }
+      } catch { /* ignore */ }
     }
 
-    // 路径C：ASR 转录（需要 API Key）
-    const openrouterKey = process.env.OPENROUTER_API_KEY
-    if (openrouterKey) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'ASR转录功能开发中，请先配置 OPENROUTER_API_KEY',
-        hint: '当前支持：抖音视频字幕直提、小红书图文内容提取'
-      })
-    }
-
-    return NextResponse.json({ 
-      success: false, 
+    return NextResponse.json({
+      success: false,
       error: '暂时无法提取该链接的口播文案',
       hint: '支持格式：抖音视频链接、小红书笔记链接。ASR语音转文字功能即将上线。'
     })
-
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : '提取失败'
     return NextResponse.json({ error: msg }, { status: 500 })
@@ -54,13 +37,12 @@ async function extractDouyinScript(url: string): Promise<string | null> {
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
   }
 
-  // 先解析短链
   let realUrl = url
   if (url.includes('v.douyin.com') || url.length < 60) {
     try {
       const resp = await fetch(url, { method: 'HEAD', redirect: 'follow', headers })
       realUrl = resp.url || url
-    } catch {}
+    } catch { /* ignore */ }
   }
 
   const resp = await fetch(realUrl, { headers })
@@ -70,39 +52,41 @@ async function extractDouyinScript(url: string): Promise<string | null> {
   const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)
   if (nextDataMatch) {
     try {
-      const data = JSON.parse(nextDataMatch[1])
-      const videoDetail = findDeep(data, 'video')
-      if (videoDetail && videoDetail.subtitleInfos) {
-        const subtitleInfo = videoDetail.subtitleInfos.find((s: Record<string, string>) => 
-          s.languageCodeName === 'zho-Hans' || s.languageCodeName === 'chi'
+      const data = JSON.parse(nextDataMatch[1]) as Record<string, unknown>
+      const videoDetail = findDeep(data, 'video') as Record<string, unknown> | null
+      if (videoDetail && Array.isArray(videoDetail.subtitleInfos)) {
+        const subtitleInfo = (videoDetail.subtitleInfos as Array<Record<string, string>>).find(
+          s => s.languageCodeName === 'zho-Hans' || s.languageCodeName === 'chi'
         )
-        if (subtitleInfo && subtitleInfo.url) {
+        if (subtitleInfo?.url) {
           const srtResp = await fetch(subtitleInfo.url)
           const srtText = await srtResp.text()
           return parseSRT(srtText)
         }
       }
-    } catch {}
+    } catch { /* ignore */ }
   }
 
-  // 尝试从页面 JSON 数据提取（使用 exec 替代 matchAll）
+  // 尝试从页面 JSON 数据提取
   const jsonRegex = /\{"aweme_detail":\{([\s\S]*?)\}\}/g
   let match
   while ((match = jsonRegex.exec(html)) !== null) {
     try {
-      const data = JSON.parse(`{"aweme_detail":{${match[1]}}}`)
-      const subtitles = data?.aweme_detail?.video?.subtitleInfos
-      if (subtitles && subtitles.length > 0) {
-        const sub = subtitles.find((s: Record<string, string>) => 
-          s.languageCodeName?.includes('zho') || s.languageCodeName?.includes('chi')
+      const data = JSON.parse(`{"aweme_detail":{${match[1]}}}`) as Record<string, unknown>
+      const aweme = data?.aweme_detail as Record<string, unknown> | undefined
+      const video = aweme?.video as Record<string, unknown> | undefined
+      const subtitles = video?.subtitleInfos
+      if (Array.isArray(subtitles) && subtitles.length > 0) {
+        const sub = (subtitles as Array<Record<string, string>>).find(
+          s => s.languageCodeName?.includes('zho') || s.languageCodeName?.includes('chi')
         )
-        if (sub && sub.url) {
+        if (sub?.url) {
           const srtResp = await fetch(sub.url)
           const srtText = await srtResp.text()
           return parseSRT(srtText)
         }
       }
-    } catch {}
+    } catch { /* ignore */ }
   }
 
   // 提取视频描述作为备选
@@ -123,20 +107,19 @@ async function extractXhsScript(url: string): Promise<string | null> {
     try {
       const resp = await fetch(url, { method: 'HEAD', redirect: 'follow', headers })
       realUrl = resp.url || url
-    } catch {}
+    } catch { /* ignore */ }
   }
 
   const resp = await fetch(realUrl, { headers })
   const html = await resp.text()
 
-  // 提取小红书笔记内容
   const initStateMatch = html.match(/window\.__INITIAL_STATE__\s*=\s*(\{[\s\S]*?\})\s*<\/script>/)
   if (initStateMatch) {
     try {
-      const data = JSON.parse(initStateMatch[1])
-      const noteDetail = findDeep(data, 'noteDetailMap')
+      const data = JSON.parse(initStateMatch[1]) as Record<string, unknown>
+      const noteDetail = findDeep(data, 'noteDetailMap') as Record<string, unknown> | null
       if (noteDetail) {
-        const notes = Object.values(noteDetail as Record<string, unknown>)
+        const notes = Object.values(noteDetail)
         if (notes.length > 0) {
           const note = notes[0] as Record<string, unknown>
           const noteData = note?.note as Record<string, string> | undefined
@@ -144,10 +127,9 @@ async function extractXhsScript(url: string): Promise<string | null> {
           if (content) return content
         }
       }
-    } catch {}
+    } catch { /* ignore */ }
   }
 
-  // 备选：提取 meta description
   const metaMatch = html.match(/<meta[^>]+name="description"[^>]+content="([^"]{20,})"/)
   if (metaMatch) return metaMatch[1]
 
