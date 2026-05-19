@@ -338,18 +338,133 @@ function Spinner({ size = 'sm' }: { size?: 'sm' | 'md' }) {
   )
 }
 
-// ─── Empty State ──────────────────────────────────────────
-function EmptyState({ icon, title, desc, action, onAction }: { icon: string; title: string; desc: string; action?: string; onAction?: () => void }) {
+// ─── 确认弹窗组件 ────────────────────────────────────────
+function ConfirmDialog({ show, title, desc, onConfirm, onCancel, danger = false }: { show: boolean, title: string, desc?: string, onConfirm: () => void, onCancel: () => void, danger?: boolean }) {
+  if (!show) return null
   return (
-    <div className="bg-white rounded-3xl p-8 text-center shadow-sm">
-      <div className="text-4xl mb-3">{icon}</div>
+    <div className="fixed inset-0 z-[300] flex items-end justify-center" onClick={onCancel}>
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      <div className="relative w-full max-w-[430px] bg-white rounded-t-3xl p-6 animate-slide-bottom" onClick={e => e.stopPropagation()}>
+        <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
+        <div className="text-center mb-5">
+          <div className="text-2xl mb-2">{danger ? '⚠️' : '❓'}</div>
+          <div className="font-bold text-gray-900 text-base mb-1">{title}</div>
+          {desc && <div className="text-sm text-gray-500 leading-relaxed">{desc}</div>}
+        </div>
+        <div className="flex gap-3">
+          <button onClick={onCancel} className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-2xl text-sm active:scale-[0.97]">取消</button>
+          <button onClick={() => { onConfirm(); onCancel(); }} className={`flex-1 py-3 font-bold rounded-2xl text-sm active:scale-[0.97] text-white ${danger ? 'bg-red-500' : 'bg-blue-500'}`}>确认</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Empty State ──────────────────────────────────────────
+function EmptyState({ icon, title, desc, action, onAction }: { icon: string; title: string; desc?: string; action?: string; onAction?: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+      <div className="text-5xl mb-4 animate-float">{icon}</div>
       <div className="font-bold text-gray-800 mb-1 text-sm">{title}</div>
-      <div className="text-xs text-gray-400 mb-4 leading-relaxed">{desc}</div>
+      {desc && <div className="text-xs text-gray-400 mb-4 leading-relaxed">{desc}</div>}
       {action && onAction && (
-        <button onClick={onAction} className="px-5 py-2.5 bg-blue-500 text-white text-xs font-bold rounded-2xl active:scale-[0.97] transition-transform">
+        <button onClick={onAction} className="px-5 py-2.5 bg-blue-500 text-white text-xs font-bold rounded-2xl active:scale-[0.97] transition-transform shadow-md shadow-blue-100">
           {action}
         </button>
       )}
+    </div>
+  )
+}
+
+// ─── 全局搜索组件 ────────────────────────────────────────
+function GlobalSearch({ show, onClose, savedTopics, savedContents, trackedCreators, setTab, setMatTab, showToast }: any) {
+  const [query, setQuery] = React.useState('')
+  const inputRef = React.useRef<HTMLInputElement>(null)
+
+  React.useEffect(() => {
+    if (show) { setQuery(''); setTimeout(() => inputRef.current?.focus(), 100) }
+  }, [show])
+
+  const results = React.useMemo(() => {
+    if (!query.trim()) return []
+    const q = query.toLowerCase()
+    const items: any[] = []
+    // 搜索选题
+    ;(savedTopics || []).forEach((t: any) => {
+      const title = typeof t === 'string' ? t : (t.title || '')
+      if (title.toLowerCase().includes(q)) {
+        items.push({ type: '选题', icon: '💡', title, action: 'topics', color: 'bg-purple-50 text-purple-600' })
+      }
+    })
+    // 搜索文案
+    ;(savedContents || []).forEach((c: any) => {
+      if ((c.topic || '').toLowerCase().includes(q) || (c.content || '').toLowerCase().includes(q)) {
+        items.push({ type: '文案', icon: '✍️', title: c.topic || '未命名文案', desc: (c.content || '').slice(0, 40) + '...', action: 'content', color: 'bg-blue-50 text-blue-600' })
+      }
+    })
+    // 搜索博主
+    ;(trackedCreators || []).forEach((c: any) => {
+      if ((c.name || c.url || '').toLowerCase().includes(q)) {
+        items.push({ type: '博主', icon: '👥', title: c.name || c.url, action: 'creator', color: 'bg-cyan-50 text-cyan-600' })
+      }
+    })
+    return items.slice(0, 12)
+  }, [query, savedTopics, savedContents, trackedCreators])
+
+  if (!show) return null
+  return (
+    <div className="fixed inset-0 z-[400] flex flex-col" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div className="relative w-full max-w-[430px] mx-auto mt-16 bg-white rounded-3xl shadow-2xl overflow-hidden animate-scale-in" onClick={e => e.stopPropagation()}>
+        {/* 搜索框 */}
+        <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-100">
+          <span className="text-xl">🔍</span>
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="搜索选题、文案、博主..."
+            className="flex-1 text-sm outline-none text-gray-800 placeholder-gray-400"
+          />
+          {query && <button onClick={() => setQuery('')} className="text-gray-400 text-lg">✕</button>}
+          <button onClick={onClose} className="text-xs text-gray-400 font-medium px-2 py-1 bg-gray-100 rounded-lg">关闭</button>
+        </div>
+        {/* 搜索结果 */}
+        <div className="max-h-[60vh] overflow-y-auto">
+          {query && results.length === 0 && (
+            <div className="py-10 text-center">
+              <div className="text-3xl mb-2">🔍</div>
+              <div className="text-sm text-gray-400">没有找到「{query}」相关内容</div>
+            </div>
+          )}
+          {!query && (
+            <div className="py-8 text-center">
+              <div className="text-3xl mb-2">✨</div>
+              <div className="text-sm text-gray-400">输入关键词搜索全部内容</div>
+              <div className="text-xs text-gray-300 mt-1">选题 · 文案 · 博主</div>
+            </div>
+          )}
+          {results.map((r, i) => (
+            <button
+              key={i}
+              onClick={() => {
+                if (r.action === 'topics') { setTab('materials'); setMatTab('topics') }
+                else if (r.action === 'content') { setTab('content') }
+                else if (r.action === 'creator') { setTab('materials'); setMatTab('creator') }
+                onClose()
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 border-b border-gray-50 last:border-0 text-left transition-colors"
+            >
+              <span className={`text-base w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${r.color}`}>{r.icon}</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-gray-800 truncate">{r.title}</div>
+                {r.desc && <div className="text-xs text-gray-400 truncate mt-0.5">{r.desc}</div>}
+              </div>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${r.color}`}>{r.type}</span>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
@@ -486,6 +601,16 @@ export default function ContentOSApp() {
   const [subtitleLines, setSubtitleLines] = useState<string[]>([])
   const [currentSubLine, setCurrentSubLine] = useState(0)
 
+  // Global Search
+  const [showGlobalSearch, setShowGlobalSearch] = React.useState(false)
+
+  // Confirm Dialog
+  const [confirmDialog, setConfirmDialog] = React.useState<{show:boolean,title:string,desc?:string,onConfirm:()=>void,danger?:boolean}>({show:false,title:'',onConfirm:()=>{}})
+  function showConfirm(title: string, desc: string, onConfirm: () => void, danger = false) {
+    setConfirmDialog({ show: true, title, desc, onConfirm, danger })
+  }
+  function hideConfirm() { setConfirmDialog(prev => ({...prev, show: false})) }
+
   // Theme / Appearance
   const [theme, setTheme] = React.useState('light')
   const [accentColor, setAccentColor] = React.useState('blue')
@@ -566,6 +691,39 @@ export default function ContentOSApp() {
 
   function saveToLocal(key: string, data: any) {
     try { localStorage.setItem(key, JSON.stringify(data)) } catch {}
+  }
+
+  // ─── 数据导出 CSV ────────────────────────────────────────
+  function exportToCSV(data: any[], filename: string, headers: string[]) {
+    const rows = [headers, ...data]
+    const csv = rows.map(row => row.map((cell: any) => {
+      const str = String(cell ?? '').replace(/"/g, '""')
+      return str.includes(',') || str.includes('"') || str.includes('\n') ? `"${str}"` : str
+    }).join(',')).join('\n')
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = filename + '_' + new Date().toLocaleDateString('zh-CN').replace(/\//g,'-') + '.csv'
+    a.click(); URL.revokeObjectURL(url)
+    showToast('✅ 导出成功')
+  }
+
+  function exportTopics() {
+    if (!savedTopics?.length) { showToast('⚠️ 暂无选题数据'); return }
+    exportToCSV(
+      savedTopics.map((t: any, i: number) => [i+1, t.title || t, t.category || '通用', t.savedAt ? new Date(t.savedAt).toLocaleDateString('zh-CN') : '-']),
+      'ContentOS_选题库',
+      ['序号', '选题标题', '分类', '保存日期']
+    )
+  }
+
+  function exportContents() {
+    if (!savedContents?.length) { showToast('⚠️ 暂无文案数据'); return }
+    exportToCSV(
+      savedContents.map((c: any, i: number) => [i+1, c.topic || '', c.style || '', c.content || '', c.hook || '', (c.content?.length || 0) + '字', c.savedAt ? new Date(c.savedAt).toLocaleDateString('zh-CN') : '-']),
+      'ContentOS_文案库',
+      ['序号', '选题', '风格', '正文', '钩子', '字数', '保存日期']
+    )
   }
 
   // ─── Auth ─────────────────────────────────────────────────
@@ -1269,6 +1427,24 @@ export default function ContentOSApp() {
   return (
     <div className="w-[390px] h-[844px] rounded-[50px] overflow-hidden bg-[#F2F2F7] flex flex-col shadow-[0_0_0_10px_#111,0_40px_100px_rgba(0,0,0,.7)] relative">
       <Toast msg={toast} />
+      <GlobalSearch
+        show={showGlobalSearch}
+        onClose={() => setShowGlobalSearch(false)}
+        savedTopics={savedTopics}
+        savedContents={savedContents}
+        trackedCreators={trackedCreators}
+        setTab={setTab}
+        setMatTab={setMatTab}
+        showToast={showToast}
+      />
+      <ConfirmDialog
+        show={confirmDialog.show}
+        title={confirmDialog.title}
+        desc={confirmDialog.desc}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={hideConfirm}
+        danger={confirmDialog.danger}
+      />
       {/* 全局 AI 快捷面板 */}
       <AiQuickPanel
         tab={tab}
@@ -1431,12 +1607,13 @@ export default function ContentOSApp() {
             showDeleteConfirm={showDeleteConfirm} setShowDeleteConfirm={setShowDeleteConfirm}
             editingAccount={editingAccount} setEditingAccount={setEditingAccount}
             saveToLocal={saveToLocal}
+            exportTopics={exportTopics} exportContents={exportContents}
             theme={theme} setTheme={setTheme}
             accentColor={accentColor} setAccentColor={setAccentColor}
           />
         )}
       </div>
-      <div className="h-[90px] bg-white/95 backdrop-blur-xl border-t border-gray-100 flex items-start pt-2 pb-5 flex-shrink-0 z-50">
+      <div className="bg-white/95 backdrop-blur-xl border-t border-gray-100 flex items-start pt-2 flex-shrink-0 z-50" style={{paddingBottom:'max(20px, env(safe-area-inset-bottom, 20px))'}}>
         {NAV_TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id as Tab)} className="flex-1 flex flex-col items-center gap-0.5 py-1 tab-transition">
             <span className={`text-[22px] transition-transform duration-200 ${tab === t.id ? 'scale-110' : 'scale-100'}`}>{t.icon}</span>
@@ -1456,7 +1633,7 @@ export default function ContentOSApp() {
 // ═══════════════════════════════════════════════════════════
 // DASHBOARD v2 — 工作台首页（每日任务+快捷入口+数据概览）
 // ═══════════════════════════════════════════════════════════
-function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab, showToast, user, onLogout, savedContents, schedule, onPositioning, showAddAccount, setShowAddAccount, newAccName, setNewAccName, newAccIndustry, setNewAccIndustry, newAccEmoji, setNewAccEmoji, addAccount, hotspots, radarData, fetchRadar, radarLoading, savedTopics, setShowAiPanel, videoRecords, savedTopicsCount }: any) {
+function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab, showToast, user, onLogout, savedContents, schedule, onPositioning, showAddAccount, setShowAddAccount, newAccName, setNewAccName, newAccIndustry, setNewAccIndustry, newAccEmoji, setNewAccEmoji, addAccount, hotspots, radarData, fetchRadar, radarLoading, savedTopics, setShowAiPanel, videoRecords, savedTopicsCount, setShowGlobalSearch }: any) {
       const EMOJIS = ['🏪', '🍜', '💪', '💄', '📚', '🏠', '🚗', '🎵', '🌿', '☕']
 
       // 任务完成状态
@@ -1518,6 +1695,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
       const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
 
       function toggleTask(id: string) {
+        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10)
         setCompletedTasks((prev: Set<string>) => {
           const next = new Set(prev)
           if (next.has(id)) next.delete(id)
@@ -1582,6 +1760,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <button onClick={() => setShowGlobalSearch(true)} className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-base">🔍</button>
                 <button onClick={() => setShowAiPanel(true)} className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-base">🤖</button>
                 <button onClick={() => setShowAddAcc(!showAddAcc)} className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-base">⚙️</button>
               </div>
@@ -1834,6 +2013,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                   { icon: '📊', label: '运营中心', action: () => setTab('operations'), color: 'bg-red-50' },
                   { icon: '🎨', label: '风格模板', action: () => { setTab('materials'); setMatTab('style') }, color: 'bg-pink-50' },
                   { icon: '👥', label: '博主追踪', action: () => { setTab('materials'); setMatTab('creator') }, color: 'bg-cyan-50' },
+                  { icon: '📥', label: '导出数据', action: () => { setTab('profile') }, color: 'bg-teal-50' },
                   { icon: '🎯', label: '账号定位', action: onPositioning, color: 'bg-amber-50' },
                 ].map((item: any, i: number) => (
                   <button
@@ -2181,7 +2361,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                 return (
                   <div className="text-center py-6">
                     <div className="text-2xl mb-2">🔍</div>
-                    <p className="text-xs text-gray-400">没有找到匹配的选题</p>
+                    <p className="text-xs text-gray-400">没有找到匹配的选题，换个关键词试试</p>
                   </div>
                 )
               }
@@ -4066,19 +4246,30 @@ ${line}
                   <div className={`absolute bottom-8 left-3 right-3 z-10 ${subtitleStyle === 'karaoke' ? 'text-center' : subtitleStyle === 'highlight' ? 'text-center' : 'text-center'}`}>
                     {subtitleStyle === 'karaoke' && (
                       <div className="bg-black/60 rounded-lg px-2 py-1">
-                        <span className="text-yellow-300 text-[9px] font-bold">{videoCopy.slice(0, 20)}</span>
-                        <span className="text-white/60 text-[9px]">{videoCopy.slice(20, 35)}</span>
+                        <span style={{
+                          color: subtitleColor==='white'?'#FFF':subtitleColor==='yellow'?'#FFE066':subtitleColor==='cyan'?'#67E8F9':'#86EFAC',
+                          fontSize: subtitleFontSize==='sm'?'9px':subtitleFontSize==='lg'?'13px':'11px',
+                          fontWeight:'bold'
+                        }}>{videoCopy.slice(0, 20)}</span>
+                        <span style={{color:'rgba(255,255,255,0.6)',fontSize:subtitleFontSize==='sm'?'9px':subtitleFontSize==='lg'?'13px':'11px'}}>{videoCopy.slice(20, 35)}</span>
                       </div>
                     )}
                     {subtitleStyle === 'bottom' && (
                       <div className="bg-black/60 rounded-lg px-2 py-1">
-                        <span className="text-white text-[9px] leading-relaxed">{videoCopy.slice(0, 30)}...</span>
+                        <span style={{
+                          color: subtitleColor==='white'?'#FFF':subtitleColor==='yellow'?'#FFE066':subtitleColor==='cyan'?'#67E8F9':'#86EFAC',
+                          fontSize: subtitleFontSize==='sm'?'9px':subtitleFontSize==='lg'?'13px':'11px',
+                        }} className="leading-relaxed">{videoCopy.slice(0, 30)}...</span>
                       </div>
                     )}
                     {subtitleStyle === 'highlight' && (
                       <div className="flex flex-wrap gap-0.5 justify-center">
                         {videoCopy.slice(0, 20).split('').map((c: string, i: number) => (
-                          <span key={i} className={`text-[9px] font-bold ${i < 5 ? 'text-yellow-300' : 'text-white'}`}>{c}</span>
+                          <span key={i} style={{
+                            color: i < 5 ? '#FFE066' : (subtitleColor==='white'?'#FFF':subtitleColor==='yellow'?'#FFE066':subtitleColor==='cyan'?'#67E8F9':'#86EFAC'),
+                            fontSize: subtitleFontSize==='sm'?'9px':subtitleFontSize==='lg'?'13px':'11px',
+                            fontWeight:'bold'
+                          }}>{c}</span>
                         ))}
                       </div>
                     )}
@@ -4127,6 +4318,8 @@ ${line}
                   ['形象', AVATARS.find(a => a.id === avatarPreset)?.label || '自定义'],
                   ['视频比例', videoRatio],
                   ['字幕样式', SUBTITLE_STYLES.find(s => s.id === subtitleStyle)?.label || '无'],
+                  ['字幕字号', SUBTITLE_FONT_SIZES.find(f => f.id === subtitleFontSize)?.label || '中'],
+                  ['字幕颜色', SUBTITLE_COLORS.find(c => c.id === subtitleColor)?.label || '白色'],
                   ['语音状态', audioB64 ? '✅ 已合成' : '⏳ 未合成'],
                   ['预计时长', `≈ ${Math.ceil(estimatedDuration / speed)} 秒`],
                 ].map(([k, v]) => (
@@ -5944,7 +6137,7 @@ function Profile({
   savedContents, savedTopics,
   showDeleteConfirm, setShowDeleteConfirm,
   editingAccount, setEditingAccount,
-  saveToLocal,
+  saveToLocal, exportTopics, exportContents,
   theme, setTheme,
   accentColor, setAccentColor,
 }: any) {
@@ -6331,7 +6524,7 @@ function Profile({
               <div className="w-16 h-16 rounded-[22px] bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-3xl mx-auto mb-3 shadow-lg">🎬</div>
               <div className="font-black text-gray-900 text-lg">ContentOS</div>
               <div className="text-xs text-gray-400 mt-1">AI 内容增长工作台</div>
-              <div className="text-xs text-gray-300 mt-0.5">v9.2.0</div>
+              <div className="text-xs text-gray-300 mt-0.5">v9.3.0</div>
             </div>
 
             {/* 外观设置 */}
@@ -6422,6 +6615,10 @@ function Profile({
             <div className="bg-white rounded-2xl p-4 shadow-sm">
               <div className="font-bold text-gray-900 text-sm mb-3">📅 更新日志</div>
               {[
+                { version: 'v9.3', date: '2026-05-19', desc: '深色模式生效、主题色切换、底部安全区、空状态、确认弹窗、数据导出、PWA' },
+                { version: 'v9.2', date: '2026-05-18', desc: '字幕字号颜色、视频生成阶段指示器、双层动画' },
+                { version: 'v9.1', date: '2026-05-18', desc: '文案模板库、AI风格分析' },
+                { version: 'v9.0', date: '2026-05-18', desc: '深色模式框架、主题色切换' },
                 { version: 'v6.1', date: '2026-05-18', desc: '个人中心、AI设置、积分系统、账号编辑' },
                 { version: 'v6.0', date: '2026-05-18', desc: '账号定位向导、多账号管理、选题收藏' },
                 { version: 'v5.0', date: '2026-05-17', desc: 'Tailwind CSS 重构，全新设计系统' },
@@ -6435,6 +6632,26 @@ function Profile({
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* 数据管理 */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">📦 数据管理</div>
+              <div className="space-y-2">
+                {[
+                  { icon: '📥', label: '导出选题库', desc: `共 ${savedTopics?.length || 0} 条选题`, action: exportTopics, color: 'text-blue-500' },
+                  { icon: '📄', label: '导出文案库', desc: `共 ${savedContents?.length || 0} 条文案`, action: exportContents, color: 'text-green-500' },
+                ].map((item, i) => (
+                  <button key={i} onClick={item.action} className="w-full flex items-center gap-3 px-3 py-3 bg-gray-50 rounded-xl active:scale-[0.98] transition-all text-left">
+                    <span className={`text-xl ${item.color}`}>{item.icon}</span>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-gray-800">{item.label}</div>
+                      <div className="text-xs text-gray-400">{item.desc}</div>
+                    </div>
+                    <span className="text-xs text-gray-400">CSV →</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <button onClick={onLogout} className="w-full py-3.5 bg-white rounded-2xl text-sm font-bold text-red-400 shadow-sm active:scale-[0.98] transition-transform">

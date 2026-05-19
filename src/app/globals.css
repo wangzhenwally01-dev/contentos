@@ -127,3 +127,99 @@ body {
 .page-enter {
   animation: fadeInUp 0.3s cubic-bezier(0.16,1,0.3,1) both;
 }
+
+/* ── 主题色系统 ── */
+:root {
+  --accent: #3B82F6;
+  --accent-light: #EFF6FF;
+  --accent-dark: #1D4ED8;
+  --bg-primary: #F9FAFB;
+  --bg-card: #FFFFFF;
+  --bg-input: #F3F4F6;
+  --text-primary: #111827;
+  --text-secondary: #6B7280;
+  --text-muted: #9CA3AF;
+  --border: #E5E7EB;
+  --shadow: rgba(0,0,0,0.08);
+  --nav-bg: rgba(255,255,255,0.95);
+  --nav-border: rgba(0,0,0,0.06);
+}
+
+/* 深色模式 */
+[data-theme="dark"] {
+  --bg-primary: #0F0F0F;
+  --bg-card: #1A1A1A;
+  --bg-input: #252525;
+  --text-primary: #F9FAFB;
+  --text-secondary: #9CA3AF;
+  --text-muted: #6B7280;
+  --border: #2D2D2D;
+  --shadow: rgba(0,0,0,0.4);
+  --nav-bg: rgba(18,18,18,0.97);
+  --nav-border: rgba(255,255,255,0.06);
+}
+
+/* 护眼模式 */
+[data-theme="eye"] {
+  --bg-primary: #F5F0E8;
+  --bg-card: #FDFAF4;
+  --bg-input: #EDE8DC;
+  --text-primary: #2C2416;
+  --text-secondary: #6B5E45;
+  --text-muted: #9C8E75;
+  --border: #D4C9B0;
+  --shadow: rgba(0,0,0,0.06);
+  --nav-bg: rgba(253,250,244,0.97);
+  --nav-border: rgba(0,0,0,0.05);
+}
+
+/* 主题色 — 蓝色（默认） */
+[data-accent="blue"] { --accent: #3B82F6; --accent-light: #EFF6FF; --accent-dark: #1D4ED8; }
+/* 主题色 — 紫色 */
+[data-accent="purple"] { --accent: #8B5CF6; --accent-light: #F5F3FF; --accent-dark: #6D28D9; }
+/* 主题色 — 绿色 */
+[data-accent="green"] { --accent: #10B981; --accent-light: #ECFDF5; --accent-dark: #059669; }
+/* 主题色 — 橙色 */
+[data-accent="orange"] { --accent: #F59E0B; --accent-light: #FFFBEB; --accent-dark: #D97706; }
+/* 主题色 — 粉色 */
+[data-accent="pink"] { --accent: #EC4899; --accent-light: #FDF2F8; --accent-dark: #BE185D; }
+
+/* ── 深色模式下的 Tailwind 覆盖 ── */
+[data-theme="dark"] .bg-white { background-color: var(--bg-card) !important; }
+[data-theme="dark"] .bg-gray-50 { background-color: var(--bg-input) !important; }
+[data-theme="dark"] .bg-gray-100 { background-color: #2A2A2A !important; }
+[data-theme="dark"] .bg-gray-200 { background-color: #333333 !important; }
+[data-theme="dark"] .text-gray-900 { color: var(--text-primary) !important; }
+[data-theme="dark"] .text-gray-800 { color: #E5E7EB !important; }
+[data-theme="dark"] .text-gray-700 { color: #D1D5DB !important; }
+[data-theme="dark"] .text-gray-600 { color: #9CA3AF !important; }
+[data-theme="dark"] .text-gray-500 { color: #6B7280 !important; }
+[data-theme="dark"] .text-gray-400 { color: #4B5563 !important; }
+[data-theme="dark"] .border-gray-100 { border-color: var(--border) !important; }
+[data-theme="dark"] .border-gray-200 { border-color: var(--border) !important; }
+[data-theme="dark"] .divide-gray-100 > * + * { border-color: var(--border) !important; }
+[data-theme="dark"] body { background: #0F0F0F; }
+
+/* 护眼模式覆盖 */
+[data-theme="eye"] .bg-white { background-color: var(--bg-card) !important; }
+[data-theme="eye"] .bg-gray-50 { background-color: var(--bg-input) !important; }
+[data-theme="eye"] .bg-gray-100 { background-color: #EDE8DC !important; }
+[data-theme="eye"] .text-gray-900 { color: var(--text-primary) !important; }
+[data-theme="eye"] .text-gray-700 { color: #4A3F2F !important; }
+[data-theme="eye"] body { background: #EDE8DC; }
+
+/* ── 主题色应用 ── */
+[data-accent] .bg-blue-500, [data-accent] .bg-blue-600 { background-color: var(--accent) !important; }
+[data-accent] .bg-blue-50 { background-color: var(--accent-light) !important; }
+[data-accent] .text-blue-500, [data-accent] .text-blue-600 { color: var(--accent) !important; }
+[data-accent] .border-blue-500, [data-accent] .border-blue-400 { border-color: var(--accent) !important; }
+[data-accent] .from-blue-500 { --tw-gradient-from: var(--accent) !important; }
+[data-accent] .to-blue-600 { --tw-gradient-to: var(--accent-dark) !important; }
+
+/* ── 底部安全区 ── */
+.pb-safe {
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+.mb-safe {
+  margin-bottom: env(safe-area-inset-bottom, 0px);
+}
