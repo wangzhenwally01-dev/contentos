@@ -10,7 +10,7 @@ const supabase = createClient(
 
 // ─── Types ───────────────────────────────────────────────
 type Tab = 'dashboard' | 'materials' | 'content' | 'video' | 'operations' | 'profile'
-type MatTab = 'hotspot' | 'topics' | 'radar' | 'creator' | 'style'
+type MatTab = 'hotspot' | 'topics' | 'radar' | 'creator' | 'style' | 'knowledge'
 type OpsTab = 'schedule' | 'stats' | 'goals'
 type VideoStep = 'input' | 'voice' | 'avatar' | 'preview'
 type ContentStep = 1 | 2 | 3
@@ -529,6 +529,23 @@ export default function ContentOSApp() {
   const [styleName, setStyleName] = useState('')
   const [styleText, setStyleText] = useState('')
 
+  // 知识库状态
+  const [knowledgeItems, setKnowledgeItems] = useState<any[]>([])
+  const [knowledgeInput, setKnowledgeInput] = useState('')
+  const [knowledgeTitle, setKnowledgeTitle] = useState('')
+  const [knowledgeCategory, setKnowledgeCategory] = useState('专业知识')
+  const [showAddKnowledge, setShowAddKnowledge] = useState(false)
+  const [knowledgeSearch, setKnowledgeSearch] = useState('')
+
+  // 三合一超级生成状态
+  const [showSuperGen, setShowSuperGen] = useState(false)
+  const [superGenLoading, setSuperGenLoading] = useState(false)
+  const [superGenResult, setSuperGenResult] = useState<any[]>([])
+  const [superGenTopic, setSuperGenTopic] = useState('')
+  const [superGenHotspot, setSuperGenHotspot] = useState('')
+  const [superGenStyle, setSuperGenStyle] = useState('')
+  const [superGenKnowledge, setSuperGenKnowledge] = useState<string[]>([])
+
   // Operations
   const [opsTab, setOpsTab] = useState<OpsTab>('schedule')
   // 视频数据记录（每条视频的发布数据）
@@ -683,6 +700,7 @@ export default function ContentOSApp() {
       const mp = localStorage.getItem('contentos_module_prompts'); if (mp) setModulePrompts(JSON.parse(mp))
       const vr = localStorage.getItem('contentos_video_records'); if (vr) setVideoRecords(JSON.parse(vr))
       const cr = localStorage.getItem('contentos_credits'); if (cr) setCredits(parseInt(cr) || 1000)
+      const kb = localStorage.getItem('contentos_knowledge'); if (kb) setKnowledgeItems(JSON.parse(kb))
     } catch {}
   }, [])
 
@@ -724,6 +742,76 @@ export default function ContentOSApp() {
       'ContentOS_文案库',
       ['序号', '选题', '风格', '正文', '钩子', '字数', '保存日期']
     )
+  }
+
+  // ─── 知识库操作 ──────────────────────────────────────────
+  function addKnowledgeItem() {
+    if (!knowledgeTitle.trim() || !knowledgeInput.trim()) { showToast('⚠️ 请填写标题和内容'); return }
+    const item = {
+      id: Date.now().toString(),
+      title: knowledgeTitle.trim(),
+      content: knowledgeInput.trim(),
+      category: knowledgeCategory,
+      createdAt: new Date().toISOString(),
+      wordCount: knowledgeInput.trim().length,
+    }
+    const updated = [item, ...knowledgeItems]
+    setKnowledgeItems(updated)
+    saveToLocal('contentos_knowledge', updated)
+    setKnowledgeTitle('')
+    setKnowledgeInput('')
+    setShowAddKnowledge(false)
+    showToast('✅ 知识已添加到知识库')
+  }
+
+  function deleteKnowledgeItem(id: string) {
+    const updated = knowledgeItems.filter((k: any) => k.id !== id)
+    setKnowledgeItems(updated)
+    saveToLocal('contentos_knowledge', updated)
+    showToast('已删除')
+  }
+
+  // ─── 三合一超级文案生成 ──────────────────────────────────
+  async function superGenerate() {
+    if (!superGenTopic.trim()) { showToast('⚠️ 请输入选题'); return }
+    setSuperGenLoading(true)
+    setSuperGenResult([])
+    try {
+      // 构建知识库上下文
+      const selectedKb = superGenKnowledge.length > 0
+        ? knowledgeItems.filter((k: any) => superGenKnowledge.includes(k.id))
+        : knowledgeItems.slice(0, 3)
+      const kbContext = selectedKb.length > 0
+        ? '\n\n【我的专业知识库】\n' + selectedKb.map((k: any) => `【${k.title}】${k.content.slice(0, 200)}`).join('\n')
+        : ''
+      const hotspotContext = superGenHotspot ? `\n\n【结合今日热点】${superGenHotspot}` : ''
+      const styleContext = superGenStyle ? `\n\n【参考风格模板】${superGenStyle}` : ''
+
+      const res = await fetch('/api/generate-copy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topicTitle: superGenTopic,
+          accountName: acc.name,
+          industry: acc.industry,
+          positioning: acc.positioning,
+          targetAudience: acc.targetAudience,
+          style: '超级生成',
+          userInput: `请结合以下信息生成3个差异化版本的口播文案：${kbContext}${hotspotContext}${styleContext}\n\n要求：\n1. 深度融合知识库中的专业内容，体现账号专业性\n2. 自然结合热点，不生硬\n3. 保持账号一贯风格\n4. 每版有明显差异（角度/结构/情绪不同）`,
+        })
+      })
+      const data = await res.json()
+      if (data.versions?.length) {
+        setSuperGenResult(data.versions)
+        showToast('✅ 超级文案生成完成！')
+      } else {
+        showToast('生成失败，请重试')
+      }
+    } catch {
+      showToast('❌ 网络错误')
+    } finally {
+      setSuperGenLoading(false)
+    }
   }
 
   // ─── Auth ─────────────────────────────────────────────────
@@ -1475,11 +1563,26 @@ export default function ContentOSApp() {
                 setShowAiPanel={setShowAiPanel}
                 videoRecords={videoRecords}
                 savedTopicsCount={savedTopics.length}
+                setShowSuperGen={setShowSuperGen}
+                knowledgeItems={knowledgeItems}
               />
             )}
         {tab === 'materials' && (
           <Materials
                 acc={acc} matTab={matTab} setMatTab={setMatTab}
+                knowledgeItems={knowledgeItems} knowledgeInput={knowledgeInput} setKnowledgeInput={setKnowledgeInput}
+                knowledgeTitle={knowledgeTitle} setKnowledgeTitle={setKnowledgeTitle}
+                knowledgeCategory={knowledgeCategory} setKnowledgeCategory={setKnowledgeCategory}
+                showAddKnowledge={showAddKnowledge} setShowAddKnowledge={setShowAddKnowledge}
+                knowledgeSearch={knowledgeSearch} setKnowledgeSearch={setKnowledgeSearch}
+                addKnowledgeItem={addKnowledgeItem} deleteKnowledgeItem={deleteKnowledgeItem}
+                showSuperGen={showSuperGen} setShowSuperGen={setShowSuperGen}
+                superGenLoading={superGenLoading} superGenResult={superGenResult} setSuperGenResult={setSuperGenResult}
+                superGenTopic={superGenTopic} setSuperGenTopic={setSuperGenTopic}
+                superGenHotspot={superGenHotspot} setSuperGenHotspot={setSuperGenHotspot}
+                superGenStyle={superGenStyle} setSuperGenStyle={setSuperGenStyle}
+                superGenKnowledge={superGenKnowledge} setSuperGenKnowledge={setSuperGenKnowledge}
+                superGenerate={superGenerate}
                 hotspots={HOTSPOTS} aiTopics={aiTopics} topicsLoading={topicsLoading}
                 generateTopics={generateTopics}
                 topicFilter={topicFilter} setTopicFilter={setTopicFilter}
@@ -1633,7 +1736,7 @@ export default function ContentOSApp() {
 // ═══════════════════════════════════════════════════════════
 // DASHBOARD v2 — 工作台首页（每日任务+快捷入口+数据概览）
 // ═══════════════════════════════════════════════════════════
-function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab, showToast, user, onLogout, savedContents, schedule, onPositioning, showAddAccount, setShowAddAccount, newAccName, setNewAccName, newAccIndustry, setNewAccIndustry, newAccEmoji, setNewAccEmoji, addAccount, hotspots, radarData, fetchRadar, radarLoading, savedTopics, setShowAiPanel, videoRecords, savedTopicsCount, setShowGlobalSearch }: any) {
+function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab, showToast, user, onLogout, savedContents, schedule, onPositioning, showAddAccount, setShowAddAccount, newAccName, setNewAccName, newAccIndustry, setNewAccIndustry, newAccEmoji, setNewAccEmoji, addAccount, hotspots, radarData, fetchRadar, radarLoading, savedTopics, setShowAiPanel, videoRecords, savedTopicsCount, setShowGlobalSearch, setShowSuperGen, knowledgeItems }: any) {
       const EMOJIS = ['🏪', '🍜', '💪', '💄', '📚', '🏠', '🚗', '🎵', '🌿', '☕']
 
       // 任务完成状态
@@ -1686,6 +1789,9 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
         if (todaySchedule.length === 0) {
           tasks.push({ id: 'schedule', icon: '📅', label: '安排今日发布', desc: '还没有今日排期，去运营中心添加', priority: 'normal', action: 'operations', tag: '建议' })
         }
+        if ((knowledgeItems||[]).length === 0) {
+          tasks.push({ id: 'knowledge', icon: '🧠', label: '建立专属知识库', desc: '添加你的专业知识，让 AI 生成更有深度的文案', priority: 'important', action: 'knowledge', tag: '推荐' })
+        }
 
         return tasks.slice(0, 6)
       }, [acc, todaySchedule, savedContents, radarData, savedTopics, savedTopicsCount])
@@ -1710,6 +1816,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
         else if (action === 'topics') { setTab('materials'); setMatTab('topics') }
         else if (action === 'operations') { setTab('operations') }
         else if (action === 'radar') { setTab('materials'); setMatTab('hotspot') }
+        else if (action === 'knowledge') { setTab('materials'); setMatTab('knowledge') }
       }
 
       // 生成每日内容计划
@@ -1733,8 +1840,8 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
       const statsCards = [
         { label: '已存文案', value: savedContents.length, icon: '✍️', color: 'blue', action: 'content' },
         { label: '选题库', value: savedTopicsCount || savedTopics?.length || 0, icon: '💡', color: 'purple', action: 'topics' },
+        { label: '知识库', value: (knowledgeItems||[]).length, icon: '🧠', color: 'indigo', action: 'knowledge' },
         { label: '排期数', value: schedule.length, icon: '📅', color: 'green', action: 'operations' },
-        { label: '视频记录', value: videoRecords?.length || 0, icon: '🎬', color: 'orange', action: 'operations' },
       ]
 
       const priorityConfig: any = {
@@ -1820,6 +1927,19 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
               </div>
             </div>
 
+            {/* 超级生成横幅 */}
+            <div
+              onClick={() => { setTab('materials'); setMatTab('knowledge'); setTimeout(()=>setShowSuperGen(true),300) }}
+              className="mx-4 mb-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl px-4 py-3 flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer shadow-lg shadow-purple-200/50"
+            >
+              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl flex-shrink-0">⚡</div>
+              <div className="flex-1">
+                <div className="font-black text-white text-sm">超级文案生成</div>
+                <div className="text-white/80 text-[10px]">热点 × 知识库({(knowledgeItems||[]).length}条) × 风格 三合一</div>
+              </div>
+              <div className="text-white/80 text-sm font-bold">立即 →</div>
+            </div>
+
             {/* 每日内容计划弹层 */}
             {showDailyPlan && (
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -1876,7 +1996,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
               {statsCards.map((card: any) => (
                 <button
                   key={card.label}
-                  onClick={() => { if (card.action === 'topics') { setTab('materials'); setMatTab('topics') } else setTab(card.action) }}
+                  onClick={() => { if (card.action === 'topics') { setTab('materials'); setMatTab('topics') } else if (card.action === 'knowledge') { setTab('materials'); setMatTab('knowledge') } else setTab(card.action) }}
                   className="bg-white rounded-2xl p-3 shadow-sm text-center active:scale-95 transition-transform"
                 >
                   <div className="text-lg mb-1">{card.icon}</div>
@@ -2013,6 +2133,8 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                   { icon: '📊', label: '运营中心', action: () => setTab('operations'), color: 'bg-red-50' },
                   { icon: '🎨', label: '风格模板', action: () => { setTab('materials'); setMatTab('style') }, color: 'bg-pink-50' },
                   { icon: '👥', label: '博主追踪', action: () => { setTab('materials'); setMatTab('creator') }, color: 'bg-cyan-50' },
+                  { icon: '⚡', label: '超级生成', action: () => { setTab('materials'); setMatTab('knowledge'); setTimeout(()=>setShowSuperGen(true),300) }, color: 'bg-gradient-to-br from-purple-50 to-pink-50' },
+                  { icon: '🧠', label: '知识库', action: () => { setTab('materials'); setMatTab('knowledge') }, color: 'bg-indigo-50' },
                   { icon: '📥', label: '导出数据', action: () => { setTab('profile') }, color: 'bg-teal-50' },
                   { icon: '🎯', label: '账号定位', action: onPositioning, color: 'bg-amber-50' },
                 ].map((item: any, i: number) => (
@@ -2136,13 +2258,14 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
     }
     
 
-function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, topicFilter, setTopicFilter, topicSearch, setTopicSearch, batchCount, setBatchCount, topicCategories, selectedCategory, setSelectedCategory, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy, setShowAiPanel, creatorAnalysisTab, setCreatorAnalysisTab, selectedScript, setSelectedScript, showScriptDetail, setShowScriptDetail }: any) {
+function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, topicFilter, setTopicFilter, topicSearch, setTopicSearch, batchCount, setBatchCount, topicCategories, selectedCategory, setSelectedCategory, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy, setShowAiPanel, creatorAnalysisTab, setCreatorAnalysisTab, selectedScript, setSelectedScript, showScriptDetail, setShowScriptDetail, knowledgeItems, knowledgeInput, setKnowledgeInput, knowledgeTitle, setKnowledgeTitle, knowledgeCategory, setKnowledgeCategory, showAddKnowledge, setShowAddKnowledge, knowledgeSearch, setKnowledgeSearch, addKnowledgeItem, deleteKnowledgeItem, showSuperGen, setShowSuperGen, superGenLoading, superGenResult, setSuperGenResult, superGenTopic, setSuperGenTopic, superGenHotspot, setSuperGenHotspot, superGenStyle, setSuperGenStyle, superGenKnowledge, setSuperGenKnowledge, superGenerate, acc: accProp }: any) {
   const TABS = [
     { id: 'hotspot', label: '🔥 热点' },
     { id: 'topics', label: '💡 选题库' },
     { id: 'radar', label: '📡 情报' },
     { id: 'creator', label: '🎯 博主' },
     { id: 'style', label: '🎨 风格' },
+    { id: 'knowledge', label: '🧠 知识库' },
   ]
 
   // 博主追踪本地状态
@@ -3183,6 +3306,279 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── 知识库 Tab ── */}
+        {matTab === 'knowledge' && (
+          <div className="space-y-3 pb-4">
+            {/* 顶部操作栏 */}
+            <div className="flex items-center gap-2 mt-1">
+              <div className="flex-1 flex items-center gap-2 bg-white rounded-2xl px-3 py-2.5 shadow-sm">
+                <span className="text-gray-400 text-sm">🔍</span>
+                <input
+                  value={knowledgeSearch}
+                  onChange={e => setKnowledgeSearch(e.target.value)}
+                  placeholder="搜索知识库..."
+                  className="flex-1 text-xs outline-none text-gray-700 placeholder-gray-400"
+                />
+              </div>
+              <button
+                onClick={() => setShowAddKnowledge(true)}
+                className="flex-shrink-0 px-3 py-2.5 bg-blue-500 text-white text-xs font-bold rounded-2xl shadow-sm active:scale-95"
+              >+ 添加</button>
+            </div>
+
+            {/* 超级生成入口卡片 */}
+            <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl p-4 shadow-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">⚡</span>
+                <div>
+                  <div className="font-black text-white text-sm">超级文案生成</div>
+                  <div className="text-white/80 text-[10px]">热点 × 知识库 × 风格 三合一</div>
+                </div>
+              </div>
+              <p className="text-white/90 text-xs leading-relaxed mb-3">
+                结合今日热点 + 你的专业知识库 + 账号风格，生成独一无二的高质量文案
+              </p>
+              <button
+                onClick={() => setShowSuperGen(true)}
+                className="w-full py-2.5 bg-white text-purple-600 font-black text-sm rounded-xl active:scale-[0.98] transition-all"
+              >🚀 立即生成</button>
+            </div>
+
+            {/* 知识库统计 */}
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: '全部知识', count: knowledgeItems.length, icon: '📚', color: 'bg-blue-50 text-blue-600' },
+                { label: '专业知识', count: knowledgeItems.filter((k:any)=>k.category==='专业知识').length, icon: '🎓', color: 'bg-purple-50 text-purple-600' },
+                { label: '案例经验', count: knowledgeItems.filter((k:any)=>k.category==='案例经验').length, icon: '💡', color: 'bg-amber-50 text-amber-600' },
+              ].map((s,i) => (
+                <div key={i} className={`${s.color} rounded-2xl p-3 text-center`}>
+                  <div className="text-xl mb-1">{s.icon}</div>
+                  <div className="font-black text-lg">{s.count}</div>
+                  <div className="text-[10px] font-medium">{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* 知识库列表 */}
+            {knowledgeItems.length === 0 ? (
+              <EmptyState
+                icon="🧠"
+                title="知识库还是空的"
+                desc="添加你的专业知识、行业经验、成功案例，AI 生成文案时会自动调用"
+                action="添加第一条知识"
+                onAction={() => setShowAddKnowledge(true)}
+              />
+            ) : (
+              <div className="space-y-2">
+                {knowledgeItems
+                  .filter((k:any) => !knowledgeSearch || k.title.includes(knowledgeSearch) || k.content.includes(knowledgeSearch))
+                  .map((item: any) => (
+                  <div key={item.id} className="bg-white rounded-2xl p-4 shadow-sm">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                            item.category === '专业知识' ? 'bg-blue-50 text-blue-500' :
+                            item.category === '案例经验' ? 'bg-amber-50 text-amber-500' :
+                            item.category === '行业洞察' ? 'bg-purple-50 text-purple-500' :
+                            'bg-gray-100 text-gray-500'
+                          }`}>{item.category}</span>
+                          <span className="text-[10px] text-gray-400">{item.wordCount} 字</span>
+                        </div>
+                        <div className="font-bold text-gray-900 text-sm">{item.title}</div>
+                      </div>
+                      <button
+                        onClick={() => deleteKnowledgeItem(item.id)}
+                        className="text-gray-300 text-lg active:text-red-400 flex-shrink-0"
+                      >🗑️</button>
+                    </div>
+                    <p className="text-xs text-gray-500 leading-relaxed line-clamp-3">{item.content}</p>
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
+                      <span className="text-[10px] text-gray-400">{new Date(item.createdAt).toLocaleDateString('zh-CN')}</span>
+                      <button
+                        onClick={() => { setSuperGenKnowledge([item.id]); setShowSuperGen(true) }}
+                        className="text-[10px] text-purple-500 font-semibold bg-purple-50 px-2.5 py-1 rounded-lg active:scale-95"
+                      >用此知识生成文案 →</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 添加知识弹窗 */}
+            {showAddKnowledge && (
+              <div className="fixed inset-0 z-[300] flex items-end justify-center" onClick={() => setShowAddKnowledge(false)}>
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+                <div className="relative w-full max-w-[430px] bg-white rounded-t-3xl p-5 pb-8 animate-slide-bottom" onClick={e => e.stopPropagation()}>
+                  <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
+                  <div className="font-black text-gray-900 text-base mb-4">🧠 添加知识</div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs text-gray-500 font-medium mb-1.5 block">知识标题</label>
+                      <input
+                        value={knowledgeTitle}
+                        onChange={e => setKnowledgeTitle(e.target.value)}
+                        placeholder="如：本地餐饮选址的3个核心要素"
+                        className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 font-medium mb-1.5 block">分类</label>
+                      <div className="flex gap-2 flex-wrap">
+                        {['专业知识', '案例经验', '行业洞察', '用户痛点', '产品卖点'].map(cat => (
+                          <button
+                            key={cat}
+                            onClick={() => setKnowledgeCategory(cat)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${knowledgeCategory === cat ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500'}`}
+                          >{cat}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 font-medium mb-1.5 block">知识内容</label>
+                      <textarea
+                        value={knowledgeInput}
+                        onChange={e => setKnowledgeInput(e.target.value)}
+                        placeholder="详细描述你的专业知识、行业经验或成功案例...&#10;&#10;例如：我在餐饮行业10年，发现选址最重要的是：1.人流量要看早中晚三个时段...&#10;&#10;AI 会在生成文案时自动调用这些内容，让文案更专业、更有说服力。"
+                        className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-36 leading-relaxed"
+                      />
+                      <div className="text-right text-[10px] text-gray-400 mt-1">{knowledgeInput.length} 字</div>
+                    </div>
+                    <button
+                      onClick={addKnowledgeItem}
+                      className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] shadow-md"
+                    >✅ 保存到知识库</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 超级生成弹窗 */}
+            {showSuperGen && (
+              <div className="fixed inset-0 z-[300] flex items-end justify-center" onClick={() => { if (!superGenLoading) setShowSuperGen(false) }}>
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+                <div className="relative w-full max-w-[430px] bg-white rounded-t-3xl p-5 pb-8 animate-slide-bottom max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                  <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-2xl">⚡</span>
+                    <div>
+                      <div className="font-black text-gray-900 text-base">超级文案生成</div>
+                      <div className="text-xs text-gray-400">热点 × 知识库 × 风格 三合一</div>
+                    </div>
+                  </div>
+
+                  {superGenResult.length === 0 ? (
+                    <div className="space-y-4">
+                      {/* 选题输入 */}
+                      <div>
+                        <label className="text-xs text-gray-500 font-semibold mb-1.5 block">📌 选题 <span className="text-red-400">*</span></label>
+                        <input
+                          value={superGenTopic}
+                          onChange={e => setSuperGenTopic(e.target.value)}
+                          placeholder="输入你想做的视频选题..."
+                          className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none"
+                        />
+                      </div>
+
+                      {/* 结合热点 */}
+                      <div>
+                        <label className="text-xs text-gray-500 font-semibold mb-1.5 block">🔥 结合热点（可选）</label>
+                        <input
+                          value={superGenHotspot}
+                          onChange={e => setSuperGenHotspot(e.target.value)}
+                          placeholder="粘贴今日热点话题，如：#五一出行攻略..."
+                          className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none"
+                        />
+                      </div>
+
+                      {/* 参考风格 */}
+                      <div>
+                        <label className="text-xs text-gray-500 font-semibold mb-1.5 block">🎨 参考风格（可选）</label>
+                        <input
+                          value={superGenStyle}
+                          onChange={e => setSuperGenStyle(e.target.value)}
+                          placeholder="描述你的风格，如：犀利直接、有争议性..."
+                          className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none"
+                        />
+                      </div>
+
+                      {/* 选择知识库 */}
+                      {knowledgeItems.length > 0 && (
+                        <div>
+                          <label className="text-xs text-gray-500 font-semibold mb-1.5 block">🧠 调用知识库（可多选）</label>
+                          <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                            {knowledgeItems.map((k: any) => (
+                              <button
+                                key={k.id}
+                                onClick={() => setSuperGenKnowledge((prev: string[]) =>
+                                  prev.includes(k.id) ? prev.filter((id: string) => id !== k.id) : [...prev, k.id]
+                                )}
+                                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left transition-all ${superGenKnowledge.includes(k.id) ? 'bg-blue-50 border border-blue-300' : 'bg-gray-50 border border-transparent'}`}
+                              >
+                                <span className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 text-xs ${superGenKnowledge.includes(k.id) ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
+                                  {superGenKnowledge.includes(k.id) ? '✓' : ''}
+                                </span>
+                                <span className="text-xs text-gray-700 truncate">{k.title}</span>
+                                <span className="text-[10px] text-gray-400 flex-shrink-0">{k.category}</span>
+                              </button>
+                            ))}
+                          </div>
+                          {knowledgeItems.length === 0 && (
+                            <p className="text-xs text-gray-400 text-center py-2">知识库为空，先添加知识</p>
+                          )}
+                        </div>
+                      )}
+
+                      <button
+                        onClick={superGenerate}
+                        disabled={superGenLoading || !superGenTopic.trim()}
+                        className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-black rounded-2xl text-sm disabled:opacity-50 active:scale-[0.98] shadow-lg shadow-purple-200"
+                      >
+                        {superGenLoading
+                          ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>AI 深度生成中...</span>
+                          : '⚡ 开始超级生成'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-bold text-gray-800">✅ 生成了 {superGenResult.length} 个版本</div>
+                        <button onClick={() => setSuperGenResult([])} className="text-xs text-gray-400">重新生成</button>
+                      </div>
+                      {superGenResult.map((v: any, i: number) => (
+                        <div key={i} className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+                          <div className="bg-gradient-to-r from-purple-500 to-pink-400 px-4 py-2.5 flex items-center justify-between">
+                            <span className="text-white font-black text-sm">版本 {i+1}</span>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => { try { navigator.clipboard.writeText(v.content); showToast('✅ 已复制') } catch {} }}
+                                className="text-[10px] font-bold text-white bg-white/20 px-2.5 py-1 rounded-lg"
+                              >复制</button>
+                              <button
+                                onClick={() => { setTab('content'); showToast('✅ 已导入内容中心') }}
+                                className="text-[10px] font-bold text-white bg-white/20 px-2.5 py-1 rounded-lg"
+                              >去编辑</button>
+                            </div>
+                          </div>
+                          <div className="p-4">
+                            {v.hook && <div className="bg-orange-50 rounded-xl px-3 py-2 mb-3 flex gap-2"><span>🎣</span><span className="text-xs text-orange-600 font-medium">{v.hook}</span></div>}
+                            <p className="text-sm text-gray-800 leading-relaxed">{v.content}</p>
+                            <div className="text-[10px] text-gray-400 mt-2">{v.content?.length || 0} 字 · ≈ {Math.ceil((v.content?.length||0)/4)} 秒</div>
+                          </div>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => { setShowSuperGen(false); setSuperGenResult([]) }}
+                        className="w-full py-3 bg-gray-100 text-gray-600 font-bold rounded-2xl text-sm"
+                      >完成</button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -6524,7 +6920,7 @@ function Profile({
               <div className="w-16 h-16 rounded-[22px] bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-3xl mx-auto mb-3 shadow-lg">🎬</div>
               <div className="font-black text-gray-900 text-lg">ContentOS</div>
               <div className="text-xs text-gray-400 mt-1">AI 内容增长工作台</div>
-              <div className="text-xs text-gray-300 mt-0.5">v9.3.0</div>
+              <div className="text-xs text-gray-300 mt-0.5">v10.0.0</div>
             </div>
 
             {/* 外观设置 */}
