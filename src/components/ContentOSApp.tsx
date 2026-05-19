@@ -19,6 +19,14 @@ interface Account {
   id: string; name: string; emoji: string; industry: string
   positioning: string; targetAudience: string; color: string
   followers?: string; likes?: string; works?: string
+  // 账号独立数据（每个账号独立存储）
+  savedContents?: SavedContent[]
+  savedTopics?: any[]
+  videoRecords?: any[]
+  schedule?: any[]
+  knowledgeItems?: any[]
+  radarCache?: any
+  aiTopicsCache?: any[]
 }
 interface SavedContent {
   id: string; topic: string; style: string; content: string
@@ -678,6 +686,26 @@ export default function ContentOSApp() {
 
   const acc = accounts[accountIdx] || accounts[0]
 
+  // 账号切换时加载对应数据
+  const prevAccIdRef = React.useRef<string>('')
+  React.useEffect(() => {
+    if (!acc?.id) return
+    if (prevAccIdRef.current === acc.id) return
+    if (prevAccIdRef.current) {
+      // 切换账号：加载新账号数据
+      loadAccData(acc.id)
+      localStorage.setItem('contentos_account_idx', String(accountIdx))
+    }
+    prevAccIdRef.current = acc.id
+  }, [acc?.id])
+
+  // 账号数据自动持久化
+  React.useEffect(() => { if (acc?.id) saveAccData(acc.id, 'saved', savedContents) }, [savedContents])
+  React.useEffect(() => { if (acc?.id) saveAccData(acc.id, 'topics', savedTopics) }, [savedTopics])
+  React.useEffect(() => { if (acc?.id) saveAccData(acc.id, 'video_records', videoRecords) }, [videoRecords])
+  React.useEffect(() => { if (acc?.id) saveAccData(acc.id, 'schedule', schedule) }, [schedule])
+  React.useEffect(() => { if (acc?.id) saveAccData(acc.id, 'knowledge', knowledgeItems) }, [knowledgeItems])
+
   // ─── Effects ─────────────────────────────────────────────
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -689,12 +717,26 @@ export default function ContentOSApp() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // ─── 账号数据隔离：按 accountId 读写 ─────────────────────
+  function getAccKey(accId: string, key: string) { return `contentos_${accId}_${key}` }
+  function loadAccData(accId: string) {
+    try {
+      const s = localStorage.getItem(getAccKey(accId, 'saved')); setSavedContents(s ? JSON.parse(s) : [])
+      const st = localStorage.getItem(getAccKey(accId, 'topics')); setSavedTopics(st ? JSON.parse(st) : [])
+      const vr = localStorage.getItem(getAccKey(accId, 'video_records')); setVideoRecords(vr ? JSON.parse(vr) : [])
+      const sch = localStorage.getItem(getAccKey(accId, 'schedule')); setSchedule(sch ? JSON.parse(sch) : [])
+      const kb = localStorage.getItem(getAccKey(accId, 'knowledge')); setKnowledgeItems(kb ? JSON.parse(kb) : [])
+    } catch {}
+  }
+  function saveAccData(accId: string, key: string, data: any) {
+    try { localStorage.setItem(getAccKey(accId, key), JSON.stringify(data)) } catch {}
+  }
+
   useEffect(() => {
     try {
-      const s = localStorage.getItem('contentos_saved'); if (s) setSavedContents(JSON.parse(s))
+      // 全局数据（不按账号隔离）
       const t = localStorage.getItem('contentos_style_templates'); if (t) setStyleTemplates(JSON.parse(t))
       const c = localStorage.getItem('contentos_creators'); if (c) setTrackedCreators(JSON.parse(c))
-      const st = localStorage.getItem('contentos_saved_topics'); if (st) setSavedTopics(JSON.parse(st))
       const ac = localStorage.getItem('contentos_accounts'); if (ac) setAccounts(JSON.parse(ac))
       const ai = localStorage.getItem('contentos_ai_settings')
       if (ai) {
@@ -706,9 +748,14 @@ export default function ContentOSApp() {
         if (s.temperature) setAiTemperature(s.temperature)
       }
       const mp = localStorage.getItem('contentos_module_prompts'); if (mp) setModulePrompts(JSON.parse(mp))
-      const vr = localStorage.getItem('contentos_video_records'); if (vr) setVideoRecords(JSON.parse(vr))
       const cr = localStorage.getItem('contentos_credits'); if (cr) setCredits(parseInt(cr) || 1000)
-      const kb = localStorage.getItem('contentos_knowledge'); if (kb) setKnowledgeItems(JSON.parse(kb))
+      // 加载当前账号数据
+      const savedAccIdx = localStorage.getItem('contentos_account_idx')
+      const initIdx = savedAccIdx ? parseInt(savedAccIdx) || 0 : 0
+      setAccountIdx(initIdx)
+      const acList = ac ? JSON.parse(ac) : DEFAULT_ACCOUNTS
+      const initAccId = acList[initIdx]?.id || acList[0]?.id || '1'
+      loadAccData(initAccId)
     } catch {}
   }, [])
 
@@ -717,6 +764,10 @@ export default function ContentOSApp() {
 
   function saveToLocal(key: string, data: any) {
     try { localStorage.setItem(key, JSON.stringify(data)) } catch {}
+  }
+  // 账号数据专用保存（自动带 accountId 前缀）
+  function saveAccLocal(key: string, data: any) {
+    saveAccData(acc?.id || '1', key, data)
   }
 
   // ─── 数据导出 CSV ────────────────────────────────────────
@@ -765,7 +816,7 @@ export default function ContentOSApp() {
     }
     const updated = [item, ...knowledgeItems]
     setKnowledgeItems(updated)
-    saveToLocal('contentos_knowledge', updated)
+    saveAccLocal('knowledge', updated)
     setKnowledgeTitle('')
     setKnowledgeInput('')
     setShowAddKnowledge(false)
@@ -775,7 +826,7 @@ export default function ContentOSApp() {
   function deleteKnowledgeItem(id: string) {
     const updated = knowledgeItems.filter((k: any) => k.id !== id)
     setKnowledgeItems(updated)
-    saveToLocal('contentos_knowledge', updated)
+    saveAccLocal('knowledge', updated)
     showToast('已删除')
   }
 
@@ -1123,7 +1174,7 @@ export default function ContentOSApp() {
     }
     const updated = [newRecord, ...videoRecords]
     setVideoRecords(updated)
-    saveToLocal('contentos_video_records', updated)
+    saveAccLocal('video_records', updated)
     // 同步更新 platformStats（累加数据）
     setPlatformStats((prev: any) => {
       const addVal = (arr: number[], add: number) => [...arr.slice(1), (arr[arr.length - 1] || 0) + add]
@@ -1158,7 +1209,7 @@ export default function ContentOSApp() {
     }
     const updated = [item, ...savedContents]
     setSavedContents(updated)
-    saveToLocal('contentos_saved', updated)
+    saveAccLocal('saved', updated)
     showToast('✅ 已保存到素材库')
   }
 
@@ -1177,12 +1228,12 @@ export default function ContentOSApp() {
     if (savedTopics.includes(title)) {
       const updated = savedTopics.filter(t => t !== title)
       setSavedTopics(updated)
-      saveToLocal('contentos_saved_topics', updated)
+      saveAccLocal('topics', updated)
       showToast('已取消收藏')
     } else {
       const updated = [title, ...savedTopics]
       setSavedTopics(updated)
-      saveToLocal('contentos_saved_topics', updated)
+      saveAccLocal('topics', updated)
       showToast('✅ 已收藏选题')
     }
   }
@@ -1598,7 +1649,7 @@ export default function ContentOSApp() {
                 batchCount={batchCount} setBatchCount={setBatchCount}
                 topicCategories={topicCategories} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}
                 useTopic={(t: string) => { setSelectedTopic(t); setTab('content'); setContentStep(2) }}
-                savedContents={savedContents} savedTopics={savedTopics} saveTopic={saveTopic}
+                savedContents={savedContents} savedTopics={savedTopics} videoRecords={videoRecords} saveTopic={saveTopic}
                 creatorUrl={creatorUrl} setCreatorUrl={setCreatorUrl}
                 creatorLoading={creatorLoading} creatorData={creatorData}
                 setCreatorData={setCreatorData} trackedCreators={trackedCreators}
@@ -1750,6 +1801,7 @@ export default function ContentOSApp() {
 // DASHBOARD v2 — 工作台首页（每日任务+快捷入口+数据概览）
 // ═══════════════════════════════════════════════════════════
 function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab, showToast, user, onLogout, savedContents, schedule, onPositioning, showAddAccount, setShowAddAccount, newAccName, setNewAccName, newAccIndustry, setNewAccIndustry, newAccEmoji, setNewAccEmoji, addAccount, hotspots, radarData, fetchRadar, radarLoading, savedTopics, setShowAiPanel, videoRecords, savedTopicsCount, setShowGlobalSearch, setShowSuperGen, knowledgeItems }: any) {
+  const [showAccSwitcher, setShowAccSwitcher] = React.useState(false)
       const EMOJIS = ['🏪', '🍜', '💪', '💄', '📚', '🏠', '🚗', '🎵', '🌿', '☕']
 
       // 任务完成状态
@@ -1887,27 +1939,26 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
             </div>
 
             {/* 账号切换 */}
-            {accounts.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-                {accounts.map((a: any, i: number) => (
-                  <button
-                    key={a.id}
-                    onClick={() => setAccountIdx(i)}
-                    className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${i === accountIdx ? 'bg-blue-500 text-white shadow-sm' : 'bg-gray-100 text-gray-500'}`}
-                  >
-                    <span>{a.emoji || '🏪'}</span>
-                    <span>{a.name}</span>
-                  </button>
-                ))}
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+              {accounts.map((a: any, i: number) => (
                 <button
-                  onClick={() => setShowAddAccount(true)}
-                  className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-400"
+                  key={a.id}
+                  onClick={() => { setAccountIdx(i); if (typeof navigator !== 'undefined') navigator.vibrate?.(10) }}
+                  className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 ${i === accountIdx ? 'bg-blue-500 text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
                 >
-                  <span>+</span>
-                  <span>添加</span>
+                  <span>{a.emoji || '🏪'}</span>
+                  <span className="max-w-[60px] truncate">{a.name}</span>
+                  {i === accountIdx && <span className="w-1.5 h-1.5 rounded-full bg-white/70 flex-shrink-0" />}
                 </button>
-              </div>
-            )}
+              ))}
+              <button
+                onClick={() => setShowAddAccount(true)}
+                className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-dashed border-2 border-dashed border-gray-200 text-gray-400 hover:border-blue-300 hover:text-blue-400 transition-all"
+              >
+                <span>＋</span>
+                <span>新账号</span>
+              </button>
+            </div>
           </div>
 
           {/* 主内容区 */}
@@ -5066,7 +5117,7 @@ ${line}
             </div>
 
             {/* MiniMax 视频生成 */}
-            <VideoGeneratePanel videoCopy={videoCopy} showToast={showToast} videoRatio={videoRatio} subtitleStyle={subtitleStyle} subtitleFontSize={subtitleFontSize} subtitleColor={subtitleColor} />
+            <VideoComposePanel videoCopy={videoCopy} audioB64={audioB64} showToast={showToast} videoRatio={videoRatio} subtitleStyle={subtitleStyle} subtitleFontSize={subtitleFontSize} subtitleColor={subtitleColor} />
             {/* 操作按钮组 */}
             <div className="grid grid-cols-2 gap-2">
               {/* 录入发布数据 */}
@@ -5109,7 +5160,311 @@ ${line}
 }
 
 // ═══════════════════════════════════════════════════════════
-// VIDEO GENERATE PANEL — MiniMax 视频合成面板
+// ═══════════════════════════════════════════════════════════
+    // VIDEO COMPOSE PANEL — 视频合成面板（LatentSync + FFmpeg + T2V）
+    // ═══════════════════════════════════════════════════════════
+    function VideoComposePanel({ videoCopy, audioB64, showToast, videoRatio, subtitleStyle, subtitleFontSize, subtitleColor }: any) {
+      type ComposeMode = 'latentsync' | 'ffmpeg_bg' | 'minimax_t2v'
+      type ComposeStatus = 'idle' | 'uploading' | 'processing' | 'polling' | 'done' | 'error' | 'demo' | 'client_side'
+
+      const [composeMode, setComposeMode] = React.useState<ComposeMode>('latentsync')
+      const [composeStatus, setComposeStatus] = React.useState<ComposeStatus>('idle')
+      const [composeTaskId, setComposeTaskId] = React.useState('')
+      const [composeVideoUrl, setComposeVideoUrl] = React.useState('')
+      const [composeError, setComposeError] = React.useState('')
+      const [pollCount, setPollCount] = React.useState(0)
+      const pollRef = React.useRef<any>(null)
+      const [avatarVideoB64, setAvatarVideoB64] = React.useState('')
+      const [avatarVideoName, setAvatarVideoName] = React.useState('')
+      const [avatarVideoPreview, setAvatarVideoPreview] = React.useState('')
+      const [bgImageB64, setBgImageB64] = React.useState('')
+      const [bgImagePreview, setBgImagePreview] = React.useState('')
+      const [bgImageName, setBgImageName] = React.useState('')
+      const [t2vPrompt, setT2vPrompt] = React.useState('')
+
+      React.useEffect(() => {
+        if (videoCopy) {
+          const preview = videoCopy.slice(0, 60).replace(/\n/g, ' ')
+          setT2vPrompt(`一位专业主播正在讲述：${preview}，竖屏视频，真实感强，光线明亮`)
+        }
+      }, [videoCopy])
+
+      const MODES = [
+        { id: 'latentsync', label: 'LatentSync换嘴型', icon: '🎭', desc: '上传人物视频，AI同步嘴型', badge: '推荐', badgeColor: 'bg-purple-100 text-purple-600' },
+        { id: 'ffmpeg_bg', label: '背景图合成', icon: '🖼️', desc: '上传背景图，配音合成视频', badge: 'FFmpeg', badgeColor: 'bg-blue-100 text-blue-600' },
+        { id: 'minimax_t2v', label: 'AI视频生成', icon: '🤖', desc: '文字描述生成视频画面', badge: 'T2V', badgeColor: 'bg-green-100 text-green-600' },
+      ]
+
+      function handleAvatarVideoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0]
+        if (!file) return
+        if (file.size > 50 * 1024 * 1024) { showToast('视频文件不能超过50MB'); return }
+        setAvatarVideoName(file.name)
+        setAvatarVideoPreview(URL.createObjectURL(file))
+        const reader = new FileReader()
+        reader.onload = () => setAvatarVideoB64((reader.result as string).split(',')[1])
+        reader.readAsDataURL(file)
+      }
+
+      function handleBgImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0]
+        if (!file) return
+        setBgImageName(file.name)
+        setBgImagePreview(URL.createObjectURL(file))
+        const reader = new FileReader()
+        reader.onload = () => setBgImageB64((reader.result as string).split(',')[1])
+        reader.readAsDataURL(file)
+      }
+
+      async function startCompose() {
+        if (!audioB64) { showToast('请先在声音步骤合成语音'); return }
+        setComposeStatus('uploading'); setComposeError(''); setComposeVideoUrl(''); setPollCount(0)
+        try {
+          let body: any = { mode: composeMode }
+          if (composeMode === 'latentsync') {
+            if (!avatarVideoB64) { showToast('请先上传人物视频'); setComposeStatus('idle'); return }
+            body.videoBase64 = avatarVideoB64; body.audioBase64 = audioB64
+            body.videoFormat = avatarVideoName.split('.').pop() || 'mp4'
+          } else if (composeMode === 'ffmpeg_bg') {
+            if (!bgImageB64) { showToast('请先上传背景图片'); setComposeStatus('idle'); return }
+            body.imageBase64 = bgImageB64; body.audioBase64 = audioB64
+            body.imageFormat = bgImageName.split('.').pop() || 'jpg'
+            body.subtitles = videoCopy ? videoCopy.split('\n').filter(Boolean) : []
+          } else {
+            if (!t2vPrompt.trim()) { showToast('请输入视频描述'); setComposeStatus('idle'); return }
+            body.prompt = t2vPrompt; body.duration = 6
+          }
+          const res = await fetch('/api/video-compose', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+          const data = await res.json()
+          if (data.status === 'demo') { setComposeStatus('demo'); showToast('⚠️ 演示模式：' + (data.message || 'API未配置')); return }
+          if (data.status === 'client_side') { setComposeStatus('client_side'); return }
+          if (data.taskId) { setComposeTaskId(data.taskId); setComposeStatus('polling'); startPolling(data.taskId, composeMode); showToast('🎬 视频合成任务已提交') }
+          else { setComposeStatus('error'); setComposeError(data.error || '提交失败') }
+        } catch (e: any) { setComposeStatus('error'); setComposeError(e.message) }
+      }
+
+      function startPolling(taskId: string, mode: string) {
+        let count = 0
+        const modeParam = mode === 'latentsync' ? 'latentsync' : mode === 'ffmpeg_bg' ? 'shotstack' : 'minimax'
+        pollRef.current = setInterval(async () => {
+          count++; setPollCount(count)
+          if (count > 120) { clearInterval(pollRef.current); setComposeStatus('error'); setComposeError('合成超时，请重试'); return }
+          try {
+            const res = await fetch(`/api/video-compose-status?taskId=${taskId}&mode=${modeParam}`)
+            const data = await res.json()
+            if (data.status === 'Success' || data.videoUrl) { clearInterval(pollRef.current); setComposeStatus('done'); setComposeVideoUrl(data.videoUrl || ''); showToast('✅ 视频合成完成！') }
+            else if (data.status === 'Fail') { clearInterval(pollRef.current); setComposeStatus('error'); setComposeError(data.error || '合成失败') }
+          } catch {}
+        }, 5000)
+      }
+
+      React.useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current) }, [])
+
+      const progressSteps = [
+        { label: '上传素材', done: ['uploading','processing','polling','done'].includes(composeStatus) },
+        { label: '提交任务', done: ['processing','polling','done'].includes(composeStatus) },
+        { label: 'AI处理中', done: ['polling','done'].includes(composeStatus) },
+        { label: '合成完成', done: composeStatus === 'done' },
+      ]
+
+      return (
+        <div className="space-y-3">
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="font-bold text-gray-900 text-sm">🎬 视频合成</div>
+                <div className="text-[11px] text-gray-400 mt-0.5">选择合成方式，生成完整视频</div>
+              </div>
+              {audioB64 ? (
+                <span className="text-[10px] font-bold px-2 py-1 bg-green-100 text-green-600 rounded-full">✅ 语音已就绪</span>
+              ) : (
+                <span className="text-[10px] font-bold px-2 py-1 bg-orange-100 text-orange-500 rounded-full">⚠️ 请先合成语音</span>
+              )}
+            </div>
+            <div className="space-y-2">
+              {MODES.map(m => (
+                <button key={m.id} onClick={() => { setComposeMode(m.id as ComposeMode); setComposeStatus('idle'); setComposeError('') }}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all active:scale-[0.98] ${composeMode === m.id ? 'bg-purple-50 border-2 border-purple-400' : 'bg-gray-50 border-2 border-transparent'}`}>
+                  <span className="text-2xl flex-shrink-0">{m.icon}</span>
+                  <div className="flex-1 text-left">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-bold ${composeMode === m.id ? 'text-purple-700' : 'text-gray-800'}`}>{m.label}</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${m.badgeColor}`}>{m.badge}</span>
+                    </div>
+                    <div className="text-xs text-gray-400 mt-0.5">{m.desc}</div>
+                  </div>
+                  {composeMode === m.id && <span className="text-purple-500 font-bold flex-shrink-0">✓</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {composeMode === 'latentsync' && (
+            <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+              <div className="font-bold text-gray-900 text-sm">🎭 上传人物视频</div>
+              <div className="text-xs text-gray-500 leading-relaxed bg-purple-50 rounded-xl p-3">
+                <div className="font-semibold text-purple-700 mb-1">📋 要求</div>
+                <div>• 人物正面朝向镜头，嘴部清晰可见</div>
+                <div>• 建议时长 5~30 秒，MP4/MOV 格式</div>
+                <div>• AI 将自动同步嘴型与您的语音</div>
+              </div>
+              {avatarVideoPreview ? (
+                <div className="relative rounded-xl overflow-hidden bg-black aspect-[9/16] max-h-48">
+                  <video src={avatarVideoPreview} className="w-full h-full object-cover" controls muted />
+                  <button onClick={() => { setAvatarVideoB64(''); setAvatarVideoPreview(''); setAvatarVideoName('') }}
+                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 text-white text-xs flex items-center justify-center">✕</button>
+                  <div className="absolute bottom-2 left-2 text-[10px] text-white/80 bg-black/40 px-2 py-0.5 rounded-full truncate max-w-[80%]">{avatarVideoName}</div>
+                </div>
+              ) : (
+                <label className="block w-full py-8 bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl text-center cursor-pointer hover:border-purple-300 hover:bg-purple-50 transition-all active:scale-[0.98]">
+                  <input type="file" accept="video/*" className="hidden" onChange={handleAvatarVideoUpload} />
+                  <div className="text-3xl mb-2">🎥</div>
+                  <div className="text-sm font-semibold text-gray-600">点击上传人物视频</div>
+                  <div className="text-xs text-gray-400 mt-1">MP4 / MOV · 最大 50MB</div>
+                </label>
+              )}
+            </div>
+          )}
+
+          {composeMode === 'ffmpeg_bg' && (
+            <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+              <div className="font-bold text-gray-900 text-sm">🖼️ 上传背景图片</div>
+              <div className="text-xs text-gray-500 leading-relaxed bg-blue-50 rounded-xl p-3">
+                <div className="font-semibold text-blue-700 mb-1">📋 合成说明</div>
+                <div>• 上传竖屏背景图（9:16 比例最佳）</div>
+                <div>• 系统将图片+语音合成为视频</div>
+                <div>• 字幕将自动叠加在视频底部</div>
+              </div>
+              {bgImagePreview ? (
+                <div className="relative rounded-xl overflow-hidden bg-gray-100 aspect-[9/16] max-h-48">
+                  <img src={bgImagePreview} alt="背景图" className="w-full h-full object-cover" />
+                  <button onClick={() => { setBgImageB64(''); setBgImagePreview(''); setBgImageName('') }}
+                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 text-white text-xs flex items-center justify-center">✕</button>
+                  <div className="absolute bottom-2 left-2 text-[10px] text-white/80 bg-black/40 px-2 py-0.5 rounded-full truncate max-w-[80%]">{bgImageName}</div>
+                </div>
+              ) : (
+                <label className="block w-full py-8 bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-all active:scale-[0.98]">
+                  <input type="file" accept="image/*" className="hidden" onChange={handleBgImageUpload} />
+                  <div className="text-3xl mb-2">🖼️</div>
+                  <div className="text-sm font-semibold text-gray-600">点击上传背景图片</div>
+                  <div className="text-xs text-gray-400 mt-1">JPG / PNG · 建议 9:16 竖屏</div>
+                </label>
+              )}
+            </div>
+          )}
+
+          {composeMode === 'minimax_t2v' && (
+            <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+              <div className="font-bold text-gray-900 text-sm">🤖 视频描述</div>
+              <textarea value={t2vPrompt} onChange={e => setT2vPrompt(e.target.value)} rows={4}
+                placeholder="描述视频画面，如：一位专业主播正在讲述..."
+                className="w-full text-sm px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-purple-400 resize-none leading-relaxed" />
+              <div className="text-xs text-gray-400">由 MiniMax T2V 模型生成，需配置 MINIMAX_API_KEY</div>
+            </div>
+          )}
+
+          {['uploading','processing','polling'].includes(composeStatus) && (
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-4 border border-purple-100">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="relative w-10 h-10 flex-shrink-0">
+                  <div className="absolute inset-0 rounded-full border-[3px] border-purple-200 border-t-purple-500 animate-spin" />
+                  <div className="absolute inset-1.5 rounded-full border-[2px] border-pink-200 border-b-pink-400 animate-spin" style={{animationDirection:'reverse',animationDuration:'0.8s'}} />
+                  <div className="absolute inset-0 flex items-center justify-center text-sm">🎬</div>
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-purple-700">视频合成中...</div>
+                  <div className="text-[11px] text-purple-400">已轮询 {pollCount} 次，预计 1~3 分钟</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                {progressSteps.map((step, i) => (
+                  <React.Fragment key={i}>
+                    <div className="flex flex-col items-center gap-1 flex-1">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${step.done ? 'bg-purple-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                        {step.done ? '✓' : i+1}
+                      </div>
+                      <div className={`text-[9px] text-center leading-tight ${step.done ? 'text-purple-600 font-semibold' : 'text-gray-400'}`}>{step.label}</div>
+                    </div>
+                    {i < progressSteps.length - 1 && (
+                      <div className={`h-0.5 flex-1 mb-4 rounded-full transition-all ${progressSteps[i+1].done ? 'bg-purple-400' : 'bg-gray-200'}`} />
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {composeStatus === 'done' && composeVideoUrl && (
+            <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-xl bg-green-100 flex items-center justify-center text-lg">✅</div>
+                <div>
+                  <div className="font-bold text-gray-900 text-sm">视频合成完成！</div>
+                  <div className="text-xs text-gray-400">点击下方预览或下载</div>
+                </div>
+              </div>
+              <div className="rounded-xl overflow-hidden bg-black aspect-[9/16] max-h-64">
+                <video src={composeVideoUrl} className="w-full h-full object-contain" controls />
+              </div>
+              <a href={composeVideoUrl} download="contentos_video.mp4"
+                className="block w-full py-3 bg-gradient-to-r from-green-500 to-emerald-400 text-white font-bold rounded-2xl text-sm text-center active:scale-[0.98] transition-all shadow-md">
+                ⬇️ 下载视频
+              </a>
+            </div>
+          )}
+
+          {composeStatus === 'demo' && (
+            <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100">
+              <div className="flex items-start gap-2">
+                <span className="text-xl flex-shrink-0">⚠️</span>
+                <div>
+                  <div className="font-bold text-amber-700 text-sm mb-1">演示模式 — API 未配置</div>
+                  <div className="text-xs text-amber-600 leading-relaxed">
+                    {composeMode === 'latentsync' && '配置 REPLICATE_API_KEY 以启用 LatentSync 换嘴型'}
+                    {composeMode === 'ffmpeg_bg' && '配置 FFMPEG_API_KEY（Shotstack）以启用背景合成'}
+                    {composeMode === 'minimax_t2v' && '配置 MINIMAX_API_KEY 以启用 AI 视频生成'}
+                  </div>
+                  <div className="mt-2 text-[11px] text-amber-500 bg-amber-100 rounded-lg p-2 font-mono">
+                    {composeMode === 'latentsync' && 'REPLICATE_API_KEY=r8_xxx'}
+                    {composeMode === 'ffmpeg_bg' && 'FFMPEG_API_KEY=your_shotstack_key'}
+                    {composeMode === 'minimax_t2v' && 'MINIMAX_API_KEY=your_minimax_key'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {composeStatus === 'client_side' && (
+            <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+              <div className="font-bold text-blue-700 text-sm mb-2">💡 本地 FFmpeg 合成命令</div>
+              <div className="text-[11px] text-blue-600 bg-blue-100 rounded-lg p-2 font-mono leading-relaxed">
+                ffmpeg -loop 1 -i bg.jpg -i audio.mp3 -c:v libx264 -tune stillimage -c:a aac -b:a 192k -pix_fmt yuv420p -shortest output.mp4
+              </div>
+            </div>
+          )}
+
+          {composeStatus === 'error' && (
+            <div className="bg-red-50 rounded-2xl p-3 border border-red-100 flex items-start gap-2">
+              <span className="text-base flex-shrink-0 mt-0.5">❌</span>
+              <div>
+                <div className="text-xs font-bold text-red-600 mb-0.5">合成失败</div>
+                <div className="text-[11px] text-red-500 leading-relaxed">{composeError}</div>
+                <button onClick={() => setComposeStatus('idle')} className="mt-2 text-[11px] font-bold text-red-500 bg-red-100 px-3 py-1 rounded-lg active:scale-95">重试</button>
+              </div>
+            </div>
+          )}
+
+          {['idle', 'error'].includes(composeStatus) && (
+            <button onClick={startCompose} disabled={!audioB64}
+              className={`w-full py-3.5 font-bold rounded-2xl text-sm transition-all shadow-md active:scale-[0.98] ${audioB64 ? 'bg-gradient-to-r from-purple-500 to-pink-400 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
+              {!audioB64 ? '⚠️ 请先合成语音' : composeMode === 'latentsync' ? '🎭 开始换嘴型合成' : composeMode === 'ffmpeg_bg' ? '🖼️ 开始背景合成' : '🤖 开始 AI 生成'}
+            </button>
+          )}
+        </div>
+      )
+    }
+
+    // VIDEO GENERATE PANEL — MiniMax 视频合成面板
 // ═══════════════════════════════════════════════════════════
 function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, subtitleFontSize, subtitleColor }: any) {
   const [videoPrompt, setVideoPrompt] = React.useState('')
