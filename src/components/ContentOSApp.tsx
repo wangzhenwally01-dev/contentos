@@ -10,7 +10,7 @@ const supabase = createClient(
 
 // ─── Types ───────────────────────────────────────────────
 type Tab = 'dashboard' | 'materials' | 'content' | 'video' | 'operations' | 'profile'
-type MatTab = 'hotspot' | 'topics' | 'radar' | 'creator' | 'style' | 'knowledge'
+type MatTab = 'hotspot' | 'topics' | 'radar' | 'creator' | 'style' | 'knowledge' | 'trending'
 type OpsTab = 'schedule' | 'stats' | 'goals'
 type VideoStep = 'input' | 'voice' | 'avatar' | 'preview'
 type ContentStep = 1 | 2 | 3
@@ -37,6 +37,7 @@ interface Topic {
 }
 interface ScheduleItem {
   id: string; time: string; title: string; status: '待发布' | '已发布' | '草稿' | '计划中'; platform: string
+  reminder?: boolean; reminderMinutes?: number
 }
 
 // ─── Constants ───────────────────────────────────────────
@@ -545,6 +546,18 @@ export default function ContentOSApp() {
   const [showAddKnowledge, setShowAddKnowledge] = useState(false)
   const [knowledgeSearch, setKnowledgeSearch] = useState('')
 
+  const [trendingItems, setTrendingItems] = useState<any[]>([])
+  const [trendingLoading, setTrendingLoading] = useState(false)
+  const [trendingCategory, setTrendingCategory] = useState('全部')
+  const [trendingSort, setTrendingSort] = useState<'heat' | 'relevance'>('heat')
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default')
+  const [swRegistered, setSwRegistered] = useState(false)
+  const [newScheduleReminder, setNewScheduleReminder] = useState(false)
+  const [newScheduleReminderMinutes, setNewScheduleReminderMinutes] = useState(30)
+  const [newScheduleTime, setNewScheduleTime] = useState('')
+  const [syncLoading, setSyncLoading] = useState(false)
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null)
+
   // 三合一超级生成状态
   const [showSuperGen, setShowSuperGen] = useState(false)
   const [superGenLoading, setSuperGenLoading] = useState(false)
@@ -725,6 +738,28 @@ export default function ContentOSApp() {
     return () => subscription.unsubscribe()
   }, [])
 
+  useEffect(() => {
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').then(() => setSwRegistered(true)).catch(() => {})
+    if ('Notification' in window) setNotificationPermission(Notification.permission)
+  }, [])
+
+  async function requestNotificationPermission() {
+    if (!('Notification' in window)) { showToast('此浏览器不支持通知'); return }
+    const perm = await Notification.requestPermission()
+    setNotificationPermission(perm)
+    if (perm === 'granted') showToast('✅ 通知权限已开启')
+    else showToast('通知权限被拒绝，请在浏览器设置中开启')
+  }
+
+  function scheduleReminder(item: ScheduleItem) {
+    if (!item.reminder || !item.reminderMinutes || notificationPermission !== 'granted') return
+    if (!('serviceWorker' in navigator)) return
+    navigator.serviceWorker.ready.then((reg) => {
+      reg.active?.postMessage({ type: 'SCHEDULE_REMINDER', id: item.id, title: item.title, platform: item.platform, time: item.time, minutesBefore: item.reminderMinutes })
+    })
+  }
+
+
   // ─── 账号数据隔离：按 accountId 读写 ─────────────────────
   function getAccKey(accId: string, key: string) { return `contentos_${accId}_${key}` }
   function loadAccData(accId: string) {
@@ -831,6 +866,16 @@ export default function ContentOSApp() {
     showToast('✅ 知识已添加到知识库')
   }
 
+  async function fetchTrendingMaterials() {
+    setTrendingLoading(true)
+    try {
+      const res = await fetch('/api/trending-materials', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ industry: acc.industry, positioning: acc.positioning, aiModel, aiApiKey, aiApiBase, aiTemperature }) })
+      const data = await res.json()
+      if (data.items) { setTrendingItems(data.items); showToast(`✅ 已抓取 ${data.items.length} 条爆款素材`) }
+    } catch { showToast('抓取失败，请重试') }
+    setTrendingLoading(false)
+  }
+
   function deleteKnowledgeItem(id: string) {
     const updated = knowledgeItems.filter((k: any) => k.id !== id)
     setKnowledgeItems(updated)
@@ -902,6 +947,36 @@ export default function ContentOSApp() {
     await supabase.auth.signOut(); setUser(null)
     showToast('已退出登录')
   }
+
+  async function syncToCloud() {
+    if (!user || user.id === 'guest') { showToast('请先登录以使用云端同步'); return }
+    setSyncLoading(true)
+    try {
+      const { error } = await supabase.from('user_data').upsert({ user_id: user.id, account_id: acc.id, data_json: { savedContents, savedTopics, schedule, videoRecords, knowledgeItems, accounts, styleTemplates }, updated_at: new Date().toISOString() }, { onConflict: 'user_id,account_id' })
+      if (error) throw error
+      setLastSyncTime(new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }))
+      showToast('✅ 数据已同步到云端')
+    } catch (e: any) { showToast('同步失败：' + (e.message || '请重试')) }
+    setSyncLoading(false)
+  }
+
+  async function loadFromCloud() {
+    if (!user || user.id === 'guest') return
+    try {
+      const { data, error } = await supabase.from('user_data').select('data_json, updated_at').eq('user_id', user.id).eq('account_id', acc.id).single()
+      if (error || !data) return
+      const d = data.data_json as any
+      if (d.savedContents) setSavedContents(d.savedContents)
+      if (d.savedTopics) setSavedTopics(d.savedTopics)
+      if (d.schedule) setSchedule(d.schedule)
+      if (d.videoRecords) setVideoRecords(d.videoRecords)
+      if (d.knowledgeItems) setKnowledgeItems(d.knowledgeItems)
+      if (d.styleTemplates) setStyleTemplates(d.styleTemplates)
+      setLastSyncTime(new Date(data.updated_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }))
+      showToast('✅ 已从云端加载数据')
+    } catch {}
+  }
+
 
   // ─── Content Generation ───────────────────────────────────
   async function generateCopy() {
@@ -1286,17 +1361,12 @@ export default function ContentOSApp() {
 
   function addScheduleItem() {
     if (!newScheduleTitle.trim()) { showToast('请输入标题'); return }
-    const item: ScheduleItem = {
-      id: Date.now().toString(),
-      time: '待定',
-      title: newScheduleTitle,
-      status: '计划中',
-      platform: newSchedulePlatform
-    }
+    const item: ScheduleItem = { id: Date.now().toString(), time: newScheduleTime || '待定', title: newScheduleTitle, status: '计划中', platform: newSchedulePlatform, reminder: newScheduleReminder, reminderMinutes: newScheduleReminderMinutes }
     setSchedule([...schedule, item])
-    setShowAddSchedule(false)
-    setNewScheduleTitle('')
-    showToast('✅ 已添加到排期')
+    if (item.reminder && notificationPermission === 'granted') { scheduleReminder(item); showToast(`✅ 已添加排期，将在发布前 ${item.reminderMinutes} 分钟提醒`) }
+    else if (item.reminder && notificationPermission !== 'granted') { requestNotificationPermission(); showToast('✅ 已添加排期，请开启通知权限') }
+    else showToast('✅ 已添加到排期')
+    setShowAddSchedule(false); setNewScheduleTitle(''); setNewScheduleTime(''); setNewScheduleReminder(false)
   }
 
   // 批量生成一周内容计划
@@ -1699,6 +1769,10 @@ export default function ContentOSApp() {
                 creatorAnalysisTab={creatorAnalysisTab} setCreatorAnalysisTab={setCreatorAnalysisTab}
                 selectedScript={selectedScript} setSelectedScript={setSelectedScript}
                 showScriptDetail={showScriptDetail} setShowScriptDetail={setShowScriptDetail}
+                trendingItems={trendingItems} trendingLoading={trendingLoading}
+                trendingCategory={trendingCategory} setTrendingCategory={setTrendingCategory}
+                trendingSort={trendingSort} setTrendingSort={setTrendingSort}
+                fetchTrendingMaterials={fetchTrendingMaterials}
               />
             )}
         {tab === 'content' && (
@@ -1785,6 +1859,10 @@ export default function ContentOSApp() {
                 publishingId={publishingId} setPublishingId={setPublishingId}
                 showPublishGuide={showPublishGuide} setShowPublishGuide={setShowPublishGuide}
                 scheduleDetailId={scheduleDetailId} setScheduleDetailId={setScheduleDetailId}
+                newScheduleTime={newScheduleTime} setNewScheduleTime={setNewScheduleTime}
+                newScheduleReminder={newScheduleReminder} setNewScheduleReminder={setNewScheduleReminder}
+                newScheduleReminderMinutes={newScheduleReminderMinutes} setNewScheduleReminderMinutes={setNewScheduleReminderMinutes}
+                notificationPermission={notificationPermission} requestNotificationPermission={requestNotificationPermission}
               />
         )}
         {tab === 'profile' && (
@@ -2351,9 +2429,10 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
     }
     
 
-function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, topicFilter, setTopicFilter, topicSearch, setTopicSearch, batchCount, setBatchCount, topicCategories, selectedCategory, setSelectedCategory, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy, setShowAiPanel, creatorAnalysisTab, setCreatorAnalysisTab, selectedScript, setSelectedScript, showScriptDetail, setShowScriptDetail, knowledgeItems, knowledgeInput, setKnowledgeInput, knowledgeTitle, setKnowledgeTitle, knowledgeCategory, setKnowledgeCategory, showAddKnowledge, setShowAddKnowledge, knowledgeSearch, setKnowledgeSearch, addKnowledgeItem, deleteKnowledgeItem, showSuperGen, setShowSuperGen, superGenLoading, superGenResult, setSuperGenResult, superGenTopic, setSuperGenTopic, superGenHotspot, setSuperGenHotspot, superGenStyle, setSuperGenStyle, superGenKnowledge, setSuperGenKnowledge, superGenerate, acc: accProp }: any) {
+function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, topicFilter, setTopicFilter, topicSearch, setTopicSearch, batchCount, setBatchCount, topicCategories, selectedCategory, setSelectedCategory, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy, setShowAiPanel, creatorAnalysisTab, setCreatorAnalysisTab, selectedScript, setSelectedScript, showScriptDetail, setShowScriptDetail, knowledgeItems, knowledgeInput, setKnowledgeInput, knowledgeTitle, setKnowledgeTitle, knowledgeCategory, setKnowledgeCategory, showAddKnowledge, setShowAddKnowledge, knowledgeSearch, setKnowledgeSearch, addKnowledgeItem, deleteKnowledgeItem, showSuperGen, setShowSuperGen, superGenLoading, superGenResult, setSuperGenResult, superGenTopic, setSuperGenTopic, superGenHotspot, setSuperGenHotspot, superGenStyle, setSuperGenStyle, superGenKnowledge, setSuperGenKnowledge, superGenerate, acc: accProp, trendingItems, trendingLoading, trendingCategory, setTrendingCategory, trendingSort, setTrendingSort, fetchTrendingMaterials }: any) {
   const TABS = [
     { id: 'hotspot', label: '🔥 热点' },
+    { id: 'trending', label: '💎 爆款' },
     { id: 'topics', label: '💡 选题库' },
     { id: 'radar', label: '📡 情报' },
     { id: 'creator', label: '🎯 博主' },
@@ -2438,7 +2517,64 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
 
       <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4">
 
-        {/* ── 热点 Tab ── */}
+                {/* ── 爆款素材 Tab ── */}
+            {matTab === 'trending' && (
+              <div>
+                <div className="flex items-center justify-between mb-3 mt-1">
+                  <div className="flex gap-2">
+                    <button onClick={() => setTrendingSort('heat')} className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${trendingSort === 'heat' ? 'bg-orange-500 text-white' : 'bg-white text-gray-500 shadow-sm'}`}>🔥 热度</button>
+                    <button onClick={() => setTrendingSort('relevance')} className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${trendingSort === 'relevance' ? 'bg-blue-500 text-white' : 'bg-white text-gray-500 shadow-sm'}`}>🎯 相关</button>
+                  </div>
+                  <button onClick={fetchTrendingMaterials} disabled={trendingLoading} className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-xl text-xs font-bold disabled:opacity-60 active:scale-95 transition-all">
+                    {trendingLoading ? <><Spinner /><span>抓取中...</span></> : <><span>⚡</span><span>一键抓取</span></>}
+                  </button>
+                </div>
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 mb-3">
+                  {['全部', '娱乐', '教育', '生活', '美食', '科技', '情感', '搞笑', '励志', '行业'].map(cat => (
+                    <button key={cat} onClick={() => setTrendingCategory(cat)} className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-all ${trendingCategory === cat ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 shadow-sm'}`}>{cat}</button>
+                  ))}
+                </div>
+                {trendingItems.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="text-5xl mb-4">💎</div>
+                    <p className="text-gray-500 font-semibold mb-1">点击「一键抓取」获取爆款素材</p>
+                    <p className="text-xs text-gray-400">AI 自动分析全平台热门内容<br/>并评估与你账号的相关性</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {[...trendingItems]
+                      .filter(item => trendingCategory === '全部' || item.category === trendingCategory)
+                      .sort((a, b) => trendingSort === 'heat' ? b.heat - a.heat : b.relevance - a.relevance)
+                      .map((item: any) => (
+                        <div key={item.id} className="bg-white rounded-2xl p-4 shadow-sm">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">{item.platform}</span>
+                                <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full">{item.category}</span>
+                              </div>
+                              <p className="text-sm font-bold text-gray-900 leading-snug">{item.title}</p>
+                            </div>
+                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                              <span className="text-xs text-orange-500 font-bold">🔥{item.heat}</span>
+                              <span className="text-xs text-blue-500 font-bold">🎯{item.relevance}%</span>
+                            </div>
+                          </div>
+                          {item.angle && <div className="bg-blue-50 rounded-xl px-3 py-2 mb-2"><p className="text-xs text-blue-600">💡 {item.angle}</p></div>}
+                          <div className="flex items-center justify-between">
+                            <div className="flex gap-1 flex-wrap">
+                              {(item.tags || []).map((tag: string) => <span key={tag} className="text-xs px-2 py-0.5 bg-gray-50 text-gray-400 rounded-full">{tag}</span>)}
+                            </div>
+                            <button onClick={() => useTopic(item.title)} className="flex-shrink-0 px-3 py-1.5 bg-blue-500 text-white rounded-xl text-xs font-bold active:scale-95 transition-all">用于选题</button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+    {/* ── 热点 Tab ── */}
         {matTab === 'hotspot' && (
           <div className="space-y-2">
             <p className="text-xs text-gray-400 mb-3 mt-1">今日热点 · 点击直接使用</p>
@@ -7457,6 +7593,31 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
                   ))}
                 </div>
               </div>
+              <input
+                value={newScheduleTime}
+                onChange={e => setNewScheduleTime(e.target.value)}
+                placeholder="发布时间（如：明天 18:30）"
+                className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none"
+              />
+              <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
+                <div>
+                  <p className="text-sm font-semibold text-gray-700">🔔 发布提醒</p>
+                  <p className="text-xs text-gray-400">提前通知你发布视频</p>
+                </div>
+                <button onClick={() => setNewScheduleReminder(!newScheduleReminder)} className={`w-12 h-6 rounded-full transition-all relative ${newScheduleReminder ? 'bg-blue-500' : 'bg-gray-300'}`}>
+                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${newScheduleReminder ? 'left-6' : 'left-0.5'}`} />
+                </button>
+              </div>
+              {newScheduleReminder && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-2">提前提醒时间</p>
+                  <div className="flex gap-2">
+                    {[15, 30, 60, 120].map(m => (
+                      <button key={m} onClick={() => setNewScheduleReminderMinutes(m)} className={`flex-1 py-1.5 rounded-xl text-xs font-semibold transition-all ${newScheduleReminderMinutes === m ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'}`}>{m < 60 ? `${m}分钟` : `${m/60}小时`}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="flex gap-2">
                 <button onClick={() => setShowAddSchedule(false)} className="flex-1 py-2.5 bg-gray-100 text-gray-600 font-bold rounded-xl text-sm">取消</button>
                 <button onClick={addScheduleItem} className="flex-1 py-2.5 bg-blue-500 text-white font-bold rounded-xl text-sm">添加</button>
