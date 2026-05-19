@@ -10,7 +10,7 @@ const supabase = createClient(
 
 // ─── Types ───────────────────────────────────────────────
 type Tab = 'dashboard' | 'materials' | 'content' | 'video' | 'operations' | 'profile'
-type MatTab = 'hotspot' | 'topics' | 'radar' | 'creator' | 'style' | 'knowledge' | 'trending'
+type MatTab = 'hotspot' | 'topics' | 'radar' | 'creator' | 'style' | 'knowledge' | 'trending' | 'extract'
 type OpsTab = 'schedule' | 'stats' | 'goals'
 type VideoStep = 'input' | 'voice' | 'avatar' | 'preview'
 type ContentStep = 1 | 2 | 3
@@ -2523,6 +2523,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                   { icon: '🎨', label: '风格模板', action: () => { setTab('materials'); setMatTab('style') }, color: 'bg-pink-50' },
                   { icon: '👥', label: '博主追踪', action: () => { setTab('materials'); setMatTab('creator') }, color: 'bg-cyan-50' },
                   { icon: '⚡', label: '超级生成', action: () => { setTab('materials'); setMatTab('knowledge'); setTimeout(()=>setShowSuperGen(true),300) }, color: 'bg-gradient-to-br from-purple-50 to-pink-50' },
+                  { icon: '🎙️', label: '口播提取', action: () => { setTab('materials'); setMatTab('extract') }, color: 'bg-violet-50' },
                   { icon: '🧠', label: '知识库', action: () => { setTab('materials'); setMatTab('knowledge') }, color: 'bg-indigo-50' },
                   { icon: '📥', label: '导出数据', action: () => { setTab('profile') }, color: 'bg-teal-50' },
                   { icon: '🎯', label: '账号定位', action: onPositioning, color: 'bg-amber-50' },
@@ -2656,7 +2657,14 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
     { id: 'creator', label: '🎯 博主' },
     { id: 'style', label: '🎨 风格' },
     { id: 'knowledge', label: '🧠 知识库' },
+    { id: 'extract', label: '🎙️ 口播提取' },
   ]
+
+  // 口播提取状态
+  const [extractUrl, setExtractUrl] = React.useState('')
+  const [extractLoading, setExtractLoading] = React.useState(false)
+  const [extractResult, setExtractResult] = React.useState<any>(null)
+  const [extractHistory, setExtractHistory] = React.useState<any[]>([])
 
   // 博主追踪本地状态
   const [creatorSort, setCreatorSort] = React.useState<'likes' | 'comments' | 'collects'>('likes')
@@ -4478,6 +4486,157 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                 </div>
               </div>
             )}
+          </div>
+        )}
+        {matTab === 'extract' && (
+          <div className="space-y-4 pb-4">
+            {/* 说明卡片 */}
+            <div className="bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl p-4 shadow-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">🎙️</span>
+                <div>
+                  <div className="font-black text-white text-sm">口播文案提取</div>
+                  <div className="text-white/80 text-[10px]">从视频链接直接提取说话内容</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mt-3">
+                {[
+                  { icon: '🎵', label: '抖音', desc: '字幕直提' },
+                  { icon: '📕', label: '小红书', desc: '图文提取' },
+                  { icon: '🔊', label: 'ASR转录', desc: '即将上线' },
+                ].map((p, i) => (
+                  <div key={i} className="bg-white/20 rounded-xl p-2 text-center">
+                    <div className="text-lg">{p.icon}</div>
+                    <div className="text-white text-[10px] font-bold">{p.label}</div>
+                    <div className="text-white/70 text-[9px]">{p.desc}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 输入区 */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <label className="text-xs font-bold text-gray-600 mb-2 block">📎 粘贴视频链接</label>
+              <textarea
+                value={extractUrl}
+                onChange={e => setExtractUrl(e.target.value)}
+                placeholder="粘贴抖音/小红书视频链接...&#10;例：https://v.douyin.com/xxxxx/"
+                className="w-full px-3 py-2.5 bg-gray-50 rounded-xl text-sm outline-none resize-none text-gray-700 placeholder-gray-400"
+                rows={3}
+              />
+              <button
+                onClick={async () => {
+                  if (!extractUrl.trim()) { showToast('请先粘贴视频链接'); return }
+                  setExtractLoading(true)
+                  setExtractResult(null)
+                  try {
+                    const res = await fetch('/api/extract-script', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ url: extractUrl.trim() })
+                    })
+                    const data = await res.json()
+                    setExtractResult(data)
+                    if (data.success && data.script) {
+                      const newItem = { url: extractUrl.trim(), script: data.script, source: data.source, time: new Date().toLocaleString() }
+                      setExtractHistory((prev: any[]) => [newItem, ...prev.slice(0, 9)])
+                      showToast('✅ 口播文案提取成功！')
+                    }
+                  } catch (e) {
+                    setExtractResult({ error: '网络错误，请重试' })
+                  } finally {
+                    setExtractLoading(false)
+                  }
+                }}
+                disabled={extractLoading}
+                className="w-full mt-3 py-3 bg-violet-500 text-white font-black text-sm rounded-xl disabled:opacity-60 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+              >
+                {extractLoading ? (
+                  <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />提取中...</>
+                ) : '🎙️ 开始提取'}
+              </button>
+            </div>
+
+            {/* 提取结果 */}
+            {extractResult && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                {extractResult.success ? (
+                  <>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-green-500 text-lg">✅</span>
+                        <span className="font-bold text-gray-800 text-sm">提取成功</span>
+                        <span className="text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full">
+                          {extractResult.source === 'douyin_subtitle' ? '抖音字幕' : extractResult.source === 'xhs_content' ? '小红书内容' : '已提取'}
+                        </span>
+                      </div>
+                      <span className="text-xs text-gray-400">{extractResult.script?.length || 0}字</span>
+                    </div>
+                    <div className="bg-gray-50 rounded-xl p-3 mb-3">
+                      <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">{extractResult.script}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { try { navigator.clipboard.writeText(extractResult.script); showToast('✅ 已复制') } catch {} }}
+                        className="flex-1 py-2.5 bg-violet-500 text-white text-xs font-bold rounded-xl active:scale-95"
+                      >📋 复制文案</button>
+                      <button
+                        onClick={() => { setTab('content'); showToast('✅ 已导入内容中心') }}
+                        className="flex-1 py-2.5 bg-white border border-violet-200 text-violet-600 text-xs font-bold rounded-xl active:scale-95"
+                      >✏️ 去编辑</button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-4">
+                    <div className="text-3xl mb-2">😅</div>
+                    <p className="text-sm font-bold text-gray-700 mb-1">{extractResult.error || '提取失败'}</p>
+                    {extractResult.hint && <p className="text-xs text-gray-400">{extractResult.hint}</p>}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 历史记录 */}
+            {extractHistory.length > 0 && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-bold text-gray-800 text-sm">📜 提取历史</span>
+                  <button onClick={() => setExtractHistory([])} className="text-xs text-gray-400">清空</button>
+                </div>
+                <div className="space-y-2">
+                  {extractHistory.map((item: any, i: number) => (
+                    <div key={i} className="bg-gray-50 rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] text-gray-400">{item.time}</span>
+                        <button
+                          onClick={() => { try { navigator.clipboard.writeText(item.script); showToast('✅ 已复制') } catch {} }}
+                          className="text-[10px] text-violet-500 font-bold"
+                        >复制</button>
+                      </div>
+                      <p className="text-xs text-gray-600 line-clamp-2">{item.script}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 使用提示 */}
+            <div className="bg-amber-50 rounded-2xl p-4">
+              <div className="font-bold text-amber-700 text-xs mb-2">💡 使用提示</div>
+              <ul className="space-y-1">
+                {[
+                  '抖音视频：支持 v.douyin.com 短链和完整链接',
+                  '小红书：支持 xhslink.com 短链和完整笔记链接',
+                  '提取的是视频字幕/说话内容，非视频描述',
+                  'ASR语音转文字功能即将上线，支持任意视频',
+                ].map((tip, i) => (
+                  <li key={i} className="text-xs text-amber-600 flex gap-1.5">
+                    <span className="flex-shrink-0">•</span>
+                    <span>{tip}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         )}
       </div>
