@@ -1875,7 +1875,6 @@ export default function ContentOSApp() {
                 recommendInsight={recommendInsight}
                 showRecommendPanel={showRecommendPanel} setShowRecommendPanel={setShowRecommendPanel}
                 recommendTopicsFn={recommendTopicsFn}
-                videoRecords={videoRecords}
               />
             )}
         {tab === 'content' && (
