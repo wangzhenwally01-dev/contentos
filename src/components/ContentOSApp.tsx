@@ -5037,6 +5037,12 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
     }
     
 function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCopy, voiceId, setVoiceId, speed, setSpeed, avatarType, setAvatarType, avatarPreset, setAvatarPreset, bgType, setBgType, bgColor, setBgColor, loading, audioB64, error, generateTTS, showToast, savedContents, setTab, setShowAiPanel, setQuickRecordData, setShowVideoRecord, videoSegments, setVideoSegments, segmentMode, setSegmentMode, activeSegment, setActiveSegment, segmentAudios, setSegmentAudios, segmentLoading, setSegmentLoading, subtitlePreview, setSubtitlePreview, subtitleLines, setSubtitleLines, currentSubLine, setCurrentSubLine, clonedVoices, setClonedVoices, isCloning, setIsCloning, cloneProgress, setCloneProgress, showClonePanel, setShowClonePanel, cloneVoiceName, setCloneVoiceName }: any) {
+  // 排期弹窗状态
+  const [showVidScheduleModal, setShowVidScheduleModal] = React.useState(false)
+  const [vidScheduleTime, setVidScheduleTime] = React.useState('')
+  const [vidSchedulePlatform, setVidSchedulePlatform] = React.useState('抖音')
+  const [vidScheduleTitle, setVidScheduleTitle] = React.useState('')
+
   const VOICES = [
     { id: 'female-shaonv', label: '少女音', emoji: '👧', desc: '清甜活泼，适合生活类' },
     { id: 'female-yujie', label: '御姐音', emoji: '👩', desc: '成熟知性，适合职场类' },
@@ -6455,8 +6461,11 @@ ${line}
               {/* 加入排期 */}
               <button
                 onClick={() => {
-                  setTab('operations')
-                  showToast('✅ 已跳转到运营中心，可添加排期')
+                  const now = new Date()
+                  const tomorrow = new Date(now.getTime() + 86400000)
+                  setVidScheduleTime(tomorrow.toISOString().slice(0,10) + 'T18:30')
+                  setVidScheduleTitle(videoCopy.slice(0, 25) || '新视频')
+                  setShowVidScheduleModal(true)
                 }}
                 className="py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md flex items-center justify-center gap-1.5"
               >
@@ -6465,6 +6474,49 @@ ${line}
             </div>
             <button onClick={() => setStep('input')} className="w-full py-2 text-sm text-gray-400">← 重新开始</button>
           </>
+        )}
+
+        {/* 视频排期弹窗 */}
+        {showVidScheduleModal && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setShowVidScheduleModal(false)}>
+            <div className="w-full bg-white rounded-t-3xl p-5 pb-8" onClick={e => e.stopPropagation()}>
+              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
+              <div className="font-black text-gray-900 text-base mb-4">📅 加入发布排期</div>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-gray-500 mb-1.5 block">视频标题</label>
+                  <input value={vidScheduleTitle} onChange={e => setVidScheduleTitle(e.target.value)} className="w-full px-3 py-2.5 bg-gray-50 rounded-xl text-sm outline-none" placeholder="输入视频标题..." />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-500 mb-1.5 block">发布时间</label>
+                  <input type="datetime-local" value={vidScheduleTime} onChange={e => setVidScheduleTime(e.target.value)} className="w-full px-3 py-2.5 bg-gray-50 rounded-xl text-sm outline-none" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-500 mb-1.5 block">发布平台</label>
+                  <div className="flex gap-2">
+                    {['抖音', '小红书', 'B站', '视频号', '快手'].map(p => (
+                      <button key={p} onClick={() => setVidSchedulePlatform(p)} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${vidSchedulePlatform === p ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'}`}>{p}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  try {
+                    const accId = acc?.id || 'default'
+                    const key = `contentos_schedule_${accId}`
+                    const existing = JSON.parse(localStorage.getItem(key) || '[]')
+                    const timeStr = vidScheduleTime.replace('T', ' ')
+                    const newItem = { id: Date.now().toString(), time: timeStr, title: vidScheduleTitle || '新视频', status: '待发布', platform: vidSchedulePlatform, copy: videoCopy }
+                    localStorage.setItem(key, JSON.stringify([...existing, newItem]))
+                    setShowVidScheduleModal(false)
+                    showToast('✅ 已加入排期！可在运营中心查看')
+                  } catch { showToast('❌ 加入排期失败') }
+                }}
+                className="w-full mt-4 py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-black text-sm rounded-2xl active:scale-[0.98] transition-all"
+              >✅ 确认加入排期</button>
+            </div>
+          </div>
         )}
       </div>
     </div>
