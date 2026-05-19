@@ -558,6 +558,19 @@ export default function ContentOSApp() {
   const [syncLoading, setSyncLoading] = useState(false)
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null)
 
+  // AI 选题推荐引擎状态
+  const [recommendTopics, setRecommendTopics] = useState<any[]>([])
+  const [recommendLoading, setRecommendLoading] = useState(false)
+  const [recommendInsight, setRecommendInsight] = useState('')
+  const [showRecommendPanel, setShowRecommendPanel] = useState(false)
+  // 智能排期状态
+  const [smartScheduleResult, setSmartScheduleResult] = useState<any[]>([])
+  const [smartScheduleLoading, setSmartScheduleLoading] = useState(false)
+  const [smartScheduleStrategy, setSmartScheduleStrategy] = useState('')
+  const [smartScheduleTips, setSmartScheduleTips] = useState<string[]>([])
+  const [showSmartSchedule, setShowSmartSchedule] = useState(false)
+  const [smartScheduleDays, setSmartScheduleDays] = useState(7)
+
   // 三合一超级生成状态
   const [showSuperGen, setShowSuperGen] = useState(false)
   const [superGenLoading, setSuperGenLoading] = useState(false)
@@ -865,6 +878,91 @@ export default function ContentOSApp() {
     setShowAddKnowledge(false)
     showToast('✅ 知识已添加到知识库')
   }
+
+  // ─── AI 选题推荐引擎 ──────────────────────────────────────
+  async function recommendTopicsFn() {
+    setRecommendLoading(true)
+    setShowRecommendPanel(true)
+    try {
+      const res = await fetch('/api/recommend-topics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          positioning: acc.positioning,
+          industry: acc.industry,
+          accountName: acc.name,
+          hotspots: HOTSPOTS,
+          knowledgeItems,
+          savedTopics,
+          videoRecords,
+          trendingItems,
+          aiModel, aiApiKey, aiApiBase, aiTemperature,
+        }),
+      })
+      const data = await res.json()
+      if (data.topics && data.topics.length > 0) {
+        setRecommendTopics(data.topics)
+        setRecommendInsight(data.insight || '')
+        showToast(`✅ AI 推荐了 ${data.topics.length} 个个性化选题`)
+      } else {
+        showToast('推荐失败，请重试')
+      }
+    } catch {
+      showToast('网络错误，请重试')
+    }
+    setRecommendLoading(false)
+  }
+
+  // ─── 智能排期生成 ─────────────────────────────────────────
+  async function generateSmartSchedule() {
+    setSmartScheduleLoading(true)
+    setShowSmartSchedule(true)
+    try {
+      const allTopics = [...aiTopics, ...savedTopics.map((t: any) => ({ title: typeof t === 'string' ? t : t.title, category: '通用' })), ...recommendTopics]
+      const res = await fetch('/api/smart-schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          positioning: acc.positioning,
+          industry: acc.industry,
+          accountName: acc.name,
+          topics: allTopics,
+          videoRecords,
+          existingSchedule: schedule,
+          days: smartScheduleDays,
+          aiModel, aiApiKey, aiApiBase, aiTemperature,
+        }),
+      })
+      const data = await res.json()
+      if (data.schedule && data.schedule.length > 0) {
+        setSmartScheduleResult(data.schedule)
+        setSmartScheduleStrategy(data.strategy || '')
+        setSmartScheduleTips(data.tips || [])
+        showToast(`✅ 已生成 ${data.schedule.length} 条智能排期`)
+      } else {
+        showToast('生成失败，请先添加选题')
+      }
+    } catch {
+      showToast('网络错误，请重试')
+    }
+    setSmartScheduleLoading(false)
+  }
+
+  function applySmartSchedule() {
+    if (!smartScheduleResult.length) return
+    const newItems: ScheduleItem[] = smartScheduleResult.map((s: any) => ({
+      id: Date.now().toString() + Math.random().toString(36).slice(2),
+      time: `${s.date} ${s.time}`,
+      title: s.title,
+      status: '计划中' as const,
+      platform: s.platform || '抖音',
+    }))
+    setSchedule(prev => [...prev, ...newItems])
+    setShowSmartSchedule(false)
+    setSmartScheduleResult([])
+    showToast(`✅ 已添加 ${newItems.length} 条排期`)
+  }
+
 
   async function fetchTrendingMaterials() {
     setTrendingLoading(true)
@@ -1773,6 +1871,11 @@ export default function ContentOSApp() {
                 trendingCategory={trendingCategory} setTrendingCategory={setTrendingCategory}
                 trendingSort={trendingSort} setTrendingSort={setTrendingSort}
                 fetchTrendingMaterials={fetchTrendingMaterials}
+                recommendTopics={recommendTopics} recommendLoading={recommendLoading}
+                recommendInsight={recommendInsight}
+                showRecommendPanel={showRecommendPanel} setShowRecommendPanel={setShowRecommendPanel}
+                recommendTopicsFn={recommendTopicsFn}
+                videoRecords={videoRecords}
               />
             )}
         {tab === 'content' && (
@@ -1863,7 +1966,15 @@ export default function ContentOSApp() {
                 newScheduleReminder={newScheduleReminder} setNewScheduleReminder={setNewScheduleReminder}
                 newScheduleReminderMinutes={newScheduleReminderMinutes} setNewScheduleReminderMinutes={setNewScheduleReminderMinutes}
                 notificationPermission={notificationPermission} requestNotificationPermission={requestNotificationPermission}
-              />
+                    generateSmartSchedule={generateSmartSchedule}
+                    smartScheduleResult={smartScheduleResult}
+                    smartScheduleLoading={smartScheduleLoading}
+                    smartScheduleStrategy={smartScheduleStrategy}
+                    smartScheduleTips={smartScheduleTips}
+                    showSmartSchedule={showSmartSchedule} setShowSmartSchedule={setShowSmartSchedule}
+                    smartScheduleDays={smartScheduleDays} setSmartScheduleDays={setSmartScheduleDays}
+                    applySmartSchedule={applySmartSchedule}
+                  />
         )}
         {tab === 'profile' && (
           <Profile
@@ -2429,7 +2540,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
     }
     
 
-function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, topicFilter, setTopicFilter, topicSearch, setTopicSearch, batchCount, setBatchCount, topicCategories, selectedCategory, setSelectedCategory, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy, setShowAiPanel, creatorAnalysisTab, setCreatorAnalysisTab, selectedScript, setSelectedScript, showScriptDetail, setShowScriptDetail, knowledgeItems, knowledgeInput, setKnowledgeInput, knowledgeTitle, setKnowledgeTitle, knowledgeCategory, setKnowledgeCategory, showAddKnowledge, setShowAddKnowledge, knowledgeSearch, setKnowledgeSearch, addKnowledgeItem, deleteKnowledgeItem, showSuperGen, setShowSuperGen, superGenLoading, superGenResult, setSuperGenResult, superGenTopic, setSuperGenTopic, superGenHotspot, setSuperGenHotspot, superGenStyle, setSuperGenStyle, superGenKnowledge, setSuperGenKnowledge, superGenerate, acc: accProp, trendingItems, trendingLoading, trendingCategory, setTrendingCategory, trendingSort, setTrendingSort, fetchTrendingMaterials }: any) {
+function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, topicFilter, setTopicFilter, topicSearch, setTopicSearch, batchCount, setBatchCount, topicCategories, selectedCategory, setSelectedCategory, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy, setShowAiPanel, creatorAnalysisTab, setCreatorAnalysisTab, selectedScript, setSelectedScript, showScriptDetail, setShowScriptDetail, knowledgeItems, knowledgeInput, setKnowledgeInput, knowledgeTitle, setKnowledgeTitle, knowledgeCategory, setKnowledgeCategory, showAddKnowledge, setShowAddKnowledge, knowledgeSearch, setKnowledgeSearch, addKnowledgeItem, deleteKnowledgeItem, showSuperGen, setShowSuperGen, superGenLoading, superGenResult, setSuperGenResult, superGenTopic, setSuperGenTopic, superGenHotspot, setSuperGenHotspot, superGenStyle, setSuperGenStyle, superGenKnowledge, setSuperGenKnowledge, superGenerate, acc: accProp, trendingItems, trendingLoading, trendingCategory, setTrendingCategory, trendingSort, setTrendingSort, fetchTrendingMaterials, recommendTopics, recommendLoading, recommendInsight, showRecommendPanel, setShowRecommendPanel, recommendTopicsFn, hotspots: hotspotsProp, videoRecords: videoRecordsProp }: any) {
   const TABS = [
     { id: 'hotspot', label: '🔥 热点' },
     { id: 'trending', label: '💎 爆款' },
@@ -2489,6 +2600,86 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
     setVideoCopy(script)
     setTab('content')
     showToast('✅ 文案已导入内容中心')
+  }
+
+  // AI 推荐面板
+  if (showRecommendPanel) {
+    return (
+      <div className="flex flex-col h-full bg-[#F2F2F7]">
+        <div className="px-5 pt-12 pb-0 flex-shrink-0">
+          <div className="flex items-center gap-3 mb-4">
+            <button onClick={() => setShowRecommendPanel(false)} className="w-9 h-9 rounded-2xl bg-white shadow-sm flex items-center justify-center text-gray-500 active:scale-95 transition-transform">←</button>
+            <div>
+              <h1 className="text-lg font-black text-gray-900">🧠 AI 个性化推荐</h1>
+              <p className="text-xs text-gray-400">基于热点 · 知识库 · 历史数据</p>
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4">
+          {recommendLoading ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-violet-500 to-purple-400 flex items-center justify-center mb-4 shadow-lg">
+                <span className="text-3xl">🧠</span>
+              </div>
+              <p className="text-gray-600 font-bold mb-1">AI 正在深度分析...</p>
+              <p className="text-xs text-gray-400 text-center">结合你的账号定位、热点数据<br/>知识库内容和历史播放数据</p>
+              <div className="flex gap-1 mt-4">
+                {[0,1,2].map(i => <div key={i} className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{animationDelay:`${i*0.15}s`}} />)}
+              </div>
+            </div>
+          ) : recommendTopics.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="text-5xl mb-4">🧠</div>
+              <p className="text-gray-500 font-semibold">点击下方按钮开始推荐</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recommendInsight && (
+                <div className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-2xl p-4 border border-violet-100">
+                  <p className="text-xs text-violet-500 font-semibold mb-1">💡 AI 洞察</p>
+                  <p className="text-sm text-gray-700 leading-relaxed">{recommendInsight}</p>
+                </div>
+              )}
+              {recommendTopics.map((topic: any, i: number) => (
+                <div key={i} className="bg-white rounded-2xl p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="text-xs px-2 py-0.5 bg-violet-50 text-violet-500 rounded-full font-semibold">{topic.type || topic.category}</span>
+                        <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full">{topic.platform}</span>
+                        {topic.score && <span className="text-xs text-orange-500 font-bold">⭐{topic.score}</span>}
+                      </div>
+                      <p className="text-sm font-bold text-gray-900 leading-snug">{topic.title}</p>
+                    </div>
+                  </div>
+                  {topic.reason && <p className="text-xs text-gray-400 mb-2 leading-relaxed">📊 {topic.reason}</p>}
+                  {topic.hook && <div className="bg-orange-50 rounded-xl px-3 py-2 mb-2"><p className="text-xs text-orange-600">🎣 {topic.hook}</p></div>}
+                  {topic.bestTime && <p className="text-xs text-green-500 mb-2">⏰ 最佳发布：{topic.bestTime}</p>}
+                  <div className="flex gap-2 pt-2 border-t border-gray-50">
+                    <button
+                      onClick={() => { useTopic(topic.title); setShowRecommendPanel(false) }}
+                      className="flex-1 py-1.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white text-xs font-bold rounded-xl active:scale-95 transition-all"
+                    >✍️ 写文案</button>
+                    <button
+                      onClick={() => { saveTopic(topic.title); showToast('✅ 已收藏') }}
+                      className="px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-bold rounded-xl active:scale-95 transition-all"
+                    >🔖 收藏</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        {!recommendLoading && (
+          <div className="px-5 pb-8 pt-3 flex-shrink-0">
+            <button
+              onClick={recommendTopicsFn}
+              className="w-full py-3.5 bg-gradient-to-r from-violet-600 to-purple-500 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md"
+            >🔄 重新推荐</button>
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -2650,6 +2841,19 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                 </select>
               </div>
             </div>
+
+            {/* AI 推荐引擎入口 */}
+            <button
+              onClick={recommendTopicsFn}
+              disabled={recommendLoading}
+              className="w-full py-3 bg-gradient-to-r from-violet-600 to-purple-500 text-white text-sm font-bold rounded-2xl disabled:opacity-60 active:scale-[0.98] transition-transform shadow-md flex items-center justify-center gap-2"
+            >
+              {recommendLoading ? (
+                <><Spinner /><span>AI 分析中...</span></>
+              ) : (
+                <><span>🧠</span><span>AI 个性化推荐</span><span className="text-xs opacity-80">（结合热点+知识库+历史数据）</span></>
+              )}
+            </button>
 
             {/* 生成按钮组 */}
             <div className="grid grid-cols-2 gap-2">
@@ -6403,7 +6607,7 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, s
     // ═══════════════════════════════════════════════════════════
 // CONTENT CALENDAR — 内容日历视图
 // ═══════════════════════════════════════════════════════════
-function ContentCalendar({ schedule, setSchedule, showToast, setShowAddSchedule, setShowVideoRecord, setQuickRecordData, generateWeekPlan, weekPlanLoading, dragItem, setDragItem, dragOverDate, setDragOverDate, handleDragDrop }: any) {
+function ContentCalendar({ schedule, setSchedule, showToast, setShowAddSchedule, setShowVideoRecord, setQuickRecordData, generateWeekPlan, weekPlanLoading, dragItem, setDragItem, dragOverDate, setDragOverDate, handleDragDrop, generateSmartSchedule, setShowSmartSchedule }: any) {
   const today = new Date()
   const [viewMonth, setViewMonth] = React.useState(today.getMonth())
   const [viewYear, setViewYear] = React.useState(today.getFullYear())
@@ -6478,6 +6682,14 @@ function ContentCalendar({ schedule, setSchedule, showToast, setShowAddSchedule,
                   <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : '✨'}
                 {weekPlanLoading ? '生成中...' : '一周计划'}
+              </button>
+            )}
+            {generateSmartSchedule && (
+              <button
+                onClick={() => setShowSmartSchedule(true)}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-violet-600 to-purple-500 text-white text-[10px] font-bold rounded-xl active:scale-95 transition-transform"
+              >
+                🧠 智能排期
               </button>
             )}
           </div>
@@ -7554,7 +7766,7 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
     }
 
     
-function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedContents, showToast, insights, insightsLoading, fetchInsights, showAddSchedule, setShowAddSchedule, newScheduleTitle, setNewScheduleTitle, newSchedulePlatform, setNewSchedulePlatform, addScheduleItem, generateWeekPlan, weekPlanLoading, showWeekPlan, setShowWeekPlan, dragItem, setDragItem, dragOverDate, setDragOverDate, handleDragDrop, platformStats, setPlatformStats, statsRange, setStatsRange, showDataBind, setShowDataBind, dataBindTab, setDataBindTab, manualFans, setManualFans, manualPlays, setManualPlays, manualLikes, setManualLikes, statsLoading, fetchPlatformStats, updateManualStats, setShowAiPanel, videoRecords, showVideoRecord, setShowVideoRecord, recordingVideo, setRecordingVideo, quickRecordData, setQuickRecordData, saveVideoRecord, reviewData, reviewLoading, fetchReview, reviewPeriod, setReviewPeriod, publishingId, setPublishingId, showPublishGuide, setShowPublishGuide, scheduleDetailId, setScheduleDetailId, newScheduleTime, setNewScheduleTime, newScheduleReminder, setNewScheduleReminder, newScheduleReminderMinutes, setNewScheduleReminderMinutes, notificationPermission, requestNotificationPermission }: any) {
+function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedContents, showToast, insights, insightsLoading, fetchInsights, showAddSchedule, setShowAddSchedule, newScheduleTitle, setNewScheduleTitle, newSchedulePlatform, setNewSchedulePlatform, addScheduleItem, generateWeekPlan, weekPlanLoading, showWeekPlan, setShowWeekPlan, dragItem, setDragItem, dragOverDate, setDragOverDate, handleDragDrop, platformStats, setPlatformStats, statsRange, setStatsRange, showDataBind, setShowDataBind, dataBindTab, setDataBindTab, manualFans, setManualFans, manualPlays, setManualPlays, manualLikes, setManualLikes, statsLoading, fetchPlatformStats, updateManualStats, setShowAiPanel, videoRecords, showVideoRecord, setShowVideoRecord, recordingVideo, setRecordingVideo, quickRecordData, setQuickRecordData, saveVideoRecord, reviewData, reviewLoading, fetchReview, reviewPeriod, setReviewPeriod, publishingId, setPublishingId, showPublishGuide, setShowPublishGuide, scheduleDetailId, setScheduleDetailId, newScheduleTime, setNewScheduleTime, newScheduleReminder, setNewScheduleReminder, newScheduleReminderMinutes, setNewScheduleReminderMinutes, notificationPermission, requestNotificationPermission, generateSmartSchedule, smartScheduleResult, smartScheduleLoading, smartScheduleStrategy, smartScheduleTips, showSmartSchedule, setShowSmartSchedule, smartScheduleDays, setSmartScheduleDays, applySmartSchedule }: any) {
   const TABS = [{ id: 'schedule', label: '📅 排期' }, { id: 'stats', label: '📊 数据' }, { id: 'review', label: '🔍 复盘' }, { id: 'goals', label: '🎯 目标' }]
   const STATS = [
     { label: '本周发布', value: '3', unit: '条', trend: '+1', up: true },
@@ -7628,16 +7840,118 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
       )}
 
       {/* 视频数据录入弹窗 */}
-      {showVideoRecord && (
-        <VideoRecordModal
-          quickRecordData={quickRecordData}
-          setShowVideoRecord={setShowVideoRecord}
-          setQuickRecordData={setQuickRecordData}
-          saveVideoRecord={saveVideoRecord}
-        />
-      )}
+          {showVideoRecord && (
+            <VideoRecordModal
+              quickRecordData={quickRecordData}
+              setShowVideoRecord={setShowVideoRecord}
+              setQuickRecordData={setQuickRecordData}
+              saveVideoRecord={saveVideoRecord}
+            />
+          )}
 
-      <div className="px-5 pt-12 pb-0 flex-shrink-0">
+          {/* 智能排期弹窗 */}
+          {showSmartSchedule && (
+            <div className="absolute inset-0 bg-black/40 z-50 flex flex-col rounded-[50px] overflow-hidden">
+              <div className="flex-1 bg-white mt-20 rounded-t-3xl flex flex-col overflow-hidden">
+                <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100 flex-shrink-0">
+                  <div>
+                    <h3 className="font-black text-gray-900 text-base">🧠 AI 智能排期</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">基于账号数据与热点分析生成最优排期</p>
+                  </div>
+                  <button onClick={() => setShowSmartSchedule(false)} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">✕</button>
+                </div>
+
+                {/* 天数选择 */}
+                <div className="px-5 py-3 flex-shrink-0">
+                  <p className="text-xs text-gray-500 mb-2 font-semibold">排期天数</p>
+                  <div className="flex gap-2">
+                    {[3, 7, 14, 30].map(d => (
+                      <button
+                        key={d}
+                        onClick={() => setSmartScheduleDays(d)}
+                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${smartScheduleDays === d ? 'bg-blue-500 text-white shadow-sm' : 'bg-gray-100 text-gray-500'}`}
+                      >{d}天</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 生成按钮 */}
+                {!smartScheduleResult.length && (
+                  <div className="px-5 pb-3 flex-shrink-0">
+                    <button
+                      onClick={generateSmartSchedule}
+                      disabled={smartScheduleLoading}
+                      className="w-full py-3 bg-gradient-to-r from-blue-500 to-violet-500 text-white font-bold rounded-2xl text-sm disabled:opacity-60 flex items-center justify-center gap-2"
+                    >
+                      {smartScheduleLoading ? (
+                        <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />生成中...</>
+                      ) : '✨ 生成智能排期'}
+                    </button>
+                  </div>
+                )}
+
+                {/* 策略说明 */}
+                {smartScheduleStrategy && (
+                  <div className="mx-5 mb-3 p-3 bg-blue-50 rounded-2xl flex-shrink-0">
+                    <p className="text-xs font-bold text-blue-700 mb-1">📋 排期策略</p>
+                    <p className="text-xs text-blue-600 leading-relaxed">{smartScheduleStrategy}</p>
+                    {smartScheduleTips.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {smartScheduleTips.map((tip: string, i: number) => (
+                          <p key={i} className="text-xs text-blue-500">• {tip}</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 排期列表 */}
+                {smartScheduleResult.length > 0 && (
+                  <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4 space-y-2">
+                    {smartScheduleResult.map((item: any, i: number) => (
+                      <div key={i} className="bg-gray-50 rounded-2xl p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg">{item.date}</span>
+                              <span className="text-xs text-gray-400">{item.time}</span>
+                              <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-lg">{item.platform}</span>
+                            </div>
+                            <p className="text-sm font-semibold text-gray-800 truncate">{item.title}</p>
+                            {item.reason && <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{item.reason}</p>}
+                          </div>
+                          <div className="flex-shrink-0 text-right">
+                            <p className="text-xs text-green-600 font-bold">{item.expectedViews || '预计高播'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 底部按钮 */}
+                {smartScheduleResult.length > 0 && (
+                  <div className="px-5 pb-6 pt-3 flex gap-3 flex-shrink-0 border-t border-gray-100">
+                    <button
+                      onClick={generateSmartSchedule}
+                      disabled={smartScheduleLoading}
+                      className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-2xl text-sm disabled:opacity-60"
+                    >
+                      {smartScheduleLoading ? '生成中...' : '🔄 重新生成'}
+                    </button>
+                    <button
+                      onClick={() => { applySmartSchedule(); setShowSmartSchedule(false); }}
+                      className="flex-1 py-3 bg-gradient-to-r from-blue-500 to-violet-500 text-white font-bold rounded-2xl text-sm"
+                    >
+                      ✅ 一键应用
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="px-5 pt-12 pb-0 flex-shrink-0">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-black text-gray-900">运营中心</h1>
           <button
@@ -7673,7 +7987,7 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
               setShowAddSchedule={setShowAddSchedule}
             />
 
-            <ContentCalendar schedule={schedule} setSchedule={setSchedule} showToast={showToast} setShowAddSchedule={setShowAddSchedule} setShowVideoRecord={setShowVideoRecord} setQuickRecordData={setQuickRecordData} generateWeekPlan={generateWeekPlan} weekPlanLoading={weekPlanLoading} dragItem={dragItem} setDragItem={setDragItem} dragOverDate={dragOverDate} setDragOverDate={setDragOverDate} handleDragDrop={handleDragDrop} />
+            <ContentCalendar schedule={schedule} setSchedule={setSchedule} showToast={showToast} setShowAddSchedule={setShowAddSchedule} setShowVideoRecord={setShowVideoRecord} setQuickRecordData={setQuickRecordData} generateWeekPlan={generateWeekPlan} weekPlanLoading={weekPlanLoading} dragItem={dragItem} setDragItem={setDragItem} dragOverDate={dragOverDate} setDragOverDate={setDragOverDate} handleDragDrop={handleDragDrop} generateSmartSchedule={generateSmartSchedule} setShowSmartSchedule={setShowSmartSchedule} />
 
             {/* 最佳发布时间 */}
             <BestTimePanel acc={acc} />
