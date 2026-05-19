@@ -4838,8 +4838,88 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                     </div>
                   ))}
                 </div>
-                <button onClick={() => { setStep(1); setVersions([]) }} className="w-full py-3 bg-white rounded-2xl text-sm font-bold text-gray-500 shadow-sm active:scale-[0.98]">🔄 重新生成</button>
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <button
+                    onClick={() => {
+                      const now = new Date()
+                      const tomorrow = new Date(now.getTime() + 86400000)
+                      const dateStr = tomorrow.toISOString().slice(0,10)
+                      setScheduleTime(dateStr + ' 18:30')
+                      setScheduleTitle(versions[0]?.title || selectedTopic.slice(0,20) || '新视频')
+                      setShowScheduleModal(true)
+                    }}
+                    className="py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-sm flex items-center justify-center gap-1.5"
+                  >📅 加入排期</button>
+                  <button onClick={() => { setStep(1); setVersions([]) }} className="py-3 bg-white rounded-2xl text-sm font-bold text-gray-500 shadow-sm active:scale-[0.98]">🔄 重新生成</button>
+                </div>
               </>
+            )}
+
+            {/* 排期弹窗 */}
+            {showScheduleModal && (
+              <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setShowScheduleModal(false)}>
+                <div className="w-full bg-white rounded-t-3xl p-5 pb-8" onClick={e => e.stopPropagation()}>
+                  <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
+                  <div className="font-black text-gray-900 text-base mb-4">📅 加入发布排期</div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs font-bold text-gray-500 mb-1.5 block">视频标题</label>
+                      <input
+                        value={scheduleTitle}
+                        onChange={e => setScheduleTitle(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-gray-50 rounded-xl text-sm outline-none"
+                        placeholder="输入视频标题..."
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-gray-500 mb-1.5 block">发布时间</label>
+                      <input
+                        type="datetime-local"
+                        value={scheduleTime.replace(' ', 'T')}
+                        onChange={e => setScheduleTime(e.target.value.replace('T', ' '))}
+                        className="w-full px-3 py-2.5 bg-gray-50 rounded-xl text-sm outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-gray-500 mb-1.5 block">发布平台</label>
+                      <div className="flex gap-2">
+                        {['抖音', '小红书', 'B站', '视频号', '快手'].map(p => (
+                          <button
+                            key={p}
+                            onClick={() => setSchedulePlatform(p)}
+                            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${schedulePlatform === p ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'}`}
+                          >{p}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      try {
+                        const accId = acc?.id || 'default'
+                        const key = `contentos_schedule_${accId}`
+                        const existing = JSON.parse(localStorage.getItem(key) || '[]')
+                        const newItem = {
+                          id: Date.now().toString(),
+                          time: scheduleTime,
+                          title: scheduleTitle || '新视频',
+                          status: '待发布',
+                          platform: schedulePlatform,
+                          copy: versions[0]?.content || '',
+                        }
+                        localStorage.setItem(key, JSON.stringify([...existing, newItem]))
+                        setShowScheduleModal(false)
+                        showToast('✅ 已加入排期！可在运营中心查看')
+                      } catch {
+                        showToast('❌ 加入排期失败')
+                      }
+                    }}
+                    className="w-full mt-4 py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-black text-sm rounded-2xl active:scale-[0.98] transition-all"
+                  >
+                    ✅ 确认加入排期
+                  </button>
+                </div>
+              </div>
             )}
           </div>
           {showTemplates && (
@@ -6375,12 +6455,8 @@ ${line}
               {/* 加入排期 */}
               <button
                 onClick={() => {
-                  const now = new Date()
-                  const tomorrow = new Date(now.getTime() + 86400000)
-                  const dateStr = tomorrow.toISOString().slice(0,10)
-                  setScheduleTime(dateStr + ' 18:30')
-                  setScheduleTitle(versions[0]?.title || selectedTopic.slice(0,20) || '新视频')
-                  setShowScheduleModal(true)
+                  setTab('operations')
+                  showToast('✅ 已跳转到运营中心，可添加排期')
                 }}
                 className="py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md flex items-center justify-center gap-1.5"
               >
@@ -6389,73 +6465,6 @@ ${line}
             </div>
             <button onClick={() => setStep('input')} className="w-full py-2 text-sm text-gray-400">← 重新开始</button>
           </>
-        )}
-
-        {/* 排期弹窗 */}
-        {showScheduleModal && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setShowScheduleModal(false)}>
-            <div className="w-full bg-white rounded-t-3xl p-5 pb-8" onClick={e => e.stopPropagation()}>
-              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
-              <div className="font-black text-gray-900 text-base mb-4">📅 加入发布排期</div>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-bold text-gray-500 mb-1.5 block">视频标题</label>
-                  <input
-                    value={scheduleTitle}
-                    onChange={e => setScheduleTitle(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-gray-50 rounded-xl text-sm outline-none"
-                    placeholder="输入视频标题..."
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-gray-500 mb-1.5 block">发布时间</label>
-                  <input
-                    type="datetime-local"
-                    value={scheduleTime.replace(' ', 'T')}
-                    onChange={e => setScheduleTime(e.target.value.replace('T', ' '))}
-                    className="w-full px-3 py-2.5 bg-gray-50 rounded-xl text-sm outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-gray-500 mb-1.5 block">发布平台</label>
-                  <div className="flex gap-2">
-                    {['抖音', '小红书', 'B站', '视频号', '快手'].map(p => (
-                      <button
-                        key={p}
-                        onClick={() => setSchedulePlatform(p)}
-                        className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${schedulePlatform === p ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'}`}
-                      >{p}</button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  try {
-                    const accId = acc?.id || 'default'
-                    const key = `contentos_schedule_${accId}`
-                    const existing = JSON.parse(localStorage.getItem(key) || '[]')
-                    const newItem = {
-                      id: Date.now().toString(),
-                      time: scheduleTime,
-                      title: scheduleTitle || '新视频',
-                      status: '待发布' as const,
-                      platform: schedulePlatform,
-                      copy: versions[0]?.content || '',
-                    }
-                    localStorage.setItem(key, JSON.stringify([...existing, newItem]))
-                    setShowScheduleModal(false)
-                    showToast('✅ 已加入排期！可在运营中心查看')
-                  } catch {
-                    showToast('❌ 加入排期失败')
-                  }
-                }}
-                className="w-full mt-4 py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-black text-sm rounded-2xl active:scale-[0.98] transition-all"
-              >
-                ✅ 确认加入排期
-              </button>
-            </div>
-          </div>
         )}
       </div>
     </div>
