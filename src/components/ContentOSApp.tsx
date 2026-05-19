@@ -840,6 +840,7 @@ export default function ContentOSApp() {
       const mp = localStorage.getItem('contentos_module_prompts'); if (mp) setModulePrompts(JSON.parse(mp))
       const cr = localStorage.getItem('contentos_credits'); if (cr) setCredits(parseInt(cr) || 1000)
       const cl = localStorage.getItem('contentos_credit_logs'); if (cl) setCreditLogs(JSON.parse(cl) || [])
+      const ch = localStorage.getItem('contentos_copy_history'); if (ch) setCopyHistory(JSON.parse(ch) || [])
       // 加载当前账号数据
       const savedAccIdx = localStorage.getItem('contentos_account_idx')
       const initIdx = savedAccIdx ? parseInt(savedAccIdx) || 0 : 0
@@ -1180,7 +1181,11 @@ export default function ContentOSApp() {
         setCopyVersions(data.versions)
         setContentStep(3)
         const histItem = { id: Date.now().toString(), topic: selectedTopic, style: copyStyle, versions: data.versions, createdAt: new Date().toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }), tokens: data.tokens || 0 }
-        setCopyHistory((prev: any[]) => [histItem, ...prev].slice(0, 20))
+        setCopyHistory((prev: any[]) => {
+          const updated = [histItem, ...prev].slice(0, 20)
+          localStorage.setItem('contentos_copy_history', JSON.stringify(updated))
+          return updated
+        })
         setCredits((c: number) => { const n = Math.max(0, c - 20); localStorage.setItem('contentos_credits', String(n)); return n })
         addCreditLog('文案生成', -20, `${copyStyle} · ${data.versions?.length || 0}个版本`)
         showToast('✅ 文案生成成功 (-20积分)')
@@ -4710,7 +4715,9 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
       const [style, setStyle] = React.useState('犀利观点')
       const [loading, setLoading] = React.useState(false)
       const [versions, setVersions] = React.useState<any[]>([])
-      const [history, setHistory] = React.useState<any[]>([])
+      const [history, setHistory] = React.useState<any[]>(() => {
+        try { const h = localStorage.getItem('contentos_cc_history'); return h ? JSON.parse(h) : [] } catch { return [] }
+      })
       const [compareMode, setCompareMode] = React.useState(false)
       const [showTemplates, setShowTemplates] = React.useState(false)
       const [showStyleAnalysis, setShowStyleAnalysis] = React.useState(false)
@@ -4753,7 +4760,11 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
           const data = await res.json()
           if (data.versions) {
             setVersions(data.versions)
-            setHistory((prev: any[]) => [{ topic: selectedTopic, style, versions: data.versions, time: Date.now() }, ...prev.slice(0, 9)])
+            setHistory((prev: any[]) => {
+              const updated = [{ topic: selectedTopic, style, versions: data.versions, time: Date.now() }, ...prev.slice(0, 9)]
+              try { localStorage.setItem('contentos_cc_history', JSON.stringify(updated)) } catch {}
+              return updated
+            })
             setStep(2); showToast('✅ 文案生成成功')
           } else { showToast(data.error || '生成失败，请重试') }
         } catch { showToast('网络错误，请重试') } finally { setLoading(false) }
