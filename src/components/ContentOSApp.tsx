@@ -4831,19 +4831,39 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
     }
   }
 
+  const SCENE_TEMPLATES = [
+    { id: 'knowledge', label: '知识分享', emoji: '📚', bgGradient: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', bgColor: '#1a1a2e', subtitleStyle: 'bottom', subtitleColor: 'cyan', sampleScript: '今天分享一个很多人都不知道的知识点...', tags: ['干货', '教程'] },
+    { id: 'product', label: '产品测评', emoji: '🛍️', bgGradient: 'linear-gradient(135deg, #2d1b69 0%, #11998e 100%)', bgColor: '#2d1b69', subtitleStyle: 'highlight', subtitleColor: 'yellow', sampleScript: '这款产品我用了一个月，说说真实感受...', tags: ['测评', '好物'] },
+    { id: 'vlog', label: '生活Vlog', emoji: '🌟', bgGradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', bgColor: '#c0392b', subtitleStyle: 'karaoke', subtitleColor: 'white', sampleScript: '今天记录一下我的日常，从早上开始...', tags: ['生活', 'Vlog'] },
+    { id: 'tutorial', label: '干货教程', emoji: '🎯', bgGradient: 'linear-gradient(135deg, #0f3460 0%, #533483 100%)', bgColor: '#0f3460', subtitleStyle: 'bottom', subtitleColor: 'white', sampleScript: '三步教你搞定这个问题，第一步...', tags: ['教程', '实操'] },
+    { id: 'story', label: '情感故事', emoji: '💝', bgGradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', bgColor: '#667eea', subtitleStyle: 'karaoke', subtitleColor: 'white', sampleScript: '有一件事我一直想说，今天终于鼓起勇气...', tags: ['情感', '故事'] },
+    { id: 'news', label: '资讯播报', emoji: '📰', bgGradient: 'linear-gradient(135deg, #1b1b1b 0%, #2d2d2d 100%)', bgColor: '#1b1b1b', subtitleStyle: 'bottom', subtitleColor: 'yellow', sampleScript: '今日重要资讯，以下几点值得关注...', tags: ['资讯', '新闻'] },
+    { id: 'motivation', label: '励志激励', emoji: '🔥', bgGradient: 'linear-gradient(135deg, #f7971e 0%, #ffd200 100%)', bgColor: '#f7971e', subtitleStyle: 'highlight', subtitleColor: 'white', sampleScript: '很多人问我成功的秘诀，其实很简单...', tags: ['励志', '正能量'] },
+    { id: 'food', label: '美食探店', emoji: '🍜', bgGradient: 'linear-gradient(135deg, #f953c6 0%, #b91d73 100%)', bgColor: '#b91d73', subtitleStyle: 'bottom', subtitleColor: 'white', sampleScript: '今天来到这家网红餐厅，人均消费...', tags: ['美食', '探店'] },
+    { id: 'finance', label: '财经干货', emoji: '💰', bgGradient: 'linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%)', bgColor: '#2d6a4f', subtitleStyle: 'bottom', subtitleColor: 'cyan', sampleScript: '这个理财方法让我多赚了30%，分享给大家...', tags: ['财经', '理财'] },
+    { id: 'tech', label: '科技数码', emoji: '💻', bgGradient: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)', bgColor: '#0f0c29', subtitleStyle: 'highlight', subtitleColor: 'cyan', sampleScript: '这款新品发布了，我第一时间上手体验...', tags: ['科技', '数码'] },
+  ]
   const AVATARS = [
     { id: 'business-female', label: '职场女性', emoji: '👩‍💼' },
     { id: 'business-male', label: '职场男性', emoji: '👨‍💼' },
     { id: 'casual-female', label: '休闲女生', emoji: '👩' },
     { id: 'casual-male', label: '休闲男生', emoji: '👨' },
+    { id: 'anchor-female', label: '主播女生', emoji: '👩‍🎤' },
+    { id: 'anchor-male', label: '主播男生', emoji: '👨‍🎤' },
+    { id: 'teacher', label: '知识博主', emoji: '🧑‍🏫' },
+    { id: 'chef', label: '美食博主', emoji: '👨‍🍳' },
   ]
   const BG_COLORS = [
-    { color: '#1a1a2e', label: '深夜蓝' },
-    { color: '#16213e', label: '星空蓝' },
-    { color: '#0f3460', label: '深海蓝' },
-    { color: '#533483', label: '神秘紫' },
-    { color: '#2d6a4f', label: '森林绿' },
-    { color: '#1b1b1b', label: '纯黑' },
+    { color: '#1a1a2e', label: '深夜蓝', gradient: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)' },
+    { color: '#16213e', label: '星空蓝', gradient: 'linear-gradient(135deg, #16213e 0%, #0f3460 100%)' },
+    { color: '#0f3460', label: '深海蓝', gradient: 'linear-gradient(135deg, #0f3460 0%, #533483 100%)' },
+    { color: '#533483', label: '神秘紫', gradient: 'linear-gradient(135deg, #533483 0%, #2d1b69 100%)' },
+    { color: '#2d6a4f', label: '森林绿', gradient: 'linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%)' },
+    { color: '#1b1b1b', label: '纯黑', gradient: 'linear-gradient(135deg, #1b1b1b 0%, #2d2d2d 100%)' },
+    { color: '#c0392b', label: '热情红', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+    { color: '#f7971e', label: '活力橙', gradient: 'linear-gradient(135deg, #f7971e 0%, #ffd200 100%)' },
+    { color: '#667eea', label: '梦幻蓝', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { color: '#b91d73', label: '玫瑰粉', gradient: 'linear-gradient(135deg, #f953c6 0%, #b91d73 100%)' },
   ]
   const STEPS = ['文案', '声音', '形象', '预览']
   const stepIdx = ['input', 'voice', 'avatar', 'preview'].indexOf(step)
@@ -4868,7 +4888,19 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
   const [showOptimized, setShowOptimized] = React.useState(false)
   const [optimizedCopy, setOptimizedCopy] = React.useState('')
 
-  const VIDEO_RATIOS = [
+      // v14.0 新增状态
+      const [selectedScene, setSelectedScene] = React.useState<string | null>(null)
+      const [showScenePanel, setShowScenePanel] = React.useState(false)
+      const [bgGradient, setBgGradient] = React.useState('linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)')
+      const [generatedSubtitles, setGeneratedSubtitles] = React.useState<any[]>([])
+      const [subtitleLoading, setSubtitleLoading] = React.useState(false)
+      const [currentSubtitleIdx, setCurrentSubtitleIdx] = React.useState(0)
+      const [showSubtitleTimeline, setShowSubtitleTimeline] = React.useState(false)
+      const [avatarMode, setAvatarMode] = React.useState<'preset' | 'upload' | 'ai'>('preset')
+      const [uploadedPhoto, setUploadedPhoto] = React.useState<string | null>(null)
+      const photoInputRef = React.useRef<HTMLInputElement>(null)
+
+    const VIDEO_RATIOS = [
     { id: '9:16', label: '竖屏', icon: '📱', desc: '抖音/快手/小红书' },
     { id: '16:9', label: '横屏', icon: '🖥️', desc: 'B站/YouTube' },
     { id: '1:1', label: '方形', icon: '⬜', desc: '微信视频号' },
@@ -5067,6 +5099,59 @@ ${line}
         {/* ── Step 1: 文案输入 ── */}
         {step === 'input' && (
           <>
+            {/* 🎬 场景模板选择器 */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-bold text-gray-900 text-sm">🎬 选择场景模板</div>
+                <button
+                  onClick={() => setShowScenePanel(!showScenePanel)}
+                  className="text-xs text-purple-500 font-medium"
+                >
+                  {showScenePanel ? '收起 ▲' : '展开 ▼'}
+                </button>
+              </div>
+              {selectedScene && !showScenePanel && (() => {
+                const sc = SCENE_TEMPLATES.find((s: any) => s.id === selectedScene)
+                return sc ? (
+                  <div className="flex items-center gap-3 bg-purple-50 rounded-xl px-3 py-2">
+                    <span className="text-2xl">{sc.emoji}</span>
+                    <div className="flex-1">
+                      <div className="font-semibold text-purple-700 text-sm">{sc.label}</div>
+                      <div className="flex gap-1 mt-0.5">
+                        {sc.tags.map((t: string) => (
+                          <span key={t} className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full">{t}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <button onClick={() => { setSelectedScene(null); setBgGradient('linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)') }} className="text-gray-400 text-xs">✕</button>
+                  </div>
+                ) : null
+              })()}
+              {(showScenePanel || !selectedScene) && (
+                <div className="grid grid-cols-5 gap-2">
+                  {SCENE_TEMPLATES.map((sc: any) => (
+                    <button
+                      key={sc.id}
+                      onClick={() => {
+                        setSelectedScene(sc.id)
+                        setBgGradient(sc.bgGradient)
+                        setBgColor(sc.bgColor)
+                        setSubtitleStyle(sc.subtitleStyle as any)
+                        setSubtitleColor(sc.subtitleColor as any)
+                        if (!videoCopy.trim()) setVideoCopy(sc.sampleScript)
+                        setShowScenePanel(false)
+                        showToast('✅ 已应用「' + sc.label + '」场景模板')
+                      }}
+                      className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${selectedScene === sc.id ? 'bg-purple-100 ring-2 ring-purple-400' : 'bg-gray-50 active:bg-purple-50'}`}
+                    >
+                      <span className="text-xl">{sc.emoji}</span>
+                      <span className="text-[9px] text-gray-600 font-medium leading-tight text-center">{sc.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* 从已保存文案选择 */}
             {savedContents.length > 0 && (
               <div className="bg-white rounded-2xl p-4 shadow-sm">
@@ -5624,37 +5709,135 @@ ${line}
 
             <div className="bg-white rounded-2xl p-4 shadow-sm">
               <div className="font-bold text-gray-900 text-sm mb-3">🎭 选择形象</div>
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                {AVATARS.map(a => (
+              <div className="flex gap-1.5 mb-3 bg-gray-100 rounded-xl p-1">
+                {[
+                  { id: 'preset', label: '预设形象', icon: '🎭' },
+                  { id: 'upload', label: '上传照片', icon: '📷' },
+                  { id: 'ai', label: 'AI数字人', icon: '🤖' },
+                ].map((m: any) => (
                   <button
-                    key={a.id}
-                    onClick={() => { setAvatarType('preset'); setAvatarPreset(a.id) }}
-                    className={`flex items-center gap-2 px-3 py-3 rounded-xl transition-all active:scale-[0.98] ${avatarPreset === a.id && avatarType === 'preset' ? 'bg-purple-50 border-2 border-purple-400' : 'bg-gray-50 border-2 border-transparent'}`}
+                    key={m.id}
+                    onClick={() => setAvatarMode(m.id as any)}
+                    className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-medium transition-all ${avatarMode === m.id ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500'}`}
                   >
-                    <span className="text-2xl">{a.emoji}</span>
-                    <span className={`text-xs font-semibold ${avatarPreset === a.id && avatarType === 'preset' ? 'text-purple-700' : 'text-gray-700'}`}>{a.label}</span>
+                    <span>{m.icon}</span>
+                    <span>{m.label}</span>
                   </button>
                 ))}
               </div>
+              {avatarMode === 'preset' && (
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  {AVATARS.map((a: any) => (
+                    <button
+                      key={a.id}
+                      onClick={() => { setAvatarType('preset'); setAvatarPreset(a.id) }}
+                      className={`flex items-center gap-2 px-3 py-3 rounded-xl transition-all active:scale-[0.98] ${avatarPreset === a.id && avatarType === 'preset' ? 'bg-purple-50 border-2 border-purple-400' : 'bg-gray-50 border-2 border-transparent'}`}
+                    >
+                      <span className="text-2xl">{a.emoji}</span>
+                      <span className={`text-xs font-semibold ${avatarPreset === a.id && avatarType === 'preset' ? 'text-purple-700' : 'text-gray-700'}`}>{a.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {avatarMode === 'upload' && (
+                <div className="mb-3">
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e: any) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      const reader = new FileReader()
+                      reader.onload = (ev: any) => {
+                        setUploadedPhoto(ev.target?.result as string)
+                        setAvatarType('upload')
+                        showToast('✅ 照片上传成功')
+                      }
+                      reader.readAsDataURL(file)
+                    }}
+                  />
+                  {uploadedPhoto ? (
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-purple-300 shadow-lg">
+                        <img src={uploadedPhoto} alt="上传照片" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="text-xs text-gray-500">已上传照片，将用于视频合成</div>
+                      <button onClick={() => photoInputRef.current?.click()} className="text-xs text-purple-500 font-medium">重新上传</button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => photoInputRef.current?.click()}
+                      className="w-full h-32 border-2 border-dashed border-purple-300 rounded-2xl flex flex-col items-center justify-center gap-2 text-purple-400 active:bg-purple-50 transition-all"
+                    >
+                      <span className="text-3xl">📷</span>
+                      <span className="text-sm font-medium">点击上传真人照片</span>
+                      <span className="text-xs text-gray-400">支持 JPG/PNG，建议正面照</span>
+                    </button>
+                  )}
+                </div>
+              )}
+              {avatarMode === 'ai' && (
+                <div className="mb-3 space-y-2">
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-3 text-center">
+                    <div className="text-3xl mb-2">🤖</div>
+                    <div className="font-semibold text-gray-800 text-sm">AI 数字人生成</div>
+                    <div className="text-xs text-gray-500 mt-1">基于文字描述生成专属数字人形象</div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: '知性女主播', emoji: '👩‍💼', desc: '专业、优雅' },
+                      { label: '阳光男博主', emoji: '👨‍💻', desc: '活力、亲切' },
+                      { label: '时尚达人', emoji: '💃', desc: '潮流、个性' },
+                      { label: '科技极客', emoji: '🧑‍💻', desc: '专业、理性' },
+                    ].map((ai: any) => (
+                      <button
+                        key={ai.label}
+                        onClick={() => { setAvatarType('ai'); setAvatarPreset(ai.label); showToast('✅ 已选择「' + ai.label + '」数字人') }}
+                        className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-all ${avatarPreset === ai.label && avatarType === 'ai' ? 'bg-purple-50 border-2 border-purple-400' : 'bg-gray-50 border-2 border-transparent'}`}
+                      >
+                        <span className="text-2xl">{ai.emoji}</span>
+                        <span className="text-xs font-semibold text-gray-700">{ai.label}</span>
+                        <span className="text-[10px] text-gray-400">{ai.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="text-[10px] text-gray-400 text-center">AI数字人功能即将上线，敬请期待</div>
+                </div>
+              )}
             </div>
-
             {/* 背景颜色 */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-3">🎨 背景颜色</div>
-              <div className="grid grid-cols-3 gap-2">
-                {BG_COLORS.map(bg => (
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-bold text-gray-900 text-sm">🎨 背景风格</div>
+                <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
+                  <button
+                    onClick={() => setBgType('solid')}
+                    className={`text-[10px] px-2 py-1 rounded-md font-medium transition-all ${bgType === 'solid' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500'}`}
+                  >纯色</button>
+                  <button
+                    onClick={() => setBgType('gradient')}
+                    className={`text-[10px] px-2 py-1 rounded-md font-medium transition-all ${bgType === 'gradient' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500'}`}
+                  >渐变</button>
+                </div>
+              </div>
+              <div className="grid grid-cols-5 gap-2">
+                {BG_COLORS.map((bg: any) => (
                   <button
                     key={bg.color}
-                    onClick={() => setBgColor(bg.color)}
-                    className={`flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all ${bgColor === bg.color ? 'ring-2 ring-purple-400 ring-offset-1' : ''}`}
+                    onClick={() => { setBgColor(bg.color); setBgGradient(bg.gradient) }}
+                    className={`flex flex-col items-center gap-1 p-1.5 rounded-xl transition-all ${bgColor === bg.color ? 'ring-2 ring-purple-400 ring-offset-1' : ''}`}
                   >
-                    <div className="w-full h-10 rounded-xl" style={{ backgroundColor: bg.color }} />
-                    <span className="text-[10px] text-gray-500 font-medium">{bg.label}</span>
+                    <div
+                      className="w-full h-8 rounded-lg"
+                      style={{ background: bgType === 'gradient' ? bg.gradient : bg.color }}
+                    />
+                    <span className="text-[9px] text-gray-500 font-medium">{bg.label}</span>
                   </button>
                 ))}
               </div>
             </div>
-
             <button
               onClick={() => setStep('preview')}
               className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md"
@@ -5679,7 +5862,7 @@ ${line}
               </div>
               <div
                 className={`rounded-2xl overflow-hidden flex flex-col items-center justify-center relative mx-auto ${videoRatio === '9:16' ? 'aspect-[9/16] max-w-[160px]' : videoRatio === '16:9' ? 'aspect-[16/9] w-full' : 'aspect-square max-w-[200px]'}`}
-                style={{ backgroundColor: bgColor }}
+                style={{ background: bgType === 'gradient' ? bgGradient : bgColor }}
               >
                 {/* 背景装饰 */}
                 <div className="absolute inset-0 opacity-10">
@@ -5767,6 +5950,61 @@ ${line}
               </div>
             </div>
 
+            {/* 字幕时间轴 */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-bold text-gray-900 text-sm">📝 字幕时间轴</div>
+                <button
+                  onClick={async () => {
+                    if (!videoCopy.trim()) { showToast('请先输入文案'); return }
+                    setSubtitleLoading(true)
+                    try {
+                      const res = await fetch('/api/generate-subtitles', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: videoCopy, duration: Math.ceil(videoCopy.length / 4 / speed) })
+                      })
+                      const data = await res.json()
+                      if (data.subtitles) {
+                        setGeneratedSubtitles(data.subtitles)
+                        setShowSubtitleTimeline(true)
+                        showToast('✅ 字幕生成成功，共 ' + data.subtitles.length + ' 条')
+                      }
+                    } catch(e) {
+                      showToast('字幕生成失败，请重试')
+                    } finally {
+                      setSubtitleLoading(false)
+                    }
+                  }}
+                  disabled={subtitleLoading}
+                  className="text-xs bg-purple-500 text-white px-3 py-1.5 rounded-lg font-medium disabled:opacity-60 active:scale-95 transition-all"
+                >
+                  {subtitleLoading ? '生成中...' : '✨ AI生成字幕'}
+                </button>
+              </div>
+              {generatedSubtitles.length > 0 && showSubtitleTimeline ? (
+                <div className="space-y-1.5 max-h-48 overflow-y-auto scrollbar-hide">
+                  {generatedSubtitles.map((sub: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className={`flex items-start gap-2 px-2 py-1.5 rounded-lg transition-all ${currentSubtitleIdx === idx ? 'bg-purple-50 border border-purple-200' : 'bg-gray-50'}`}
+                    >
+                      <div className="flex-shrink-0 text-[10px] text-gray-400 font-mono mt-0.5 w-16">
+                        {sub.start}s - {sub.end}s
+                      </div>
+                      <div className="text-xs text-gray-700 flex-1">{sub.text}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-400">
+                  <div className="text-3xl mb-2">📝</div>
+                  <div className="text-xs">点击「AI生成字幕」自动生成时间轴</div>
+                  <div className="text-[10px] text-gray-300 mt-1">基于文案长度和语速智能分配时间</div>
+                </div>
+              )}
+            </div>
+
             {/* 配置摘要 */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
               <div className="font-bold text-gray-900 text-sm mb-3">📋 配置摘要</div>
@@ -5780,6 +6018,8 @@ ${line}
                   ['字幕样式', SUBTITLE_STYLES.find(s => s.id === subtitleStyle)?.label || '无'],
                   ['字幕字号', SUBTITLE_FONT_SIZES.find(f => f.id === subtitleFontSize)?.label || '中'],
                   ['字幕颜色', SUBTITLE_COLORS.find(c => c.id === subtitleColor)?.label || '白色'],
+                  ['场景模板', selectedScene ? (SCENE_TEMPLATES.find((s: any) => s.id === selectedScene)?.label || '自定义') : '未选择'],
+                  ['背景风格', bgType === 'gradient' ? '渐变色' : '纯色'],
                   ['语音状态', audioB64 ? '✅ 已合成' : '⏳ 未合成'],
                   ['预计时长', `≈ ${Math.ceil(estimatedDuration / speed)} 秒`],
                 ].map(([k, v]) => (
