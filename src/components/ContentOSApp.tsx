@@ -3809,12 +3809,41 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
             {creatorData && (
               <div className="space-y-3">
                 {/* 返回按钮 */}
-                <button
-                  onClick={() => { setCreatorData(null); setSelectedCreator(null); setExpandedVideo(null) }}
-                  className="flex items-center gap-1.5 text-xs text-gray-500 font-medium"
-                >
-                  ← 返回列表
-                </button>
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => { setCreatorData(null); setSelectedCreator(null); setExpandedVideo(null) }}
+                    className="flex items-center gap-1.5 text-xs text-gray-500 font-medium"
+                  >
+                    ← 返回列表
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!creatorData?.videos?.length) { showToast('暂无数据可导出'); return }
+                      const headers = ['排名', '标题', '点赞', '评论', '收藏', '分享', '发布日期', '时长', '类型', '钩子', '口播文案']
+                      const rows = creatorData.videos.map((v: any) => [
+                        v.rank, v.title, v.likes, v.comments, v.collects, v.shares,
+                        v.publishDate, v.duration, v.type, v.hook, v.script
+                      ])
+                      const csv = [headers, ...rows].map((row: any[]) =>
+                        row.map((cell: any) => {
+                          const str = String(cell ?? '').replace(/"/g, '""')
+                          return str.includes(',') || str.includes('"') || str.includes('\n') ? `"${str}"` : str
+                        }).join(',')
+                      ).join('\n')
+                      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `${creatorData.creator?.name || '博主'}_视频数据_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.csv`
+                      a.click()
+                      URL.revokeObjectURL(url)
+                      showToast('✅ 导出成功')
+                    }}
+                    className="flex items-center gap-1 text-xs text-blue-500 font-bold bg-blue-50 px-3 py-1.5 rounded-xl active:scale-95"
+                  >
+                    📥 导出 CSV
+                  </button>
+                </div>
 
                 {/* 博主信息卡 */}
                 <div className="bg-gradient-to-br from-blue-500 to-cyan-400 rounded-3xl p-4 text-white shadow-lg">
