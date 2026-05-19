@@ -531,7 +531,15 @@ export default function ContentOSApp() {
   const [creatorData, setCreatorData] = useState<any>(null)
   const [trackedCreators, setTrackedCreators] = useState<any[]>([])
   const [radarData, setRadarData] = useState<any>(null)
-  const [radarLoading, setRadarLoading] = useState(false)
+      const [radarLoading, setRadarLoading] = useState(false)
+      // v13.0 趋势分析
+      const [trendData, setTrendData] = useState<any>(null)
+      const [trendLoading, setTrendLoading] = useState(false)
+      const [showTrendPanel, setShowTrendPanel] = useState(false)
+      const [borrowHotspot, setBorrowHotspot] = useState<any>(null)
+      const [borrowLoading, setBorrowLoading] = useState(false)
+      const [showBorrowPanel, setShowBorrowPanel] = useState(false)
+      const [borrowResult, setBorrowResult] = useState<any>(null)
   const [styleTemplates, setStyleTemplates] = useState<any[]>([])
   const [styleLoading, setStyleLoading] = useState(false)
   const [styleUrl, setStyleUrl] = useState('')
@@ -1143,27 +1151,72 @@ export default function ContentOSApp() {
   }
 
   async function fetchRadar() {
-    setRadarLoading(true)
-    try {
-      const res = await fetch('/api/daily-radar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          industry: acc.industry,
-          modulePrompt: modulePrompts['radar'] || '',
-          aiModel, aiApiKey, aiApiBase
-        })
-      })
-      const data = await res.json()
-      if (data.hotspots) setRadarData(data)
-      else showToast('获取失败，请重试')
-    } catch {
-      showToast('网络错误')
-    } finally {
-      setRadarLoading(false)
-    }
-  }
+        setRadarLoading(true)
+        try {
+          const res = await fetch('/api/daily-radar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              industry: acc.industry,
+              modulePrompt: modulePrompts['radar'] || '',
+              aiModel, aiApiKey, aiApiBase,
+              mode: 'full',
+            })
+          })
+          const data = await res.json()
+          if (data.success) {
+            setRadarData({ ...data, updateTime: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) })
+            showToast('✅ 情报雷达已更新')
+          }
+        } catch { showToast('获取失败，请重试') }
+        setRadarLoading(false)
+      }
 
+      async function fetchTrendAnalysis() {
+        if (!radarData?.hotspots?.length) { showToast('请先获取情报雷达数据'); return }
+        setTrendLoading(true)
+        setShowTrendPanel(true)
+        try {
+          const res = await fetch('/api/trend-analysis', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              hotspots: radarData.hotspots,
+              industry: acc.industry,
+              accountPositioning: acc.positioning,
+              aiModel, aiApiKey, aiApiBase,
+            })
+          })
+          const data = await res.json()
+          if (data.success) setTrendData(data)
+          else showToast('趋势分析失败')
+        } catch { showToast('趋势分析失败') }
+        setTrendLoading(false)
+      }
+
+      async function generateBorrowScript(hotspot: any) {
+        setBorrowHotspot(hotspot)
+        setBorrowLoading(true)
+        setShowBorrowPanel(true)
+        setBorrowResult(null)
+        try {
+          const res = await fetch('/api/borrow-hotspot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              hotspot: hotspot.title,
+              industry: acc.industry,
+              positioning: acc.positioning,
+              style: 'dry-goods',
+              aiModel, aiApiKey, aiApiBase,
+            })
+          })
+          const data = await res.json()
+          if (data.success) setBorrowResult(data)
+          else showToast('生成失败')
+        } catch { showToast('生成失败') }
+        setBorrowLoading(false)
+      }
   async function scrapeCreator(sort = 'likes', count = 20) {
     if (!creatorUrl.trim()) { showToast('请输入博主链接'); return }
     setCreatorLoading(true)
@@ -1882,7 +1935,14 @@ export default function ContentOSApp() {
                 recommendInsight={recommendInsight}
                 showRecommendPanel={showRecommendPanel} setShowRecommendPanel={setShowRecommendPanel}
                 recommendTopicsFn={recommendTopicsFn}
-              />
+                    fetchTrendAnalysis={fetchTrendAnalysis}
+                    trendData={trendData} trendLoading={trendLoading}
+                    showTrendPanel={showTrendPanel} setShowTrendPanel={setShowTrendPanel}
+                    generateBorrowScript={generateBorrowScript}
+                    borrowLoading={borrowLoading}
+                    showBorrowPanel={showBorrowPanel} setShowBorrowPanel={setShowBorrowPanel}
+                    borrowResult={borrowResult} borrowHotspot={borrowHotspot}
+                  />
             )}
         {tab === 'content' && (
           <ContentCenter
@@ -2546,7 +2606,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
     }
     
 
-function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, topicFilter, setTopicFilter, topicSearch, setTopicSearch, batchCount, setBatchCount, topicCategories, selectedCategory, setSelectedCategory, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy, setShowAiPanel, creatorAnalysisTab, setCreatorAnalysisTab, selectedScript, setSelectedScript, showScriptDetail, setShowScriptDetail, knowledgeItems, knowledgeInput, setKnowledgeInput, knowledgeTitle, setKnowledgeTitle, knowledgeCategory, setKnowledgeCategory, showAddKnowledge, setShowAddKnowledge, knowledgeSearch, setKnowledgeSearch, addKnowledgeItem, deleteKnowledgeItem, showSuperGen, setShowSuperGen, superGenLoading, superGenResult, setSuperGenResult, superGenTopic, setSuperGenTopic, superGenHotspot, setSuperGenHotspot, superGenStyle, setSuperGenStyle, superGenKnowledge, setSuperGenKnowledge, superGenerate, acc: accProp, trendingItems, trendingLoading, trendingCategory, setTrendingCategory, trendingSort, setTrendingSort, fetchTrendingMaterials, recommendTopics, recommendLoading, recommendInsight, showRecommendPanel, setShowRecommendPanel, recommendTopicsFn, hotspots: hotspotsProp, videoRecords: videoRecordsProp }: any) {
+function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, topicFilter, setTopicFilter, topicSearch, setTopicSearch, batchCount, setBatchCount, topicCategories, selectedCategory, setSelectedCategory, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy, setShowAiPanel, creatorAnalysisTab, setCreatorAnalysisTab, selectedScript, setSelectedScript, showScriptDetail, setShowScriptDetail, knowledgeItems, knowledgeInput, setKnowledgeInput, knowledgeTitle, setKnowledgeTitle, knowledgeCategory, setKnowledgeCategory, showAddKnowledge, setShowAddKnowledge, knowledgeSearch, setKnowledgeSearch, addKnowledgeItem, deleteKnowledgeItem, showSuperGen, setShowSuperGen, superGenLoading, superGenResult, setSuperGenResult, superGenTopic, setSuperGenTopic, superGenHotspot, setSuperGenHotspot, superGenStyle, setSuperGenStyle, superGenKnowledge, setSuperGenKnowledge, superGenerate, acc: accProp, trendingItems, trendingLoading, trendingCategory, setTrendingCategory, trendingSort, setTrendingSort, fetchTrendingMaterials, recommendTopics, recommendLoading, recommendInsight, showRecommendPanel, setShowRecommendPanel, recommendTopicsFn, hotspots: hotspotsProp, videoRecords: videoRecordsProp, fetchTrendAnalysis, trendData, trendLoading, showTrendPanel, setShowTrendPanel, generateBorrowScript, borrowLoading, showBorrowPanel, setShowBorrowPanel, borrowResult, borrowHotspot }: any) {
   const TABS = [
     { id: 'hotspot', label: '🔥 热点' },
     { id: 'trending', label: '💎 爆款' },
@@ -2562,7 +2622,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
   const [creatorCount, setCreatorCount] = React.useState(20)
   const [expandedVideo, setExpandedVideo] = React.useState<number | null>(null)
   const [selectedCreator, setSelectedCreator] = React.useState<any>(null)
-  const [radarTab, setRadarTab] = React.useState<'hotspot' | 'format' | 'keyword' | 'insight'>('hotspot')
+  const [radarTab, setRadarTab] = React.useState<'hotspot' | 'format' | 'keyword' | 'insight' | 'forecast'>('hotspot')
 
   const TAG_COLORS: Record<string, string> = {
     '社会': 'bg-red-50 text-red-500',
@@ -2984,225 +3044,577 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
         )}
 
                 {/* ── 情报雷达 Tab ── */}
-        {matTab === 'radar' && (
-          <div className="mt-1">
-            {!radarData ? (
-              <div className="bg-white rounded-3xl p-8 text-center shadow-sm">
-                <div className="text-5xl mb-4">📡</div>
-                <div className="font-black text-gray-800 text-base mb-1">内容情报雷达</div>
-                <div className="text-xs text-gray-400 mb-2 leading-relaxed">
-                  每日热点 · 爆款形式 · 关键词热度<br />
-                  <span className="text-blue-400 font-medium">基于 {acc.industry} 行业定制分析</span>
-                </div>
-                <div className="flex justify-center gap-4 mb-5 text-xs text-gray-400">
-                  <span>🔥 8个热点</span>
-                  <span>🎬 5种形式</span>
-                  <span>🏷️ 12个关键词</span>
-                </div>
-                <button
-                  onClick={fetchRadar}
-                  disabled={radarLoading}
-                  className="px-8 py-3 bg-gradient-to-r from-orange-400 to-amber-400 text-white text-sm font-bold rounded-2xl disabled:opacity-60 active:scale-[0.97] transition-transform shadow-md"
-                >
-                  {radarLoading ? '📡 获取中...' : '📡 获取今日情报'}
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {/* 顶部信息栏 */}
-                <div className="flex items-center justify-between">
-                  <div className="text-xs text-gray-400">
-                    📅 {radarData.updateTime || '今日'} · {acc.industry}行业
-                    {radarData.dataSource && (
-                      <span className={`ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${radarData.dataSource.includes('真实') ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'}`}>
-                        {radarData.dataSource.includes('真实') ? '🌐 实时热点' : '🤖 AI生成'}
-                      </span>
-                    )}
+            {matTab === 'radar' && (
+              <div className="mt-1">
+                {/* 借势文案弹窗 */}
+                {showBorrowPanel && (
+                  <div className="absolute inset-0 bg-black/40 z-50 flex flex-col rounded-[50px] overflow-hidden">
+                    <div className="flex-1 bg-white mt-16 rounded-t-3xl flex flex-col overflow-hidden">
+                      <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100 flex-shrink-0">
+                        <div>
+                          <h3 className="font-black text-gray-900 text-base">🎯 借势文案生成</h3>
+                          <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[220px]">热点：{borrowHotspot?.title}</p>
+                        </div>
+                        <button onClick={() => setShowBorrowPanel(false)} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">✕</button>
+                      </div>
+                      <div className="flex-1 overflow-y-auto scrollbar-hide px-5 py-4 space-y-3">
+                        {borrowLoading ? (
+                          <div className="flex flex-col items-center justify-center py-16 gap-3">
+                            <div className="w-10 h-10 border-3 border-orange-200 border-t-orange-500 rounded-full animate-spin" />
+                            <p className="text-sm text-gray-500">AI 正在生成借势文案...</p>
+                          </div>
+                        ) : borrowResult?.scripts ? (
+                          <>
+                            {borrowResult.bestTime && (
+                              <div className="bg-orange-50 rounded-2xl px-4 py-2.5 flex items-center gap-2">
+                                <span className="text-orange-500">⏰</span>
+                                <span className="text-xs text-orange-700 font-semibold">最佳发布时间：{borrowResult.bestTime}</span>
+                              </div>
+                            )}
+                            {borrowResult.scripts.map((s: any, i: number) => (
+                              <div key={i} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-white text-xs font-black ${i===0?'bg-red-400':i===1?'bg-orange-400':'bg-amber-400'}`}>{i+1}</span>
+                                  <span className="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">{s.angle}</span>
+                                  <span className="text-xs text-gray-400 ml-auto">{s.platform}</span>
+                                </div>
+                                <p className="text-sm font-bold text-gray-900 mb-2">{s.title}</p>
+                                {s.hook && <div className="bg-orange-50 rounded-xl px-3 py-2 mb-2">
+                                  <p className="text-xs text-orange-600 font-semibold">💡 开场钩子</p>
+                                  <p className="text-xs text-orange-700 mt-0.5">{s.hook}</p>
+                                </div>}
+                                <p className="text-xs text-gray-600 leading-relaxed mb-3 line-clamp-4">{s.script}</p>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex gap-1 flex-wrap">
+                                    {s.tags?.slice(0,3).map((tag: string, ti: number) => (
+                                      <span key={ti} className="text-[10px] bg-blue-50 text-blue-500 px-2 py-0.5 rounded-full">#{tag}</span>
+                                    ))}
+                                  </div>
+                                  <button
+                                    onClick={() => { setVideoCopy(s.script); setTab('content'); setShowBorrowPanel(false); showToast('文案已填入内容中心') }}
+                                    className="text-xs bg-blue-500 text-white px-3 py-1.5 rounded-xl font-bold flex-shrink-0"
+                                  >用这个 →</button>
+                                </div>
+                              </div>
+                            ))}
+                            {borrowResult.tips?.length > 0 && (
+                              <div className="bg-gray-50 rounded-2xl p-3">
+                                <p className="text-xs font-bold text-gray-600 mb-2">⚠️ 借势注意事项</p>
+                                {borrowResult.tips.map((tip: string, i: number) => (
+                                  <p key={i} className="text-xs text-gray-500 mb-1">• {tip}</p>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="text-center py-10 text-gray-400 text-sm">生成失败，请重试</div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <button
-                    onClick={fetchRadar}
-                    disabled={radarLoading}
-                    className="text-xs text-orange-500 font-bold bg-orange-50 px-3 py-1 rounded-full active:scale-95 transition-transform"
-                  >
-                    {radarLoading ? '刷新中...' : '🔄 刷新'}
-                  </button>
-                </div>
+                )}
 
-                {/* 子Tab切换 */}
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-                  {[
-                    { id: 'hotspot', label: '🔥 热点' },
-                    { id: 'format', label: '🎬 形式' },
-                    { id: 'keyword', label: '🏷️ 关键词' },
-                    { id: 'insight', label: '💡 洞察' },
-                  ].map(t => (
+                {/* 趋势分析弹窗 */}
+                {showTrendPanel && (
+                  <div className="absolute inset-0 bg-black/40 z-50 flex flex-col rounded-[50px] overflow-hidden">
+                    <div className="flex-1 bg-white mt-16 rounded-t-3xl flex flex-col overflow-hidden">
+                      <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100 flex-shrink-0">
+                        <div>
+                          <h3 className="font-black text-gray-900 text-base">📊 AI 趋势深度分析</h3>
+                          <p className="text-xs text-gray-400 mt-0.5">热点机会评分 · 趋势预测 · 行动方案</p>
+                        </div>
+                        <button onClick={() => setShowTrendPanel(false)} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">✕</button>
+                      </div>
+                      <div className="flex-1 overflow-y-auto scrollbar-hide px-5 py-4 space-y-3">
+                        {trendLoading ? (
+                          <div className="flex flex-col items-center justify-center py-16 gap-3">
+                            <div className="w-10 h-10 border-3 border-blue-200 border-t-blue-500 rounded-full animate-spin" />
+                            <p className="text-sm text-gray-500">AI 正在分析趋势...</p>
+                            <p className="text-xs text-gray-400">预计需要 10-15 秒</p>
+                          </div>
+                        ) : trendData ? (
+                          <>
+                            {/* 机会矩阵 */}
+                            {trendData.opportunityMatrix?.length > 0 && (
+                              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                                <p className="text-sm font-black text-gray-900 mb-3">🎯 热点机会矩阵</p>
+                                <div className="space-y-2">
+                                  {trendData.opportunityMatrix.map((item: any, i: number) => (
+                                    <div key={i} className="bg-gray-50 rounded-xl p-3">
+                                      <div className="flex items-center justify-between mb-1.5">
+                                        <p className="text-sm font-bold text-gray-800 flex-1 truncate">{item.topic}</p>
+                                        <div className={`flex-shrink-0 ml-2 px-2 py-0.5 rounded-full text-xs font-black ${item.opportunityScore >= 80 ? 'bg-green-100 text-green-600' : item.opportunityScore >= 60 ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-500'}`}>
+                                          {item.opportunityScore}分
+                                        </div>
+                                      </div>
+                                      <div className="flex gap-2 mb-1.5">
+                                        <div className="flex-1">
+                                          <p className="text-[10px] text-gray-400 mb-0.5">热度</p>
+                                          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                            <div className="h-full bg-red-400 rounded-full" style={{width:`${item.heatScore||70}%`}} />
+                                          </div>
+                                        </div>
+                                        <div className="flex-1">
+                                          <p className="text-[10px] text-gray-400 mb-0.5">竞争度</p>
+                                          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                            <div className="h-full bg-orange-400 rounded-full" style={{width:`${item.competitionScore||60}%`}} />
+                                          </div>
+                                        </div>
+                                        <div className="flex-1">
+                                          <p className="text-[10px] text-gray-400 mb-0.5">相关度</p>
+                                          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                            <div className="h-full bg-blue-400 rounded-full" style={{width:`${item.relevanceScore||80}%`}} />
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <p className="text-xs text-gray-500">⏰ {item.contentWindow}</p>
+                                          {item.estimatedViews && <p className="text-xs text-green-600 font-semibold">预计 {item.estimatedViews}</p>}
+                                        </div>
+                                        <button
+                                          onClick={() => generateBorrowScript({title: item.topic})}
+                                          className="text-xs bg-orange-400 text-white px-3 py-1.5 rounded-xl font-bold"
+                                        >借势 →</button>
+                                      </div>
+                                      {item.angle && <p className="text-xs text-blue-500 mt-1.5 bg-blue-50 px-2 py-1 rounded-lg">💡 {item.angle}</p>}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 行动方案 */}
+                            {trendData.actionPlan?.length > 0 && (
+                              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                                <p className="text-sm font-black text-gray-900 mb-3">⚡ 优先行动方案</p>
+                                <div className="space-y-2">
+                                  {trendData.actionPlan.map((plan: any, i: number) => (
+                                    <div key={i} className={`rounded-xl p-3 ${i===0?'bg-red-50 border border-red-100':'bg-gray-50'}`}>
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-black flex-shrink-0 ${i===0?'bg-red-400':i===1?'bg-orange-400':'bg-gray-400'}`}>{plan.priority}</span>
+                                        <p className="text-sm font-bold text-gray-800">{plan.action}</p>
+                                      </div>
+                                      <p className="text-xs text-gray-600 mb-1">{plan.topic}</p>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-xs text-gray-400">⏰ {plan.deadline}</span>
+                                        <span className="text-xs text-green-600 font-semibold">{plan.expectedResult}</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 内容策略 */}
+                            {trendData.contentStrategy && (
+                              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                                <p className="text-sm font-black text-gray-900 mb-3">🗺️ 内容策略建议</p>
+                                {trendData.contentStrategy.urgentTopics?.length > 0 && (
+                                  <div className="mb-3">
+                                    <p className="text-xs font-bold text-red-500 mb-1.5">🔴 立即创作</p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {trendData.contentStrategy.urgentTopics.map((t: string, i: number) => (
+                                        <button key={i} onClick={() => useTopic(t)} className="text-xs bg-red-50 text-red-600 px-2.5 py-1 rounded-full font-medium">{t}</button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {trendData.contentStrategy.planTopics?.length > 0 && (
+                                  <div className="mb-3">
+                                    <p className="text-xs font-bold text-blue-500 mb-1.5">🔵 计划创作</p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {trendData.contentStrategy.planTopics.map((t: string, i: number) => (
+                                        <button key={i} onClick={() => useTopic(t)} className="text-xs bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full font-medium">{t}</button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {trendData.contentStrategy.bestPostTime && (
+                                  <div className="bg-green-50 rounded-xl px-3 py-2">
+                                    <p className="text-xs text-green-700 font-semibold">⏰ 最佳发布时间：{trendData.contentStrategy.bestPostTime}</p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="text-center py-10 text-gray-400 text-sm">分析失败，请重试</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {!radarData ? (
+                  <div className="bg-white rounded-3xl p-8 text-center shadow-sm">
+                    <div className="text-5xl mb-4">📡</div>
+                    <div className="font-black text-gray-800 text-base mb-1">内容情报雷达 v13</div>
+                    <div className="text-xs text-gray-400 mb-3 leading-relaxed">
+                      多平台实时热点 · AI趋势分析 · 一键借势<br />
+                      <span className="text-blue-400 font-medium">基于 {acc.industry} 行业定制分析</span>
+                    </div>
+                    <div className="flex justify-center gap-3 mb-5 text-xs text-gray-400">
+                      <span>🔥 微博/百度</span>
+                      <span>🎵 抖音</span>
+                      <span>📺 B站</span>
+                      <span>💬 知乎</span>
+                    </div>
                     <button
-                      key={t.id}
-                      onClick={() => setRadarTab(t.id as any)}
-                      className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${radarTab === t.id ? 'bg-orange-400 text-white' : 'bg-white text-gray-500 shadow-sm'}`}
-                    >{t.label}</button>
-                  ))}
-                </div>
-
-                {/* 热点列表 */}
-                {radarTab === 'hotspot' && (
-                  <div className="space-y-2">
-                    {radarData.hotspots?.map((h: any, i: number) => (
-                      <div key={i} className="bg-white rounded-2xl p-3.5 shadow-sm">
-                        <div className="flex items-start gap-3">
-                          <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-white font-black text-xs flex-shrink-0 ${i < 3 ? 'bg-red-400' : 'bg-gray-300'}`}>
-                            {i + 1}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-sm font-bold text-gray-900">{h.title}</span>
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${TAG_COLORS[h.tag] || 'bg-gray-100 text-gray-500'}`}>{h.tag}</span>
-                            </div>
-                            {h.desc && <div className="text-xs text-gray-400 mb-1.5">{h.desc}</div>}
-                            {/* 热度条 */}
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full ${i < 3 ? 'bg-gradient-to-r from-red-400 to-orange-400' : 'bg-gradient-to-r from-blue-300 to-cyan-300'}`}
-                                  style={{ width: `${h.heat || 70}%` }}
-                                />
-                              </div>
-                              <span className="text-xs font-bold text-gray-500 flex-shrink-0">{h.heat}</span>
-                            </div>
-                          </div>
-                        </div>
-                        {h.canBorrow && h.borrowTip && (
-                          <div className="mt-2 flex items-center gap-1.5 bg-orange-50 rounded-xl px-3 py-1.5">
-                            <span className="text-orange-400 text-xs">💡</span>
-                            <span className="text-xs text-orange-600 font-medium">{h.borrowTip}</span>
-                            <button
-                              onClick={() => useTopic(h.title)}
-                              className="ml-auto text-[10px] text-white bg-orange-400 px-2 py-0.5 rounded-full font-bold flex-shrink-0"
-                            >用</button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      onClick={fetchRadar}
+                      disabled={radarLoading}
+                      className="px-8 py-3 bg-gradient-to-r from-orange-400 to-amber-400 text-white text-sm font-bold rounded-2xl disabled:opacity-60 active:scale-[0.97] transition-transform shadow-md"
+                    >
+                      {radarLoading ? (
+                        <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />获取中...</span>
+                      ) : '📡 获取今日情报'}
+                    </button>
                   </div>
-                )}
-
-                {/* 爆款形式 */}
-                {radarTab === 'format' && (
-                  <div className="space-y-2">
-                    {radarData.formats?.map((f: any, i: number) => (
-                      <div key={i} className="bg-white rounded-2xl p-4 shadow-sm">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-white text-xs font-black flex-shrink-0 ${i === 0 ? 'bg-red-400' : i === 1 ? 'bg-orange-400' : i === 2 ? 'bg-amber-400' : 'bg-gray-300'}`}>{i + 1}</span>
-                            <span className="font-bold text-gray-900 text-sm">{f.format}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${f.difficulty === '简单' ? 'bg-green-50 text-green-500' : f.difficulty === '中等' ? 'bg-yellow-50 text-yellow-600' : 'bg-red-50 text-red-400'}`}>{f.difficulty}</span>
-                            <span className="text-xs font-bold text-orange-500">{f.heat}</span>
-                          </div>
-                        </div>
-                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
-                          <div
-                            className="h-full bg-gradient-to-r from-orange-400 to-amber-300 rounded-full"
-                            style={{ width: `${f.heat || 70}%` }}
-                          />
-                        </div>
-                        <div className="text-xs text-gray-500 mb-1">{f.desc}</div>
-                        {f.example && (
-                          <div className="text-xs text-blue-500 bg-blue-50 px-2.5 py-1.5 rounded-xl">
-                            📌 {f.example}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* 关键词热度 */}
-                {radarTab === 'keyword' && (
-                  <div className="bg-white rounded-2xl p-4 shadow-sm">
-                    <div className="font-bold text-gray-900 text-sm mb-3">🏷️ 热门关键词</div>
-                    <div className="space-y-2.5">
-                      {radarData.keywords?.map((k: any, i: number) => (
-                        <div key={i} className="flex items-center gap-3">
-                          <span className="text-xs font-bold text-gray-400 w-4 flex-shrink-0">{i + 1}</span>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-1">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-sm font-semibold text-gray-800">{k.word}</span>
-                                {k.category && <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">{k.category}</span>}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <span className={`text-xs font-bold ${TREND_COLORS[k.trend] || 'text-gray-400'}`}>
-                                  {TREND_ICONS[k.trend] || '→'}
-                                </span>
-                                <span className="text-xs font-bold text-gray-600">{k.heat}</span>
-                              </div>
-                            </div>
-                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full ${k.trend === '上升' ? 'bg-gradient-to-r from-red-400 to-orange-300' : k.trend === '下降' ? 'bg-gradient-to-r from-blue-300 to-cyan-200' : 'bg-gradient-to-r from-gray-300 to-gray-200'}`}
-                                style={{ width: `${k.heat || 60}%` }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {/* 词云标签 */}
-                    <div className="mt-4 pt-3 border-t border-gray-50">
-                      <div className="text-xs text-gray-400 mb-2">快速复制关键词</div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {radarData.keywords?.map((k: any, i: number) => (
-                          <button
-                            key={i}
-                            onClick={() => { navigator.clipboard?.writeText(k.word); showToast(`已复制：${k.word}`) }}
-                            className={`text-xs px-2.5 py-1 rounded-full font-medium active:scale-95 transition-transform ${i < 3 ? 'bg-red-50 text-red-500' : i < 6 ? 'bg-orange-50 text-orange-500' : 'bg-gray-100 text-gray-500'}`}
-                          >{k.word}</button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* AI 洞察 */}
-                {radarTab === 'insight' && (
+                ) : (
                   <div className="space-y-3">
-                    {/* 核心洞察 */}
-                    <div className="bg-white rounded-2xl p-4 shadow-sm">
-                      <div className="font-bold text-gray-900 text-sm mb-3">💡 今日创作洞察</div>
-                      {radarData.insights?.map((insight: string, i: number) => (
-                        <div key={i} className="flex gap-3 py-2.5 border-b border-gray-50 last:border-0">
-                          <div className={`w-6 h-6 rounded-xl flex items-center justify-center text-white text-xs font-black flex-shrink-0 ${i === 0 ? 'bg-blue-400' : i === 1 ? 'bg-purple-400' : 'bg-green-400'}`}>{i + 1}</div>
-                          <div className="text-xs text-gray-700 leading-relaxed flex-1">{insight}</div>
+                    {/* 顶部信息栏 */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="text-xs text-gray-400">
+                          🕐 {radarData.updateTime || '今日'} · {acc.industry}
                         </div>
+                        {radarData.dataSource && (
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${radarData.dataSource.includes('实时') ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'}`}>
+                            {radarData.dataSource.includes('实时') ? '🌐 实时' : '🤖 AI'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={fetchTrendAnalysis}
+                          disabled={trendLoading}
+                          className="text-xs text-purple-500 font-bold bg-purple-50 px-2.5 py-1 rounded-full active:scale-95 transition-transform"
+                        >
+                          {trendLoading ? '分析中...' : '📊 趋势分析'}
+                        </button>
+                        <button
+                          onClick={fetchRadar}
+                          disabled={radarLoading}
+                          className="text-xs text-orange-500 font-bold bg-orange-50 px-2.5 py-1 rounded-full active:scale-95 transition-transform"
+                        >
+                          {radarLoading ? '刷新中...' : '🔄 刷新'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 平台数据统计 */}
+                    {radarData._meta?.hasRealData && (
+                      <div className="bg-white rounded-2xl p-3 shadow-sm">
+                        <p className="text-xs font-bold text-gray-500 mb-2">📡 实时数据来源</p>
+                        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                          {[
+                            { name: '微博', count: radarData._meta?.platformData?.weibo?.length || 0, color: 'bg-red-50 text-red-500', icon: '🔥' },
+                            { name: '百度', count: radarData._meta?.platformData?.baidu?.length || 0, color: 'bg-blue-50 text-blue-500', icon: '🔍' },
+                            { name: '抖音', count: radarData._meta?.platformData?.douyin?.length || 0, color: 'bg-gray-900 text-white', icon: '🎵' },
+                            { name: '知乎', count: radarData._meta?.platformData?.zhihu?.length || 0, color: 'bg-blue-50 text-blue-600', icon: '💬' },
+                            { name: 'B站', count: radarData._meta?.platformData?.bilibili?.length || 0, color: 'bg-pink-50 text-pink-500', icon: '📺' },
+                          ].map((p, i) => (
+                            <div key={i} className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold ${p.color}`}>
+                              <span>{p.icon}</span>
+                              <span>{p.name}</span>
+                              <span className="opacity-70">{p.count}条</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 子Tab切换 */}
+                    <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                      {[
+                        { id: 'hotspot', label: '🔥 热点' },
+                        { id: 'format', label: '🎬 形式' },
+                        { id: 'keyword', label: '🏷️ 关键词' },
+                        { id: 'insight', label: '💡 洞察' },
+                        { id: 'forecast', label: '📈 预测' },
+                      ].map(t => (
+                        <button
+                          key={t.id}
+                          onClick={() => setRadarTab(t.id as any)}
+                          className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${radarTab === t.id ? 'bg-orange-400 text-white' : 'bg-white text-gray-500 shadow-sm'}`}
+                        >{t.label}</button>
                       ))}
                     </div>
-                    {/* 推荐选题 */}
-                    {radarData.bestTopics && (
-                      <div className="bg-white rounded-2xl p-4 shadow-sm">
-                        <div className="font-bold text-gray-900 text-sm mb-3">🎯 今日推荐选题</div>
-                        {radarData.bestTopics.map((t: any, i: number) => (
-                          <div key={i} className="py-2.5 border-b border-gray-50 last:border-0">
-                            <div className="flex items-start justify-between gap-2 mb-1">
-                              <span className="text-sm font-semibold text-gray-800 flex-1">{t.title}</span>
-                              <button
-                                onClick={() => useTopic(t.title)}
-                                className="text-[10px] text-white bg-blue-500 px-2 py-0.5 rounded-full font-bold flex-shrink-0"
-                              >用</button>
+
+                    {/* 热点列表 */}
+                    {radarTab === 'hotspot' && (
+                      <div className="space-y-2">
+                        {radarData.hotspots?.map((h: any, i: number) => (
+                          <div key={i} className="bg-white rounded-2xl p-3.5 shadow-sm">
+                            <div className="flex items-start gap-3">
+                              <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-white font-black text-xs flex-shrink-0 ${i < 3 ? 'bg-red-400' : i < 6 ? 'bg-orange-400' : 'bg-gray-300'}`}>
+                                {i + 1}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                                  <span className="text-sm font-bold text-gray-900">{h.title}</span>
+                                  {h.trend && <span className={`text-xs font-bold ${h.trend === '↑' ? 'text-red-500' : h.trend === '↓' ? 'text-blue-400' : 'text-gray-400'}`}>{h.trend}</span>}
+                                </div>
+                                <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                                  {h.tag && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-orange-50 text-orange-500">{h.tag}</span>}
+                                  {h.source && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">{h.source}</span>}
+                                  {h.difficulty && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${h.difficulty==='简单'?'bg-green-50 text-green-500':h.difficulty==='中等'?'bg-yellow-50 text-yellow-600':'bg-red-50 text-red-400'}`}>{h.difficulty}</span>}
+                                  {h.opportunityScore && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-500 font-bold">机会{h.opportunityScore}分</span>}
+                                </div>
+                                {h.desc && <div className="text-xs text-gray-400 mb-1.5">{h.desc}</div>}
+                                {/* 热度条 */}
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full ${i < 3 ? 'bg-gradient-to-r from-red-400 to-orange-400' : 'bg-gradient-to-r from-blue-300 to-cyan-300'}`}
+                                      style={{ width: `${typeof h.heat === 'number' ? h.heat : 70}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-xs font-bold text-gray-500 flex-shrink-0">{typeof h.heat === 'number' ? h.heat : h.heatLevel || '🔥'}</span>
+                                </div>
+                              </div>
                             </div>
-                            {t.reason && <div className="text-xs text-gray-400 mb-1">{t.reason}</div>}
-                            {t.hook && <div className="text-xs text-orange-500 bg-orange-50 px-2 py-1 rounded-lg">💡 {t.hook}</div>}
+                            {/* 借势提示 + 按钮 */}
+                            {(h.canBorrow || h.borrowTip || h.contentAngle) && (
+                              <div className="mt-2 bg-orange-50 rounded-xl px-3 py-2">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1">
+                                    {h.borrowTip && <p className="text-xs text-orange-600 font-medium mb-0.5">💡 {h.borrowTip}</p>}
+                                    {h.contentAngle && <p className="text-xs text-orange-500">{h.contentAngle}</p>}
+                                  </div>
+                                  <button
+                                    onClick={() => generateBorrowScript(h)}
+                                    disabled={borrowLoading}
+                                    className="flex-shrink-0 text-[10px] text-white bg-orange-400 px-2.5 py-1 rounded-full font-bold disabled:opacity-60"
+                                  >借势</button>
+                                </div>
+                              </div>
+                            )}
+                            {!h.canBorrow && !h.borrowTip && (
+                              <div className="mt-2 flex justify-end">
+                                <button
+                                  onClick={() => generateBorrowScript(h)}
+                                  disabled={borrowLoading}
+                                  className="text-[10px] text-orange-500 bg-orange-50 px-2.5 py-1 rounded-full font-bold disabled:opacity-60"
+                                >🎯 一键借势</button>
+                              </div>
+                            )}
                           </div>
                         ))}
+                      </div>
+                    )}
+
+                    {/* 爆款形式 */}
+                    {radarTab === 'format' && (
+                      <div className="space-y-2">
+                        {radarData.formats?.map((f: any, i: number) => (
+                          <div key={i} className="bg-white rounded-2xl p-4 shadow-sm">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-white text-xs font-black flex-shrink-0 ${i === 0 ? 'bg-red-400' : i === 1 ? 'bg-orange-400' : i === 2 ? 'bg-amber-400' : 'bg-gray-300'}`}>{i + 1}</span>
+                                <span className="font-bold text-gray-900 text-sm">{f.format || f.name}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {f.difficulty && <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${f.difficulty === '简单' ? 'bg-green-50 text-green-500' : f.difficulty === '中等' ? 'bg-yellow-50 text-yellow-600' : 'bg-red-50 text-red-400'}`}>{f.difficulty}</span>}
+                                {f.trend && <span className="text-xs font-bold text-green-500">{f.trend}</span>}
+                              </div>
+                            </div>
+                            {f.desc && <p className="text-xs text-gray-500 mb-2">{f.desc}</p>}
+                            {f.example && <div className="bg-gray-50 rounded-xl px-3 py-2 mb-2">
+                              <p className="text-[10px] text-gray-400 mb-0.5">示例标题</p>
+                              <p className="text-xs text-gray-700 font-medium">{f.example}</p>
+                            </div>}
+                            <div className="flex items-center justify-between">
+                              {f.bestPlatform && <span className="text-xs text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">{f.bestPlatform}</span>}
+                              {f.avgViews && <span className="text-xs text-green-600 font-semibold">{f.avgViews}</span>}
+                            </div>
+                            {f.tips?.length > 0 && (
+                              <div className="mt-2 space-y-0.5">
+                                {f.tips.map((tip: string, ti: number) => (
+                                  <p key={ti} className="text-xs text-gray-400">• {tip}</p>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 关键词热度 */}
+                    {radarTab === 'keyword' && (
+                      <div className="space-y-2">
+                        <div className="bg-white rounded-2xl p-4 shadow-sm">
+                          <div className="font-bold text-gray-900 text-sm mb-3">🏷️ 关键词热度榜</div>
+                          <div className="space-y-2">
+                            {radarData.keywords?.map((kw: any, i: number) => (
+                              <div key={i} className="flex items-center gap-3">
+                                <span className={`w-5 h-5 rounded-lg flex items-center justify-center text-white text-[10px] font-black flex-shrink-0 ${i < 3 ? 'bg-red-400' : i < 6 ? 'bg-orange-400' : 'bg-gray-300'}`}>{i + 1}</span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between mb-0.5">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-sm font-semibold text-gray-800">{kw.word}</span>
+                                      {kw.trend && <span className={`text-xs font-bold ${kw.trend === '↑' ? 'text-red-500' : kw.trend === '↓' ? 'text-blue-400' : 'text-gray-400'}`}>{kw.trend}</span>}
+                                      {kw.category && <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">{kw.category}</span>}
+                                    </div>
+                                    <span className="text-xs font-bold text-gray-500 flex-shrink-0">{kw.heat}</span>
+                                  </div>
+                                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full ${i < 3 ? 'bg-gradient-to-r from-red-400 to-orange-400' : i < 6 ? 'bg-gradient-to-r from-orange-300 to-amber-300' : 'bg-gradient-to-r from-blue-300 to-cyan-300'}`}
+                                      style={{ width: `${kw.heat || 50}%` }}
+                                    />
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => useTopic(kw.word)}
+                                  className="flex-shrink-0 text-[10px] text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full font-bold"
+                                >用</button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* AI 洞察 */}
+                    {radarTab === 'insight' && (
+                      <div className="space-y-3">
+                        <div className="bg-white rounded-2xl p-4 shadow-sm">
+                          <div className="font-bold text-gray-900 text-sm mb-3">💡 今日创作洞察</div>
+                          {radarData.insights?.map((insight: any, i: number) => (
+                            <div key={i} className="flex gap-3 py-2.5 border-b border-gray-50 last:border-0">
+                              <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-lg flex-shrink-0`}>
+                                {typeof insight === 'object' ? (insight.icon || '💡') : '💡'}
+                              </div>
+                              <div className="flex-1">
+                                {typeof insight === 'object' ? (
+                                  <>
+                                    <p className="text-sm font-bold text-gray-800 mb-0.5">{insight.title}</p>
+                                    <p className="text-xs text-gray-500 leading-relaxed">{insight.detail}</p>
+                                    {insight.actionable && <p className="text-xs text-blue-500 mt-1 font-medium">→ {insight.actionable}</p>}
+                                  </>
+                                ) : (
+                                  <p className="text-xs text-gray-700 leading-relaxed">{insight}</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {/* 行业预警 */}
+                        {radarData.industryAlert && (
+                          <div className={`rounded-2xl p-4 ${radarData.industryAlert.level === 'high' ? 'bg-red-50' : radarData.industryAlert.level === 'medium' ? 'bg-yellow-50' : 'bg-green-50'}`}>
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-base">{radarData.industryAlert.level === 'high' ? '🚨' : radarData.industryAlert.level === 'medium' ? '⚠️' : '✅'}</span>
+                              <p className={`text-sm font-bold ${radarData.industryAlert.level === 'high' ? 'text-red-700' : radarData.industryAlert.level === 'medium' ? 'text-yellow-700' : 'text-green-700'}`}>行业情报预警</p>
+                            </div>
+                            <p className={`text-xs mb-1 ${radarData.industryAlert.level === 'high' ? 'text-red-600' : radarData.industryAlert.level === 'medium' ? 'text-yellow-600' : 'text-green-600'}`}>{radarData.industryAlert.message}</p>
+                            {radarData.industryAlert.suggestion && <p className="text-xs text-gray-600 font-medium">建议：{radarData.industryAlert.suggestion}</p>}
+                          </div>
+                        )}
+                        {/* 推荐选题 */}
+                        {radarData.bestTopics && (
+                          <div className="bg-white rounded-2xl p-4 shadow-sm">
+                            <div className="font-bold text-gray-900 text-sm mb-3">🎯 今日推荐选题</div>
+                            {radarData.bestTopics.map((t: any, i: number) => (
+                              <div key={i} className="py-2.5 border-b border-gray-50 last:border-0">
+                                <div className="flex items-start justify-between gap-2 mb-1">
+                                  <span className="text-sm font-semibold text-gray-800 flex-1">{t.title}</span>
+                                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                                    {t.score && <span className="text-[10px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded-full font-bold">{t.score}分</span>}
+                                    <button onClick={() => useTopic(t.title)} className="text-[10px] text-white bg-blue-500 px-2 py-0.5 rounded-full font-bold">用</button>
+                                  </div>
+                                </div>
+                                {t.reason && <div className="text-xs text-gray-400 mb-1">{t.reason}</div>}
+                                {t.hook && <div className="text-xs text-orange-500 bg-orange-50 px-2 py-1 rounded-lg">💡 {t.hook}</div>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 趋势预测 Tab */}
+                    {radarTab === 'forecast' && (
+                      <div className="space-y-3">
+                        {/* 趋势预测卡片 */}
+                        {radarData.trendForecast?.length > 0 ? (
+                          <div className="space-y-2">
+                            {radarData.trendForecast.map((tf: any, i: number) => (
+                              <div key={i} className="bg-white rounded-2xl p-4 shadow-sm">
+                                <div className="flex items-center justify-between mb-3">
+                                  <p className="text-sm font-bold text-gray-900">{tf.topic}</p>
+                                  <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${tf.lifecycle === '上升期' ? 'bg-green-100 text-green-600' : tf.lifecycle === '峰值期' ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}>{tf.lifecycle || '上升期'}</span>
+                                </div>
+                                {/* 简易趋势图 */}
+                                {tf.timeline?.length > 0 && (
+                                  <div className="mb-3">
+                                    <div className="flex items-end gap-1 h-12">
+                                      {tf.timeline.map((point: any, pi: number) => {
+                                        const h = Math.max(4, Math.round((point.heat / 100) * 48))
+                                        const isNow = point.time === '现在'
+                                        return (
+                                          <div key={pi} className="flex-1 flex flex-col items-center gap-0.5">
+                                            <div
+                                              className={`w-full rounded-t-sm ${isNow ? 'bg-orange-400' : pi < 2 ? 'bg-gray-200' : 'bg-blue-200'}`}
+                                              style={{height: `${h}px`}}
+                                            />
+                                            <span className="text-[8px] text-gray-400 truncate w-full text-center">{point.time}</span>
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+                                <div className="flex items-center justify-between mb-2">
+                                  <div>
+                                    <p className="text-xs text-gray-500">当前热度 <span className="font-bold text-gray-800">{tf.currentHeat}</span></p>
+                                    <p className="text-xs text-gray-500">预测峰值 <span className="font-bold text-orange-500">{tf.forecastHeat}</span></p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-xs text-gray-500">峰值时间</p>
+                                    <p className="text-xs font-bold text-orange-500">{tf.peakTime}</p>
+                                  </div>
+                                </div>
+                                {tf.contentWindow && <div className="bg-green-50 rounded-xl px-3 py-2 mb-2">
+                                  <p className="text-xs text-green-700 font-semibold">⏰ 最佳创作窗口：{tf.contentWindow}</p>
+                                </div>}
+                                {tf.reason && <p className="text-xs text-gray-400">{tf.reason}</p>}
+                                <button
+                                  onClick={() => generateBorrowScript({title: tf.topic})}
+                                  className="mt-2 w-full py-2 bg-orange-400 text-white text-xs font-bold rounded-xl"
+                                >🎯 立即借势创作</button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="bg-white rounded-2xl p-6 text-center shadow-sm">
+                            <p className="text-gray-400 text-sm mb-3">暂无趋势预测数据</p>
+                            <button
+                              onClick={fetchTrendAnalysis}
+                              disabled={trendLoading}
+                              className="px-6 py-2.5 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-bold rounded-2xl disabled:opacity-60"
+                            >
+                              {trendLoading ? '分析中...' : '📊 AI 深度趋势分析'}
+                            </button>
+                          </div>
+                        )}
+                        {/* 快速行动 */}
+                        <div className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-2xl p-4">
+                          <p className="text-sm font-bold text-gray-800 mb-2">⚡ 快速行动</p>
+                          <button
+                            onClick={fetchTrendAnalysis}
+                            disabled={trendLoading}
+                            className="w-full py-2.5 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-bold rounded-xl disabled:opacity-60 flex items-center justify-center gap-2"
+                          >
+                            {trendLoading ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />分析中...</> : '📊 获取 AI 趋势深度分析'}
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
                 )}
               </div>
             )}
-          </div>
-        )}
 
         {/* ── 博主追踪 Tab ── */}
         {matTab === 'creator' && (
