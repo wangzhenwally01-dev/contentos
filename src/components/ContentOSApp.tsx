@@ -748,6 +748,22 @@ export default function ContentOSApp() {
   React.useEffect(() => { if (acc?.id) { saveAccData(acc.id, 'schedule', schedule); autoSync() } }, [schedule])
   React.useEffect(() => { if (acc?.id) { saveAccData(acc.id, 'knowledge', knowledgeItems); autoSync() } }, [knowledgeItems])
 
+  // 切换到运营中心时，从 localStorage 重新加载排期（合并文案/视频页写入的数据）
+  React.useEffect(() => {
+    if (tab === 'operations' && acc?.id) {
+      try {
+        const key = `contentos_${acc.id}_schedule`
+        const stored = localStorage.getItem(key)
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (parsed.length !== schedule.length) {
+            setSchedule(parsed)
+          }
+        }
+      } catch {}
+    }
+  }, [tab])
+
   // ─── Effects ─────────────────────────────────────────────
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -4897,7 +4913,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                     onClick={() => {
                       try {
                         const accId = acc?.id || 'default'
-                        const key = `contentos_schedule_${accId}`
+                        const key = `contentos_${accId}_schedule`
                         const existing = JSON.parse(localStorage.getItem(key) || '[]')
                         const newItem = {
                           id: Date.now().toString(),
@@ -6504,7 +6520,7 @@ ${line}
                 onClick={() => {
                   try {
                     const accId = acc?.id || 'default'
-                    const key = `contentos_schedule_${accId}`
+                    const key = `contentos_${accId}_schedule`
                     const existing = JSON.parse(localStorage.getItem(key) || '[]')
                     const timeStr = vidScheduleTime.replace('T', ' ')
                     const newItem = { id: Date.now().toString(), time: timeStr, title: vidScheduleTitle || '新视频', status: '待发布', platform: vidSchedulePlatform, copy: videoCopy }
