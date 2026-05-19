@@ -95,8 +95,13 @@ import { NextResponse } from 'next/server'
         signal: AbortSignal.timeout(5000),
       })
       const html = await res.text()
-      const matches = [...html.matchAll(/"word":"([^"]+)"/g)]
-      return matches.slice(0, 10).map((m, i) => ({ id: `baidu_${i}`, title: m[1], heat: Math.max(0, 100 - i * 8) }))
+      const wordRegex = /"word":"([^"]+)"/g
+      const matches: string[] = []
+      let m: RegExpExecArray | null
+      while ((m = wordRegex.exec(html)) !== null && matches.length < 10) {
+        matches.push(m[1])
+      }
+      return matches.map((title, i) => ({ id: `baidu_${i}`, title, heat: Math.max(0, 100 - i * 8) }))
     }
 
     async function fetchDouyinHot() {
