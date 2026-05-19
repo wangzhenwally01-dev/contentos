@@ -41,14 +41,14 @@ export async function POST(req: NextRequest) {
       hint: '支持格式：抖音视频链接、小红书笔记链接。ASR语音转文字功能即将上线。'
     })
 
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || '提取失败' }, { status: 500 })
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : '提取失败'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
 
 async function extractDouyinScript(url: string): Promise<string | null> {
-  // 获取真实视频页面
-  const headers = {
+  const headers: Record<string, string> = {
     'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
     'Referer': 'https://www.douyin.com/',
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -72,9 +72,11 @@ async function extractDouyinScript(url: string): Promise<string | null> {
     try {
       const data = JSON.parse(nextDataMatch[1])
       const videoDetail = findDeep(data, 'video')
-      if (videoDetail?.subtitleInfos) {
-        const subtitleInfo = videoDetail.subtitleInfos.find((s: any) => s.languageCodeName === 'zho-Hans' || s.languageCodeName === 'chi')
-        if (subtitleInfo?.url) {
+      if (videoDetail && videoDetail.subtitleInfos) {
+        const subtitleInfo = videoDetail.subtitleInfos.find((s: Record<string, string>) => 
+          s.languageCodeName === 'zho-Hans' || s.languageCodeName === 'chi'
+        )
+        if (subtitleInfo && subtitleInfo.url) {
           const srtResp = await fetch(subtitleInfo.url)
           const srtText = await srtResp.text()
           return parseSRT(srtText)
@@ -83,15 +85,18 @@ async function extractDouyinScript(url: string): Promise<string | null> {
     } catch {}
   }
 
-  // 尝试从页面 JSON 数据提取
-  const jsonMatches = html.matchAll(/\{"aweme_detail":\{([\s\S]*?)\}\}/g)
-  for (const match of jsonMatches) {
+  // 尝试从页面 JSON 数据提取（使用 exec 替代 matchAll）
+  const jsonRegex = /\{"aweme_detail":\{([\s\S]*?)\}\}/g
+  let match
+  while ((match = jsonRegex.exec(html)) !== null) {
     try {
       const data = JSON.parse(`{"aweme_detail":{${match[1]}}}`)
       const subtitles = data?.aweme_detail?.video?.subtitleInfos
-      if (subtitles?.length > 0) {
-        const sub = subtitles.find((s: any) => s.languageCodeName?.includes('zho') || s.languageCodeName?.includes('chi'))
-        if (sub?.url) {
+      if (subtitles && subtitles.length > 0) {
+        const sub = subtitles.find((s: Record<string, string>) => 
+          s.languageCodeName?.includes('zho') || s.languageCodeName?.includes('chi')
+        )
+        if (sub && sub.url) {
           const srtResp = await fetch(sub.url)
           const srtText = await srtResp.text()
           return parseSRT(srtText)
@@ -108,7 +113,7 @@ async function extractDouyinScript(url: string): Promise<string | null> {
 }
 
 async function extractXhsScript(url: string): Promise<string | null> {
-  const headers = {
+  const headers: Record<string, string> = {
     'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15',
     'Referer': 'https://www.xiaohongshu.com/',
   }
@@ -131,9 +136,13 @@ async function extractXhsScript(url: string): Promise<string | null> {
       const data = JSON.parse(initStateMatch[1])
       const noteDetail = findDeep(data, 'noteDetailMap')
       if (noteDetail) {
-        const note = Object.values(noteDetail as Record<string, any>)[0] as any
-        const content = note?.note?.desc || note?.note?.title
-        if (content) return content
+        const notes = Object.values(noteDetail as Record<string, unknown>)
+        if (notes.length > 0) {
+          const note = notes[0] as Record<string, unknown>
+          const noteData = note?.note as Record<string, string> | undefined
+          const content = noteData?.desc || noteData?.title
+          if (content) return content
+        }
       }
     } catch {}
   }
@@ -145,10 +154,11 @@ async function extractXhsScript(url: string): Promise<string | null> {
   return null
 }
 
-function findDeep(obj: any, key: string): any {
+function findDeep(obj: unknown, key: string): unknown {
   if (!obj || typeof obj !== 'object') return null
-  if (obj[key] !== undefined) return obj[key]
-  for (const v of Object.values(obj)) {
+  const record = obj as Record<string, unknown>
+  if (record[key] !== undefined) return record[key]
+  for (const v of Object.values(record)) {
     const result = findDeep(v, key)
     if (result !== null) return result
   }
@@ -161,7 +171,6 @@ function parseSRT(srt: string): string {
   for (const line of lines) {
     const trimmed = line.trim()
     if (!trimmed || /^\d+$/.test(trimmed) || trimmed.includes('-->')) continue
-    // 去除 HTML 标签
     const clean = trimmed.replace(/<[^>]+>/g, '').trim()
     if (clean) texts.push(clean)
   }
