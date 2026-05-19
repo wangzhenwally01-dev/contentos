@@ -599,6 +599,14 @@ export default function ContentOSApp() {
   const [videoStep, setVideoStep] = useState<VideoStep>('input')
   const [videoCopy, setVideoCopy] = useState('')
   const [videoVoiceId, setVideoVoiceId] = useState('female-shaonv')
+  // 声音克隆状态
+  const [clonedVoices, setClonedVoices] = React.useState<Array<{id:string,name:string,createdAt:string}>>(() => {
+    try { return JSON.parse(localStorage.getItem('contentos_cloned_voices') || '[]') } catch { return [] }
+  })
+  const [isCloning, setIsCloning] = React.useState(false)
+  const [cloneProgress, setCloneProgress] = React.useState('')
+  const [showClonePanel, setShowClonePanel] = React.useState(false)
+  const [cloneVoiceName, setCloneVoiceName] = React.useState('我的声音')
   const [videoSpeed, setVideoSpeed] = useState(1.0)
   const [videoAvatarType, setVideoAvatarType] = useState<'preset' | 'upload'>('preset')
   const [videoAvatarPreset, setVideoAvatarPreset] = useState('business-female')
@@ -1639,6 +1647,11 @@ export default function ContentOSApp() {
             acc={acc} step={videoStep} setStep={setVideoStep}
             copy={videoCopy} setCopy={setVideoCopy}
             voiceId={videoVoiceId} setVoiceId={setVideoVoiceId}
+            clonedVoices={clonedVoices} setClonedVoices={setClonedVoices}
+            isCloning={isCloning} setIsCloning={setIsCloning}
+            cloneProgress={cloneProgress} setCloneProgress={setCloneProgress}
+            showClonePanel={showClonePanel} setShowClonePanel={setShowClonePanel}
+            cloneVoiceName={cloneVoiceName} setCloneVoiceName={setCloneVoiceName}
             speed={videoSpeed} setSpeed={setVideoSpeed}
             avatarType={videoAvatarType} setAvatarType={setVideoAvatarType}
             avatarPreset={videoAvatarPreset} setAvatarPreset={setVideoAvatarPreset}
@@ -2574,6 +2587,11 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                 <div className="flex items-center justify-between">
                   <div className="text-xs text-gray-400">
                     📅 {radarData.updateTime || '今日'} · {acc.industry}行业
+                    {radarData.dataSource && (
+                      <span className={`ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${radarData.dataSource.includes('真实') ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'}`}>
+                        {radarData.dataSource.includes('真实') ? '🌐 实时热点' : '🤖 AI生成'}
+                      </span>
+                    )}
                   </div>
                   <button
                     onClick={fetchRadar}
@@ -3895,7 +3913,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
       )
     }
     
-function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCopy, voiceId, setVoiceId, speed, setSpeed, avatarType, setAvatarType, avatarPreset, setAvatarPreset, bgType, setBgType, bgColor, setBgColor, loading, audioB64, error, generateTTS, showToast, savedContents, setTab, setShowAiPanel, setQuickRecordData, setShowVideoRecord, videoSegments, setVideoSegments, segmentMode, setSegmentMode, activeSegment, setActiveSegment, segmentAudios, setSegmentAudios, segmentLoading, setSegmentLoading, subtitlePreview, setSubtitlePreview, subtitleLines, setSubtitleLines, currentSubLine, setCurrentSubLine }: any) {
+function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCopy, voiceId, setVoiceId, speed, setSpeed, avatarType, setAvatarType, avatarPreset, setAvatarPreset, bgType, setBgType, bgColor, setBgColor, loading, audioB64, error, generateTTS, showToast, savedContents, setTab, setShowAiPanel, setQuickRecordData, setShowVideoRecord, videoSegments, setVideoSegments, segmentMode, setSegmentMode, activeSegment, setActiveSegment, segmentAudios, setSegmentAudios, segmentLoading, setSegmentLoading, subtitlePreview, setSubtitlePreview, subtitleLines, setSubtitleLines, currentSubLine, setCurrentSubLine, clonedVoices, setClonedVoices, isCloning, setIsCloning, cloneProgress, setCloneProgress, showClonePanel, setShowClonePanel, cloneVoiceName, setCloneVoiceName }: any) {
   const VOICES = [
     { id: 'female-shaonv', label: '少女音', emoji: '👧', desc: '清甜活泼，适合生活类' },
     { id: 'female-yujie', label: '御姐音', emoji: '👩', desc: '成熟知性，适合职场类' },
@@ -3903,6 +3921,78 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
     { id: 'male-chunhou', label: '醇厚男声', emoji: '🧔', desc: '低沉有力，适合干货类' },
     { id: 'audiobook-male-1', label: '播音腔', emoji: '🎙️', desc: '专业标准，适合资讯类' },
   ]
+  // 声音克隆函数
+  async function handleVoiceClone(audioBase64: string, audioFormat: string) {
+    setIsCloning(true)
+    setCloneProgress('正在上传音频...')
+    try {
+      const res = await fetch('/api/voice-clone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audioBase64, audioFormat, voiceName: cloneVoiceName || '我的声音' })
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        showToast('克隆失败：' + (data.error || '未知错误'), 'error')
+        return
+      }
+      setCloneProgress('克隆成功！')
+      const newVoice = { id: data.voiceId, name: cloneVoiceName || '我的声音', createdAt: new Date().toLocaleDateString() }
+      const updated = [newVoice, ...clonedVoices]
+      setClonedVoices(updated)
+      localStorage.setItem('contentos_cloned_voices', JSON.stringify(updated))
+      setVoiceId(data.voiceId)
+      setShowClonePanel(false)
+      showToast('声音克隆成功！已自动选中', 'success')
+    } catch (e: any) {
+      showToast('克隆出错：' + e.message, 'error')
+    } finally {
+      setIsCloning(false)
+      setCloneProgress('')
+    }
+  }
+
+  // 录音克隆
+  const mediaRecorderRef = React.useRef<MediaRecorder | null>(null)
+  const recordedChunksRef = React.useRef<Blob[]>([])
+  const [isRecording, setIsRecording] = React.useState(false)
+  const [recordSeconds, setRecordSeconds] = React.useState(0)
+  const recordTimerRef = React.useRef<any>(null)
+
+  async function startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mr = new MediaRecorder(stream)
+      recordedChunksRef.current = []
+      mr.ondataavailable = (e) => { if (e.data.size > 0) recordedChunksRef.current.push(e.data) }
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop())
+        const blob = new Blob(recordedChunksRef.current, { type: 'audio/webm' })
+        const reader = new FileReader()
+        reader.onload = async () => {
+          const base64 = (reader.result as string).split(',')[1]
+          await handleVoiceClone(base64, 'webm')
+        }
+        reader.readAsDataURL(blob)
+      }
+      mr.start()
+      mediaRecorderRef.current = mr
+      setIsRecording(true)
+      setRecordSeconds(0)
+      recordTimerRef.current = setInterval(() => setRecordSeconds(s => s + 1), 1000)
+    } catch (e: any) {
+      showToast('无法访问麦克风：' + e.message, 'error')
+    }
+  }
+
+  function stopRecording() {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop()
+      setIsRecording(false)
+      clearInterval(recordTimerRef.current)
+    }
+  }
+
   const AVATARS = [
     { id: 'business-female', label: '职场女性', emoji: '👩‍💼' },
     { id: 'business-male', label: '职场男性', emoji: '👨‍💼' },
@@ -4395,6 +4485,142 @@ ${line}
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* 克隆声音区域 */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-bold text-gray-900 text-sm">🧬 克隆声音</div>
+                <button
+                  onClick={() => setShowClonePanel(!showClonePanel)}
+                  className="text-xs font-bold text-purple-600 bg-purple-50 px-3 py-1 rounded-lg active:scale-95"
+                >
+                  {showClonePanel ? '收起' : '+ 克隆我的声音'}
+                </button>
+              </div>
+
+              {/* 已克隆声音列表 */}
+              {clonedVoices.length > 0 && (
+                <div className="space-y-2 mb-3">
+                  {clonedVoices.map((cv: any) => (
+                    <button
+                      key={cv.id}
+                      onClick={() => setVoiceId(cv.id)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all active:scale-[0.98] ${voiceId === cv.id ? 'bg-purple-50 border-2 border-purple-400' : 'bg-gray-50 border-2 border-transparent'}`}
+                    >
+                      <span className="text-xl flex-shrink-0">🎤</span>
+                      <div className="flex-1 text-left">
+                        <div className={`text-sm font-bold ${voiceId === cv.id ? 'text-purple-700' : 'text-gray-800'}`}>{cv.name}</div>
+                        <div className="text-xs text-gray-400">克隆于 {cv.createdAt}</div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {voiceId === cv.id && <span className="text-purple-500 font-bold">✓</span>}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            const updated = clonedVoices.filter((v: any) => v.id !== cv.id)
+                            setClonedVoices(updated)
+                            localStorage.setItem('contentos_cloned_voices', JSON.stringify(updated))
+                            if (voiceId === cv.id) setVoiceId('female-shaonv')
+                          }}
+                          className="text-[10px] text-red-400 bg-red-50 px-1.5 py-0.5 rounded ml-1"
+                        >删除</button>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* 克隆面板 */}
+              {showClonePanel && (
+                <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-4 border border-purple-100 space-y-3">
+                  <div className="text-xs text-purple-700 font-semibold">📋 使用说明</div>
+                  <div className="text-[11px] text-purple-600 leading-relaxed">
+                    上传或录制 30秒以上清晰语音，AI 将克隆您的声音特征，用于后续视频配音。
+                  </div>
+
+                  {/* 声音名称 */}
+                  <div>
+                    <div className="text-xs text-gray-600 font-medium mb-1">声音名称</div>
+                    <input
+                      type="text"
+                      value={cloneVoiceName}
+                      onChange={e => setCloneVoiceName(e.target.value)}
+                      placeholder="给这个声音起个名字"
+                      className="w-full text-sm px-3 py-2 rounded-xl border border-purple-200 bg-white focus:outline-none focus:border-purple-400"
+                    />
+                  </div>
+
+                  {/* 录音按钮 */}
+                  <div>
+                    <div className="text-xs text-gray-600 font-medium mb-2">方式一：实时录音</div>
+                    <div className="flex items-center gap-2">
+                      {!isRecording ? (
+                        <button
+                          onClick={startRecording}
+                          disabled={isCloning}
+                          className="flex-1 py-2.5 bg-red-500 text-white text-sm font-bold rounded-xl active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                          开始录音
+                        </button>
+                      ) : (
+                        <button
+                          onClick={stopRecording}
+                          className="flex-1 py-2.5 bg-gray-700 text-white text-sm font-bold rounded-xl active:scale-95 flex items-center justify-center gap-2"
+                        >
+                          <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+                          停止录音（{recordSeconds}s）
+                        </button>
+                      )}
+                    </div>
+                    {isRecording && (
+                      <div className="mt-2 flex items-center gap-1 justify-center">
+                        {[0.3,0.6,1,0.8,0.5,0.9,0.4,0.7,1,0.6].map((h, i) => (
+                          <div key={i} className="w-1 bg-red-400 rounded-full animate-pulse" style={{ height: `${h * 24}px`, animationDelay: `${i * 0.08}s` }} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 上传文件 */}
+                  <div>
+                    <div className="text-xs text-gray-600 font-medium mb-2">方式二：上传音频文件</div>
+                    <label className="block w-full py-2.5 bg-white border-2 border-dashed border-purple-200 text-purple-600 text-sm font-medium rounded-xl text-center cursor-pointer active:scale-95 hover:border-purple-400 transition-all">
+                      <input
+                        type="file"
+                        accept="audio/*"
+                        className="hidden"
+                        disabled={isCloning || isRecording}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          const ext = file.name.split('.').pop() || 'mp3'
+                          const reader = new FileReader()
+                          reader.onload = async () => {
+                            const base64 = (reader.result as string).split(',')[1]
+                            await handleVoiceClone(base64, ext)
+                          }
+                          reader.readAsDataURL(file)
+                        }}
+                      />
+                      📁 点击上传音频（MP3/WAV/M4A）
+                    </label>
+                  </div>
+
+                  {/* 克隆进度 */}
+                  {isCloning && (
+                    <div className="flex items-center gap-2 bg-white rounded-xl p-3">
+                      <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                      <span className="text-xs text-purple-600 font-medium">{cloneProgress || '克隆中...'}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {clonedVoices.length === 0 && !showClonePanel && (
+                <div className="text-xs text-gray-400 text-center py-2">暂无克隆声音，点击上方按钮开始克隆</div>
+              )}
             </div>
 
             {/* 语速调节 */}
