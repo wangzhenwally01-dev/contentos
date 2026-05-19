@@ -1054,10 +1054,17 @@ export default function ContentOSApp() {
       if (error) throw error
       setLastSyncTime(new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }))
       showToast('✅ 数据已同步到云端')
-    } catch (e: any) { showToast('同步失败：' + (e.message || '请重试')) }
-    setSyncLoading(false)
-  }
-
+    } catch (e: any) {
+          const msg = e.message || ''
+          if (msg.includes('user_data') || msg.includes('schema cache') || msg.includes('PGRST205')) {
+            showToast('⚠️ 需要先在 Supabase 创建数据表，请查看个人中心')
+          } else {
+            showToast('同步失败：' + msg.slice(0, 30))
+          }
+        }
+        setSyncLoading(false)
+      }
+    
   async function loadFromCloud() {
     if (!user || user.id === 'guest') return
     try {
@@ -8111,6 +8118,8 @@ function Profile({
   saveToLocal, exportTopics, exportContents,
   theme, setTheme,
   accentColor, setAccentColor,
+  syncToCloud, loadFromCloud,
+  syncLoading, lastSyncTime,
 }: any) {
   const TABS = [
     { id: 'ai', label: '🤖 AI 设置' },
@@ -8606,24 +8615,47 @@ function Profile({
             </div>
 
             {/* 数据管理 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-3">📦 数据管理</div>
-              <div className="space-y-2">
-                {[
-                  { icon: '📥', label: '导出选题库', desc: `共 ${savedTopics?.length || 0} 条选题`, action: exportTopics, color: 'text-blue-500' },
-                  { icon: '📄', label: '导出文案库', desc: `共 ${savedContents?.length || 0} 条文案`, action: exportContents, color: 'text-green-500' },
-                ].map((item, i) => (
-                  <button key={i} onClick={item.action} className="w-full flex items-center gap-3 px-3 py-3 bg-gray-50 rounded-xl active:scale-[0.98] transition-all text-left">
-                    <span className={`text-xl ${item.color}`}>{item.icon}</span>
-                    <div className="flex-1">
-                      <div className="text-sm font-semibold text-gray-800">{item.label}</div>
-                      <div className="text-xs text-gray-400">{item.desc}</div>
+                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                  <div className="font-bold text-gray-900 text-sm mb-3">📦 数据管理</div>
+                  <div className="space-y-2">
+                    {/* 云端同步 */}
+                    <div className="bg-gradient-to-r from-blue-50 to-violet-50 rounded-xl p-3">
+                      <div className="mb-2">
+                        <p className="text-sm font-bold text-gray-800">☁️ 云端数据同步</p>
+                        <p className="text-xs text-gray-400">{lastSyncTime ? `上次同步：${lastSyncTime}` : '数据仅存本地，登录后可同步'}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={syncToCloud}
+                          disabled={syncLoading}
+                          className="flex-1 py-2 bg-blue-500 text-white text-xs font-bold rounded-xl disabled:opacity-60 flex items-center justify-center gap-1"
+                        >
+                          {syncLoading ? <><span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />同步中</> : '⬆️ 同步到云端'}
+                        </button>
+                        <button
+                          onClick={loadFromCloud}
+                          disabled={syncLoading}
+                          className="flex-1 py-2 bg-white text-blue-500 text-xs font-bold rounded-xl border border-blue-200 disabled:opacity-60"
+                        >
+                          ⬇️ 从云端加载
+                        </button>
+                      </div>
                     </div>
-                    <span className="text-xs text-gray-400">CSV →</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+                    {[
+                      { icon: '📥', label: '导出选题库', desc: `共 ${savedTopics?.length || 0} 条选题`, action: exportTopics, color: 'text-blue-500' },
+                      { icon: '📄', label: '导出文案库', desc: `共 ${savedContents?.length || 0} 条文案`, action: exportContents, color: 'text-green-500' },
+                    ].map((item, i) => (
+                      <button key={i} onClick={item.action} className="w-full flex items-center gap-3 px-3 py-3 bg-gray-50 rounded-xl active:scale-[0.98] transition-all text-left">
+                        <span className={`text-xl ${item.color}`}>{item.icon}</span>
+                        <div className="flex-1">
+                          <div className="text-sm font-semibold text-gray-800">{item.label}</div>
+                          <div className="text-xs text-gray-400">{item.desc}</div>
+                        </div>
+                        <span className="text-xs text-gray-400">CSV →</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
             <button onClick={onLogout} className="w-full py-3.5 bg-white rounded-2xl text-sm font-bold text-red-400 shadow-sm active:scale-[0.98] transition-transform">
               {isGuest ? '🔑 去登录 / 注册' : '🚪 退出登录'}
