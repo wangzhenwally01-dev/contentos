@@ -741,20 +741,29 @@ export default function ContentOSApp() {
     prevAccIdRef.current = acc.id
   }, [acc?.id])
 
-  // 账号数据自动持久化
-  React.useEffect(() => { if (acc?.id) saveAccData(acc.id, 'saved', savedContents) }, [savedContents])
-  React.useEffect(() => { if (acc?.id) saveAccData(acc.id, 'topics', savedTopics) }, [savedTopics])
-  React.useEffect(() => { if (acc?.id) saveAccData(acc.id, 'video_records', videoRecords) }, [videoRecords])
-  React.useEffect(() => { if (acc?.id) saveAccData(acc.id, 'schedule', schedule) }, [schedule])
-  React.useEffect(() => { if (acc?.id) saveAccData(acc.id, 'knowledge', knowledgeItems) }, [knowledgeItems])
+  // 账号数据自动持久化（localStorage + 云端防抖同步）
+  React.useEffect(() => { if (acc?.id) { saveAccData(acc.id, 'saved', savedContents); autoSync() } }, [savedContents])
+  React.useEffect(() => { if (acc?.id) { saveAccData(acc.id, 'topics', savedTopics); autoSync() } }, [savedTopics])
+  React.useEffect(() => { if (acc?.id) { saveAccData(acc.id, 'video_records', videoRecords); autoSync() } }, [videoRecords])
+  React.useEffect(() => { if (acc?.id) { saveAccData(acc.id, 'schedule', schedule); autoSync() } }, [schedule])
+  React.useEffect(() => { if (acc?.id) { saveAccData(acc.id, 'knowledge', knowledgeItems); autoSync() } }, [knowledgeItems])
 
   // ─── Effects ─────────────────────────────────────────────
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) setUser(session.user)
+      if (session?.user) {
+        setUser(session.user)
+        // 登录后自动从云端加载数据
+        setTimeout(() => loadFromCloudForUser(session.user), 500)
+      }
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-      setUser(session?.user ?? null)
+      const u = session?.user ?? null
+      setUser(u)
+      if (u && u.id !== 'guest') {
+        // 登录成功，自动拉取云端数据
+        setTimeout(() => loadFromCloudForUser(u), 500)
+      }
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -1054,39 +1063,71 @@ export default function ContentOSApp() {
     showToast('已退出登录')
   }
 
+  // 防抖同步 timer
+  const syncTimerRef = React.useRef<any>(null)
+
   async function syncToCloud() {
     if (!user || user.id === 'guest') { showToast('请先登录以使用云端同步'); return }
     setSyncLoading(true)
     try {
-      const { error } = await supabase.from('user_data').upsert({ user_id: user.id, account_id: acc.id, data_json: { savedContents, savedTopics, schedule, videoRecords, knowledgeItems, accounts, styleTemplates }, updated_at: new Date().toISOString() }, { onConflict: 'user_id,account_id' })
+      const { error } = await supabase.from('user_data').upsert({
+        user_id: user.id,
+        account_id: acc.id,
+        data_json: { savedContents, savedTopics, schedule, videoRecords, knowledgeItems, accounts, styleTemplates },
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id,account_id' })
       if (error) throw error
       setLastSyncTime(new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }))
       showToast('✅ 数据已同步到云端')
     } catch (e: any) {
-          const msg = e.message || ''
-          if (msg.includes('user_data') || msg.includes('schema cache') || msg.includes('PGRST205')) {
-            showToast('⚠️ 需要先在 Supabase 创建数据表，请查看个人中心')
-          } else {
-            showToast('同步失败：' + msg.slice(0, 30))
-          }
-        }
-        setSyncLoading(false)
-      }
-    
+      showToast('同步失败：' + (e.message || '').slice(0, 30))
+    }
+    setSyncLoading(false)
+  }
+
+  // 防抖自动同步（数据变更后 5 秒自动同步）
+  function autoSync() {
+    if (!user || user.id === 'guest') return
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current)
+    syncTimerRef.current = setTimeout(async () => {
+      try {
+        await supabase.from('user_data').upsert({
+          user_id: user.id,
+          account_id: acc.id,
+          data_json: { savedContents, savedTopics, schedule, videoRecords, knowledgeItems, accounts, styleTemplates },
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id,account_id' })
+        setLastSyncTime(new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }))
+      } catch {}
+    }, 5000)
+  }
+
   async function loadFromCloud() {
     if (!user || user.id === 'guest') return
+    await loadFromCloudForUser(user)
+  }
+
+  async function loadFromCloudForUser(u: any) {
+    if (!u || u.id === 'guest') return
     try {
-      const { data, error } = await supabase.from('user_data').select('data_json, updated_at').eq('user_id', user.id).eq('account_id', acc.id).single()
+      const accId = acc?.id || 'default'
+      const { data, error } = await supabase
+        .from('user_data')
+        .select('data_json, updated_at')
+        .eq('user_id', u.id)
+        .eq('account_id', accId)
+        .single()
       if (error || !data) return
       const d = data.data_json as any
-      if (d.savedContents) setSavedContents(d.savedContents)
-      if (d.savedTopics) setSavedTopics(d.savedTopics)
-      if (d.schedule) setSchedule(d.schedule)
-      if (d.videoRecords) setVideoRecords(d.videoRecords)
-      if (d.knowledgeItems) setKnowledgeItems(d.knowledgeItems)
-      if (d.styleTemplates) setStyleTemplates(d.styleTemplates)
+      if (d.savedContents?.length) setSavedContents(d.savedContents)
+      if (d.savedTopics?.length) setSavedTopics(d.savedTopics)
+      if (d.schedule?.length) setSchedule(d.schedule)
+      if (d.videoRecords?.length) setVideoRecords(d.videoRecords)
+      if (d.knowledgeItems?.length) setKnowledgeItems(d.knowledgeItems)
+      if (d.styleTemplates?.length) setStyleTemplates(d.styleTemplates)
+      if (d.accounts?.length) setAccounts(d.accounts)
       setLastSyncTime(new Date(data.updated_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }))
-      showToast('✅ 已从云端加载数据')
+      showToast('☁️ 已从云端恢复数据')
     } catch {}
   }
 
@@ -9285,7 +9326,7 @@ function Profile({
                           {syncLoading ? <><span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />同步中</> : '⬆️ 同步到云端'}
                         </button>
                         <button
-                          onClick={loadFromCloud}
+                          onClick={() => { loadFromCloud(); showToast('☁️ 正在从云端加载...') }}
                           disabled={syncLoading}
                           className="flex-1 py-2 bg-white text-blue-500 text-xs font-bold rounded-xl border border-blue-200 disabled:opacity-60"
                         >
