@@ -556,6 +556,14 @@ export default function ContentOSApp() {
 
   // Operations
   const [opsTab, setOpsTab] = useState<OpsTab>('schedule')
+  // 数据复盘状态
+  const [reviewData, setReviewData] = React.useState<any>(null)
+  const [reviewLoading, setReviewLoading] = React.useState(false)
+  const [reviewPeriod, setReviewPeriod] = React.useState('近30天')
+  // 发布排期扩展状态
+  const [publishingId, setPublishingId] = React.useState<string | null>(null)
+  const [showPublishGuide, setShowPublishGuide] = React.useState<string | null>(null)
+  const [scheduleDetailId, setScheduleDetailId] = React.useState<string | null>(null)
   // 视频数据记录（每条视频的发布数据）
   const [videoRecords, setVideoRecords] = useState<any[]>([])
   const [showVideoRecord, setShowVideoRecord] = useState(false)
@@ -1084,7 +1092,23 @@ export default function ContentOSApp() {
     showToast('✅ 数据已更新')
   }
 
-  async function fetchInsights() {
+  async function fetchReview() {
+        if (reviewLoading) return
+        setReviewLoading(true)
+        try {
+          const res = await fetch('/api/review-analysis', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ videoRecords, accountInfo: { name: acc.name, industry: acc.industry, positioning: acc.positioning }, period: reviewPeriod, aiModel, aiApiKey, aiApiBase })
+          })
+          const data = await res.json()
+          if (data.success) { setReviewData(data); showToast('✅ 复盘分析完成') }
+          else showToast('分析失败：' + (data.error || '未知错误'))
+        } catch (e: any) { showToast('分析出错：' + e.message) }
+        finally { setReviewLoading(false) }
+      }
+
+      async function fetchInsights() {
     setInsightsLoading(true)
     try {
       const res = await fetch('/api/generate-insights', {
@@ -1756,7 +1780,12 @@ export default function ContentOSApp() {
             recordingVideo={recordingVideo} setRecordingVideo={setRecordingVideo}
             quickRecordData={quickRecordData} setQuickRecordData={setQuickRecordData}
             saveVideoRecord={saveVideoRecord}
-          />
+                reviewData={reviewData} reviewLoading={reviewLoading} fetchReview={fetchReview}
+                reviewPeriod={reviewPeriod} setReviewPeriod={setReviewPeriod}
+                publishingId={publishingId} setPublishingId={setPublishingId}
+                showPublishGuide={showPublishGuide} setShowPublishGuide={setShowPublishGuide}
+                scheduleDetailId={scheduleDetailId} setScheduleDetailId={setScheduleDetailId}
+              />
         )}
         {tab === 'profile' && (
           <Profile
@@ -5769,6 +5798,473 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, s
 
 
 // ═══════════════════════════════════════════════════════════
+    // PUBLISH MANAGER — 发布任务管理
+    // ═══════════════════════════════════════════════════════════
+    function PublishManager({ schedule, setSchedule, showToast, publishingId, setPublishingId, showPublishGuide, setShowPublishGuide, scheduleDetailId, setScheduleDetailId, setShowAddSchedule }: any) {
+      const today = new Date().toISOString().split('T')[0]
+      const now = new Date()
+
+      // 今日待发布 + 即将发布（未来3天）
+      const pendingToday = schedule.filter((s: any) => {
+        const d = s.publishDate || s.time?.split(' ')[0] || ''
+        return d === today && (s.status === '待发布' || s.status === '计划中')
+      })
+      const upcoming = schedule.filter((s: any) => {
+        const d = s.publishDate || s.time?.split(' ')[0] || ''
+        if (!d || d === today) return false
+        const diff = (new Date(d).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+        return diff > 0 && diff <= 3 && (s.status === '待发布' || s.status === '计划中')
+      })
+
+      const PLATFORM_GUIDES: Record<string, { icon: string; color: string; steps: string[]; tips: string[] }> = {
+        '抖音': {
+          icon: '🎵', color: 'from-gray-800 to-gray-900',
+          steps: ['打开抖音 App → 点击底部「+」', '选择视频文件上传', '填写标题（建议30字内）', '添加话题标签（#号开头）', '选择封面图', '设置定时发布时间', '点击「发布」'],
+          tips: ['发布时间建议：早7-9点、午12-13点、晚18-22点', '标题前3秒要有钩子', '话题标签选3-5个精准标签', '封面图要清晰有文字']
+        },
+        '小红书': {
+          icon: '📕', color: 'from-red-500 to-rose-600',
+          steps: ['打开小红书 App → 点击「+」', '选择视频或图文', '填写标题（建议20字内，含关键词）', '正文描述（500字以内）', '添加话题标签', '选择地点（本地账号必填）', '点击「发布笔记」'],
+          tips: ['标题要含搜索关键词', '正文多用换行和emoji', '话题选垂直领域标签', '发布后1小时内积极互动评论']
+        },
+        'B站': {
+          icon: '📺', color: 'from-blue-400 to-cyan-500',
+          steps: ['登录B站创作中心', '点击「投稿」→「视频投稿」', '上传视频文件', '填写标题、简介、标签', '选择分区', '设置封面', '提交审核（约2小时）'],
+          tips: ['标题含关键词利于搜索', '简介要详细，利于SEO', '分区选择要精准', '审核通过后可设定时发布']
+        },
+        '视频号': {
+          icon: '💬', color: 'from-green-500 to-emerald-600',
+          steps: ['打开微信 → 发现 → 视频号', '点击右上角「+」', '选择视频上传', '填写描述文字', '添加话题', '选择封面', '点击「发表」'],
+          tips: ['描述要引导转发分享', '可关联公众号文章', '发布后在朋友圈分享扩散', '互动率影响推荐权重']
+        },
+        '快手': {
+          icon: '⚡', color: 'from-orange-400 to-amber-500',
+          steps: ['打开快手 App → 点击「+」', '选择视频', '填写描述', '添加话题', '选择封面', '设置发布时间', '点击「发布」'],
+          tips: ['快手用户偏好真实接地气内容', '评论区要积极互动', '发布时间建议晚上8-10点', '可开启直播预告功能']
+        },
+      }
+
+      function markPublished(id: string) {
+        const updated = schedule.map((s: any) => s.id === id ? { ...s, status: '已发布', publishedAt: new Date().toLocaleString('zh-CN') } : s)
+        setSchedule(updated)
+        showToast('✅ 已标记为发布成功')
+      }
+
+      function markFailed(id: string) {
+        const updated = schedule.map((s: any) => s.id === id ? { ...s, status: '发布失败' } : s)
+        setSchedule(updated)
+        showToast('已标记为发布失败')
+      }
+
+      const guide = showPublishGuide ? PLATFORM_GUIDES[showPublishGuide] : null
+
+      return (
+        <div className="space-y-3">
+          {/* 发布指引弹窗 */}
+          {guide && showPublishGuide && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setShowPublishGuide(null)}>
+              <div className="w-full bg-white rounded-t-3xl p-5 pb-8 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${guide.color} flex items-center justify-center text-lg`}>{guide.icon}</div>
+                    <div>
+                      <div className="font-black text-gray-900">{showPublishGuide} 发布指引</div>
+                      <div className="text-xs text-gray-400">按步骤操作，轻松完成发布</div>
+                    </div>
+                  </div>
+                  <button onClick={() => setShowPublishGuide(null)} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">✕</button>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <div className="font-bold text-gray-800 text-sm mb-2">📋 发布步骤</div>
+                    <div className="space-y-2">
+                      {guide.steps.map((step: string, i: number) => (
+                        <div key={i} className="flex items-start gap-3">
+                          <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${guide.color} text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5`}>{i+1}</div>
+                          <div className="text-sm text-gray-700 leading-relaxed">{step}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="bg-amber-50 rounded-2xl p-3">
+                    <div className="font-bold text-amber-700 text-sm mb-2">💡 发布技巧</div>
+                    <div className="space-y-1">
+                      {guide.tips.map((tip: string, i: number) => (
+                        <div key={i} className="text-xs text-amber-600 flex items-start gap-1.5">
+                          <span className="flex-shrink-0 mt-0.5">•</span>
+                          <span>{tip}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 今日发布任务 */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="font-bold text-gray-900 text-sm">📤 今日发布任务</div>
+                <div className="text-[11px] text-gray-400 mt-0.5">{new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}</div>
+              </div>
+              <button onClick={() => setShowAddSchedule(true)} className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-xl active:scale-95">+ 添加</button>
+            </div>
+
+            {pendingToday.length === 0 ? (
+              <div className="text-center py-6">
+                <div className="text-3xl mb-2">📭</div>
+                <div className="text-sm text-gray-500 font-medium">今日暂无待发布任务</div>
+                <div className="text-xs text-gray-400 mt-1">点击右上角添加发布计划</div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {pendingToday.map((item: any) => {
+                  const platformGuide = PLATFORM_GUIDES[item.platform]
+                  return (
+                    <div key={item.id} className="border border-gray-100 rounded-2xl overflow-hidden">
+                      <div className="flex items-center gap-3 p-3">
+                        <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${platformGuide?.color || 'from-gray-400 to-gray-500'} flex items-center justify-center text-lg flex-shrink-0`}>
+                          {platformGuide?.icon || '📱'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-bold text-gray-900 truncate">{item.title}</div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-gray-400">{item.platform}</span>
+                            <span className="text-[10px] text-gray-300">·</span>
+                            <span className="text-[10px] text-gray-400">{item.publishTime || item.time?.split(' ')[1] || '待定时间'}</span>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${item.status === '待发布' ? 'bg-orange-100 text-orange-500' : 'bg-blue-100 text-blue-500'}`}>{item.status}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-1 px-3 pb-3">
+                        <button
+                          onClick={() => setShowPublishGuide(item.platform)}
+                          className="flex-1 py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-xl active:scale-95"
+                        >📋 发布指引</button>
+                        <button
+                          onClick={() => markPublished(item.id)}
+                          className="flex-1 py-2 bg-green-50 text-green-600 text-xs font-bold rounded-xl active:scale-95"
+                        >✅ 标记已发</button>
+                        <button
+                          onClick={() => markFailed(item.id)}
+                          className="flex-1 py-2 bg-red-50 text-red-400 text-xs font-bold rounded-xl active:scale-95"
+                        >❌ 发布失败</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* 即将发布（未来3天） */}
+          {upcoming.length > 0 && (
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">⏰ 即将发布（未来3天）</div>
+              <div className="space-y-2">
+                {upcoming.map((item: any) => {
+                  const d = item.publishDate || item.time?.split(' ')[0] || ''
+                  const daysLeft = Math.ceil((new Date(d).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+                  return (
+                    <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                      <div className="w-10 h-10 rounded-xl bg-blue-50 flex flex-col items-center justify-center flex-shrink-0">
+                        <div className="text-xs font-black text-blue-600">{daysLeft}</div>
+                        <div className="text-[9px] text-blue-400">天后</div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-gray-800 truncate">{item.title}</div>
+                        <div className="text-[10px] text-gray-400 mt-0.5">{item.platform} · {d} {item.publishTime || ''}</div>
+                      </div>
+                      <button onClick={() => setShowPublishGuide(item.platform)} className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded-lg flex-shrink-0">指引</button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 发布统计 */}
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: '本周已发', value: schedule.filter((s: any) => s.status === '已发布').length, icon: '✅', color: 'text-green-600 bg-green-50' },
+              { label: '待发布', value: schedule.filter((s: any) => s.status === '待发布' || s.status === '计划中').length, icon: '⏳', color: 'text-orange-500 bg-orange-50' },
+              { label: '发布失败', value: schedule.filter((s: any) => s.status === '发布失败').length, icon: '❌', color: 'text-red-500 bg-red-50' },
+            ].map((stat, i) => (
+              <div key={i} className={`rounded-2xl p-3 text-center ${stat.color}`}>
+                <div className="text-lg mb-0.5">{stat.icon}</div>
+                <div className="text-xl font-black">{stat.value}</div>
+                <div className="text-[10px] font-medium mt-0.5">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // REVIEW TAB — 数据复盘模块
+    // ═══════════════════════════════════════════════════════════
+    function ReviewTab({ acc, videoRecords, reviewData, reviewLoading, fetchReview, reviewPeriod, setReviewPeriod, schedule, savedContents }: any) {
+      const PERIODS = ['近7天', '近30天', '近90天', '全部']
+
+      const GRADE_COLORS: Record<string, string> = {
+        'S': 'from-yellow-400 to-amber-500', 'A+': 'from-green-400 to-emerald-500',
+        'A': 'from-green-400 to-emerald-500', 'B+': 'from-blue-400 to-cyan-500',
+        'B': 'from-blue-400 to-cyan-500', 'C': 'from-gray-400 to-gray-500',
+      }
+
+      // 本地数据统计（不依赖AI）
+      const totalPlays = videoRecords.reduce((s: number, v: any) => s + (v.plays || 0), 0)
+      const totalLikes = videoRecords.reduce((s: number, v: any) => s + (v.likes || 0), 0)
+      const totalComments = videoRecords.reduce((s: number, v: any) => s + (v.comments || 0), 0)
+      const totalCollects = videoRecords.reduce((s: number, v: any) => s + (v.collects || 0), 0)
+      const avgCompletion = videoRecords.length > 0
+        ? Math.round(videoRecords.reduce((s: number, v: any) => s + (v.completionRate || 0), 0) / videoRecords.length)
+        : 0
+      const publishedCount = schedule.filter((s: any) => s.status === '已发布').length
+
+      // 平台分布
+      const platformDist: Record<string, number> = {}
+      videoRecords.forEach((v: any) => {
+        const p = v.platform || '未知'
+        platformDist[p] = (platformDist[p] || 0) + 1
+      })
+
+      // 最佳视频（按播放量排序）
+      const topVideos = [...videoRecords].sort((a: any, b: any) => (b.plays || 0) - (a.plays || 0)).slice(0, 3)
+
+      return (
+        <div className="space-y-3">
+          {/* 周期选择 + 分析按钮 */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="font-bold text-gray-900 text-sm">🔍 数据复盘</div>
+              <button
+                onClick={fetchReview}
+                disabled={reviewLoading || videoRecords.length === 0}
+                className="text-xs font-bold text-white bg-gradient-to-r from-purple-500 to-pink-400 px-3 py-1.5 rounded-xl active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {reviewLoading ? (
+                  <><div className="w-3 h-3 border-2 border-white/50 border-t-white rounded-full animate-spin" />分析中...</>
+                ) : '✨ AI深度分析'}
+              </button>
+            </div>
+            <div className="flex gap-2">
+              {PERIODS.map(p => (
+                <button key={p} onClick={() => setReviewPeriod(p)}
+                  className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${reviewPeriod === p ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                  {p}
+                </button>
+              ))}
+            </div>
+            {videoRecords.length === 0 && (
+              <div className="mt-3 text-xs text-amber-600 bg-amber-50 rounded-xl p-2.5 flex items-center gap-2">
+                <span>⚠️</span>
+                <span>暂无视频数据，请先在视频页面录入视频数据</span>
+              </div>
+            )}
+          </div>
+
+          {/* 本地数据概览（不依赖AI） */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="font-bold text-gray-900 text-sm mb-3">📊 数据概览</div>
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {[
+                { label: '总播放量', value: totalPlays >= 10000 ? (totalPlays/10000).toFixed(1)+'万' : totalPlays.toLocaleString(), icon: '▶️' },
+                { label: '总点赞数', value: totalLikes >= 10000 ? (totalLikes/10000).toFixed(1)+'万' : totalLikes.toLocaleString(), icon: '❤️' },
+                { label: '总评论数', value: totalComments.toLocaleString(), icon: '💬' },
+                { label: '总收藏数', value: totalCollects.toLocaleString(), icon: '⭐' },
+                { label: '平均完播率', value: avgCompletion + '%', icon: '🎯' },
+                { label: '已发布视频', value: publishedCount + '条', icon: '✅' },
+              ].map((stat, i) => (
+                <div key={i} className="bg-gray-50 rounded-xl p-2.5 text-center">
+                  <div className="text-base mb-0.5">{stat.icon}</div>
+                  <div className="text-sm font-black text-gray-900">{stat.value}</div>
+                  <div className="text-[9px] text-gray-400 mt-0.5">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* 平台分布 */}
+            {Object.keys(platformDist).length > 0 && (
+              <div>
+                <div className="text-xs font-semibold text-gray-600 mb-2">平台分布</div>
+                <div className="flex gap-2 flex-wrap">
+                  {Object.entries(platformDist).map(([platform, count]) => (
+                    <div key={platform} className="flex items-center gap-1.5 bg-blue-50 rounded-full px-2.5 py-1">
+                      <span className="text-xs font-bold text-blue-600">{platform}</span>
+                      <span className="text-[10px] text-blue-400">{count}条</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 最佳视频 */}
+          {topVideos.length > 0 && (
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">🏆 播放量 TOP3</div>
+              <div className="space-y-2">
+                {topVideos.map((v: any, i: number) => (
+                  <div key={i} className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-xl">
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-sm font-black flex-shrink-0 ${i === 0 ? 'bg-yellow-100 text-yellow-600' : i === 1 ? 'bg-gray-200 text-gray-600' : 'bg-orange-100 text-orange-500'}`}>
+                      {i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-bold text-gray-800 truncate">{v.title || '无标题'}</div>
+                      <div className="text-[10px] text-gray-400 mt-0.5">{v.platform} · 播放 {(v.plays||0).toLocaleString()} · 点赞 {(v.likes||0).toLocaleString()}</div>
+                    </div>
+                    <div className="text-xs font-black text-purple-600 flex-shrink-0">{(v.plays||0) >= 10000 ? ((v.plays||0)/10000).toFixed(1)+'万' : (v.plays||0).toLocaleString()}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* AI 分析结果 */}
+          {reviewLoading && (
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-100 text-center">
+              <div className="relative w-14 h-14 mx-auto mb-3">
+                <div className="absolute inset-0 rounded-full border-[3px] border-purple-200 border-t-purple-500 animate-spin" />
+                <div className="absolute inset-2 rounded-full border-[2px] border-pink-200 border-b-pink-400 animate-spin" style={{animationDirection:'reverse',animationDuration:'0.8s'}} />
+                <div className="absolute inset-0 flex items-center justify-center text-xl">🔍</div>
+              </div>
+              <div className="text-sm font-bold text-purple-700">AI 正在深度分析...</div>
+              <div className="text-xs text-purple-400 mt-1">分析 {videoRecords.length} 条视频数据，请稍候</div>
+            </div>
+          )}
+
+          {reviewData && !reviewLoading && (
+            <>
+              {/* 综合评分 */}
+              <div className={`bg-gradient-to-br ${GRADE_COLORS[reviewData.summary?.grade] || 'from-blue-400 to-cyan-500'} rounded-2xl p-5 text-white shadow-md`}>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <div className="text-white/70 text-xs font-medium">{reviewData.period} 综合评分</div>
+                    <div className="text-4xl font-black mt-1">{reviewData.summary?.score || '--'}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-5xl font-black opacity-90">{reviewData.summary?.grade || '--'}</div>
+                    <div className="text-white/70 text-xs mt-1">综合等级</div>
+                  </div>
+                </div>
+                <div className="bg-white/20 rounded-xl p-3 space-y-1.5">
+                  <div className="flex items-start gap-2">
+                    <span className="text-green-300 flex-shrink-0">✅</span>
+                    <span className="text-xs text-white/90 leading-relaxed">{reviewData.summary?.highlight}</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-yellow-300 flex-shrink-0">⚠️</span>
+                    <span className="text-xs text-white/90 leading-relaxed">{reviewData.summary?.weakness}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 内容分析 */}
+              {reviewData.contentAnalysis && (
+                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                  <div className="font-bold text-gray-900 text-sm mb-3">📈 内容分析</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: '最佳发布时间', value: reviewData.contentAnalysis.bestTime, icon: '⏰' },
+                      { label: '最佳平台', value: reviewData.contentAnalysis.bestPlatform, icon: '📱' },
+                      { label: '最受欢迎风格', value: reviewData.contentAnalysis.bestStyle, icon: '🎨' },
+                      { label: '平均互动率', value: reviewData.contentAnalysis.avgEngagement, icon: '💫' },
+                    ].map((item, i) => (
+                      <div key={i} className="bg-gray-50 rounded-xl p-3">
+                        <div className="text-base mb-1">{item.icon}</div>
+                        <div className="text-xs font-bold text-gray-800">{item.value || '--'}</div>
+                        <div className="text-[10px] text-gray-400 mt-0.5">{item.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 改进建议 */}
+              {reviewData.improvements?.length > 0 && (
+                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                  <div className="font-bold text-gray-900 text-sm mb-3">🎯 优化建议</div>
+                  <div className="space-y-3">
+                    {reviewData.improvements.map((imp: any, i: number) => (
+                      <div key={i} className={`rounded-xl p-3 border-l-4 ${imp.priority === '高' ? 'bg-red-50 border-red-400' : imp.priority === '中' ? 'bg-amber-50 border-amber-400' : 'bg-blue-50 border-blue-400'}`}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-base">{imp.icon}</span>
+                          <span className="text-xs font-bold text-gray-800">{imp.title}</span>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-auto ${imp.priority === '高' ? 'bg-red-100 text-red-500' : imp.priority === '中' ? 'bg-amber-100 text-amber-500' : 'bg-blue-100 text-blue-500'}`}>{imp.priority}优先</span>
+                        </div>
+                        <div className="text-xs text-gray-600 leading-relaxed">{imp.detail}</div>
+                        {imp.action && (
+                          <div className="mt-2 text-[11px] font-bold text-purple-600 bg-purple-50 rounded-lg px-2 py-1 inline-block">→ {imp.action}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 下周计划 */}
+              {reviewData.nextWeekPlan?.length > 0 && (
+                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                  <div className="font-bold text-gray-900 text-sm mb-3">📅 AI 推荐下周计划</div>
+                  <div className="space-y-2">
+                    {reviewData.nextWeekPlan.map((plan: any, i: number) => (
+                      <div key={i} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 flex flex-col items-center justify-center flex-shrink-0">
+                          <div className="text-[10px] font-black text-blue-600">{plan.day}</div>
+                          <div className="text-[9px] text-blue-400">{plan.time}</div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-bold text-gray-800">{plan.topic}</div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-gray-400">{plan.platform}</span>
+                            <span className="text-[10px] text-purple-500">{plan.reason}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* AI 洞察 */}
+              {reviewData.insights?.length > 0 && (
+                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                  <div className="font-bold text-gray-900 text-sm mb-3">💡 AI 洞察</div>
+                  <div className="space-y-2">
+                    {reviewData.insights.map((ins: any, i: number) => (
+                      <div key={i} className={`flex items-start gap-2.5 p-3 rounded-xl`} style={{background: ins.type === 'warning' ? '#FFF7ED' : ins.type === 'success' ? '#F0FDF4' : '#EFF6FF'}}>
+                        <span className="text-base flex-shrink-0 mt-0.5">{ins.icon || '💡'}</span>
+                        <div>
+                          <div className="text-xs font-bold text-gray-800 mb-0.5">{ins.title}</div>
+                          <div className="text-xs text-gray-500 leading-relaxed">{ins.content}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {!reviewData && !reviewLoading && videoRecords.length > 0 && (
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 text-center border border-purple-100">
+              <div className="text-4xl mb-3">🔍</div>
+              <div className="font-bold text-gray-800 text-sm mb-1">开始 AI 数据复盘</div>
+              <div className="text-xs text-gray-500 mb-4">AI 将分析你的 {videoRecords.length} 条视频数据，生成深度复盘报告</div>
+              <button onClick={fetchReview} className="px-6 py-2.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white text-sm font-bold rounded-2xl active:scale-95 shadow-md">
+                ✨ 开始分析
+              </button>
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    // ═══════════════════════════════════════════════════════════
 // CONTENT CALENDAR — 内容日历视图
 // ═══════════════════════════════════════════════════════════
 function ContentCalendar({ schedule, setSchedule, showToast, setShowAddSchedule, setShowVideoRecord, setQuickRecordData, generateWeekPlan, weekPlanLoading, dragItem, setDragItem, dragOverDate, setDragOverDate, handleDragDrop }: any) {
@@ -6922,8 +7418,8 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
     }
 
     
-function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedContents, showToast, insights, insightsLoading, fetchInsights, showAddSchedule, setShowAddSchedule, newScheduleTitle, setNewScheduleTitle, newSchedulePlatform, setNewSchedulePlatform, addScheduleItem, generateWeekPlan, weekPlanLoading, showWeekPlan, setShowWeekPlan, dragItem, setDragItem, dragOverDate, setDragOverDate, handleDragDrop, platformStats, setPlatformStats, statsRange, setStatsRange, showDataBind, setShowDataBind, dataBindTab, setDataBindTab, manualFans, setManualFans, manualPlays, setManualPlays, manualLikes, setManualLikes, statsLoading, fetchPlatformStats, updateManualStats, setShowAiPanel, videoRecords, showVideoRecord, setShowVideoRecord, recordingVideo, setRecordingVideo, quickRecordData, setQuickRecordData, saveVideoRecord }: any) {
-  const TABS = [{ id: 'schedule', label: '📅 排期' }, { id: 'stats', label: '📊 数据' }, { id: 'goals', label: '🎯 目标' }]
+function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedContents, showToast, insights, insightsLoading, fetchInsights, showAddSchedule, setShowAddSchedule, newScheduleTitle, setNewScheduleTitle, newSchedulePlatform, setNewSchedulePlatform, addScheduleItem, generateWeekPlan, weekPlanLoading, showWeekPlan, setShowWeekPlan, dragItem, setDragItem, dragOverDate, setDragOverDate, handleDragDrop, platformStats, setPlatformStats, statsRange, setStatsRange, showDataBind, setShowDataBind, dataBindTab, setDataBindTab, manualFans, setManualFans, manualPlays, setManualPlays, manualLikes, setManualLikes, statsLoading, fetchPlatformStats, updateManualStats, setShowAiPanel, videoRecords, showVideoRecord, setShowVideoRecord, recordingVideo, setRecordingVideo, quickRecordData, setQuickRecordData, saveVideoRecord, reviewData, reviewLoading, fetchReview, reviewPeriod, setReviewPeriod, publishingId, setPublishingId, showPublishGuide, setShowPublishGuide, scheduleDetailId, setScheduleDetailId }: any) {
+  const TABS = [{ id: 'schedule', label: '📅 排期' }, { id: 'stats', label: '📊 数据' }, { id: 'review', label: '🔍 复盘' }, { id: 'goals', label: '🎯 目标' }]
   const STATS = [
     { label: '本周发布', value: '3', unit: '条', trend: '+1', up: true },
     { label: '总播放量', value: '2.4万', unit: '', trend: '+18%', up: true },
@@ -7007,6 +7503,15 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
         {opsTab === 'schedule' && (
           <>
             {/* 内容日历 */}
+            {/* 发布任务管理 */}
+            <PublishManager
+              schedule={schedule} setSchedule={setSchedule} showToast={showToast}
+              publishingId={publishingId} setPublishingId={setPublishingId}
+              showPublishGuide={showPublishGuide} setShowPublishGuide={setShowPublishGuide}
+              scheduleDetailId={scheduleDetailId} setScheduleDetailId={setScheduleDetailId}
+              setShowAddSchedule={setShowAddSchedule}
+            />
+
             <ContentCalendar schedule={schedule} setSchedule={setSchedule} showToast={showToast} setShowAddSchedule={setShowAddSchedule} setShowVideoRecord={setShowVideoRecord} setQuickRecordData={setQuickRecordData} generateWeekPlan={generateWeekPlan} weekPlanLoading={weekPlanLoading} dragItem={dragItem} setDragItem={setDragItem} dragOverDate={dragOverDate} setDragOverDate={setDragOverDate} handleDragDrop={handleDragDrop} />
 
             {/* 最佳发布时间 */}
@@ -7078,6 +7583,21 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
                 fetchPlatformStats={fetchPlatformStats}
                 updateManualStats={updateManualStats}
                 videoRecords={videoRecords}
+              />
+            )}
+
+            {/* Review Tab — 数据复盘 */}
+            {opsTab === 'review' && (
+              <ReviewTab
+                acc={acc}
+                videoRecords={videoRecords}
+                reviewData={reviewData}
+                reviewLoading={reviewLoading}
+                fetchReview={fetchReview}
+                reviewPeriod={reviewPeriod}
+                setReviewPeriod={setReviewPeriod}
+                schedule={schedule}
+                savedContents={savedContents}
               />
             )}
 
