@@ -711,6 +711,7 @@ export default function ContentOSApp() {
     positioning: '',
   })
   const [credits, setCredits] = useState(1000)
+  const [creditLogs, setCreditLogs] = useState<Array<{action:string;cost:number;time:string;desc:string}>>([])
   const [profileTab, setProfileTab] = useState<'ai' | 'accounts' | 'credits' | 'about'>('ai')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [editingAccount, setEditingAccount] = useState<any>(null)
@@ -838,6 +839,7 @@ export default function ContentOSApp() {
       }
       const mp = localStorage.getItem('contentos_module_prompts'); if (mp) setModulePrompts(JSON.parse(mp))
       const cr = localStorage.getItem('contentos_credits'); if (cr) setCredits(parseInt(cr) || 1000)
+      const cl = localStorage.getItem('contentos_credit_logs'); if (cl) setCreditLogs(JSON.parse(cl) || [])
       // 加载当前账号数据
       const savedAccIdx = localStorage.getItem('contentos_account_idx')
       const initIdx = savedAccIdx ? parseInt(savedAccIdx) || 0 : 0
@@ -1149,6 +1151,15 @@ export default function ContentOSApp() {
 
 
   // ─── Content Generation ───────────────────────────────────
+  function addCreditLog(action: string, cost: number, desc: string) {
+    const log = { action, cost, time: new Date().toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }), desc }
+    setCreditLogs((prev: any[]) => {
+      const updated = [log, ...prev].slice(0, 50)
+      localStorage.setItem('contentos_credit_logs', JSON.stringify(updated))
+      return updated
+    })
+  }
+
   async function generateCopy() {
     if (!selectedTopic.trim()) { showToast('请先选择选题'); return }
     setCopyLoading(true); setCopyError(''); setCopyVersions([])
@@ -1171,6 +1182,7 @@ export default function ContentOSApp() {
         const histItem = { id: Date.now().toString(), topic: selectedTopic, style: copyStyle, versions: data.versions, createdAt: new Date().toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }), tokens: data.tokens || 0 }
         setCopyHistory((prev: any[]) => [histItem, ...prev].slice(0, 20))
         setCredits((c: number) => { const n = Math.max(0, c - 20); localStorage.setItem('contentos_credits', String(n)); return n })
+        addCreditLog('文案生成', -20, `${copyStyle} · ${data.versions?.length || 0}个版本`)
         showToast('✅ 文案生成成功 (-20积分)')
       } else {
         setCopyError(data.error || '生成失败，请重试')
@@ -1199,7 +1211,7 @@ export default function ContentOSApp() {
       const data = await res.json()
       if (data.topics) {
         setAiTopics(prev => count ? [...data.topics, ...prev] : data.topics)
-        showToast(`✅ 已生成 ${data.topics.length} 个选题 (-10积分)`); setCredits((c: number) => { const n = Math.max(0, c - 10); localStorage.setItem('contentos_credits', String(n)); return n })
+        showToast(`✅ 已生成 ${data.topics.length} 个选题 (-10积分)`); setCredits((c: number) => { const n = Math.max(0, c - 10); localStorage.setItem('contentos_credits', String(n)); return n }); addCreditLog('选题生成', -10, `${data.topics.length}个选题`)
       } else showToast('生成失败，请重试')
     } catch {
       showToast('网络错误，请重试')
@@ -2109,7 +2121,7 @@ export default function ContentOSApp() {
             aiApiBase={aiApiBase} setAiApiBase={setAiApiBase}
             aiSystemPrompt={aiSystemPrompt} setAiSystemPrompt={setAiSystemPrompt}
             aiTemperature={aiTemperature} setAiTemperature={setAiTemperature}
-            credits={credits} setCredits={setCredits}
+            credits={credits} setCredits={setCredits} creditLogs={creditLogs} setCreditLogs={setCreditLogs} addCreditLog={addCreditLog}
             accounts={accounts} setAccounts={setAccounts}
             accountIdx={accountIdx} setAccountIdx={setAccountIdx}
             savedContents={savedContents} savedTopics={savedTopics}
@@ -9461,12 +9473,11 @@ function Profile({
 
             <div className="bg-white rounded-2xl p-4 shadow-sm">
               <div className="font-bold text-gray-900 text-sm mb-3">📋 消耗记录</div>
-              {[
+              {(creditLogs.length > 0 ? creditLogs : [
                 { action: '文案生成', cost: -20, time: '今天 08:32', desc: '犀利观点 · 3个版本' },
-                { action: '选题生成', cost: -15, time: '昨天 19:45', desc: '餐饮行业 · 8个选题' },
-                { action: '情报雷达', cost: -30, time: '昨天 10:12', desc: '今日热点获取' },
-                { action: '充值', cost: 1000, time: '3天前', desc: '基础套餐' },
-              ].map((r, i) => (
+                { action: '选题生成', cost: -10, time: '昨天 19:45', desc: '餐饮行业 · 8个选题' },
+                { action: '超级生成', cost: -30, time: '昨天 10:12', desc: '热点×知识库×风格' },
+              ]).map((r, i) => (
                 <div key={i} className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
                   <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${r.cost > 0 ? 'bg-green-100' : 'bg-gray-100'}`}>
                     {r.cost > 0 ? '💰' : '⚡'}
