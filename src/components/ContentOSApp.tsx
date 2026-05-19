@@ -9127,6 +9127,7 @@ function Profile({
   aiSystemPrompt, setAiSystemPrompt,
   aiTemperature, setAiTemperature,
   credits, setCredits,
+  creditLogs,
   accounts, setAccounts,
   accountIdx, setAccountIdx,
   savedContents, savedTopics,
