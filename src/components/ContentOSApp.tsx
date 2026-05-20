@@ -2760,10 +2760,8 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
 
   // AI 推荐面板（升级版）
   if (showRecommendPanel) {
-    const strategyLines = (recommendTopics as any)?.strategy
-      ? ((recommendTopics as any).strategy as string).split(/[。
-]/).filter((s: string) => s.trim())
-      : []
+    const _strategyStr = (recommendTopics as any)?.strategy || ''
+    const strategyLines = _strategyStr ? _strategyStr.split('\n').filter((s: string) => s.trim()) : []
     return (
       <div className="flex flex-col h-full bg-[#F2F2F7]">
         <div className="px-5 pt-12 pb-0 flex-shrink-0">
