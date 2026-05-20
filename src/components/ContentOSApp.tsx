@@ -5267,6 +5267,12 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
       const [scheduleTime, setScheduleTime] = React.useState('')
       const [schedulePlatform, setSchedulePlatform] = React.useState('抖音')
       const [scheduleTitle, setScheduleTitle] = React.useState('')
+      // 批量生成模式
+      const [batchMode, setBatchMode] = React.useState(false)
+      const [batchSelected, setBatchSelected] = React.useState<string[]>([])
+      const [batchResults, setBatchResults] = React.useState<any[]>([])
+      const [batchLoading, setBatchLoading] = React.useState(false)
+      const [batchProgress, setBatchProgress] = React.useState(0)
 
       const BUILTIN_TEMPLATES = [
         { id: 'hook', name: '问题钩子', icon: '🎣', desc: '用问题开头，引发好奇', prompt: '用一个尖锐的问题开头，引发读者强烈好奇心，然后给出意想不到的答案' },
@@ -5283,6 +5289,39 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
         { id: 'humor', name: '幽默自嘲', icon: '😄', desc: '自嘲拉近距离', prompt: '用幽默自嘲的方式开头，让读者觉得真实可爱，拉近距离后再给出干货' },
         { id: 'inspire', name: '励志行动', icon: '💪', desc: '激励行动，正能量', prompt: '用激励性的语言，让读者感受到紧迫感和行动力，结尾给出明确的行动指引' },
       ]
+
+      async function batchGenerateCopy() {
+        if (batchSelected.length === 0) { showToast('请先选择选题'); return }
+        setBatchLoading(true)
+        setBatchProgress(0)
+        setBatchResults([])
+        const results: any[] = []
+        for (let i = 0; i < batchSelected.length; i++) {
+          const topic = batchSelected[i]
+          setBatchProgress(Math.round((i / batchSelected.length) * 100))
+          try {
+            const res = await fetch('/api/generate-copy', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                topic,
+                style,
+                positioning: acc?.positioning || '',
+                industry: acc?.industry || '',
+                accountName: acc?.name || '',
+              })
+            })
+            const data = await res.json()
+            results.push({ topic, copy: data.copy || data.result || '', success: true })
+          } catch {
+            results.push({ topic, copy: '', success: false })
+          }
+        }
+        setBatchResults(results)
+        setBatchProgress(100)
+        setBatchLoading(false)
+        showToast(`✅ 批量生成完成，共 ${results.filter(r => r.success).length} 条`)
+      }
 
       async function generateCopy() {
         if (!selectedTopic.trim()) { showToast('请先输入选题'); return }
@@ -5367,7 +5406,15 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
                   </div>
                 </div>
                 <div className="bg-white rounded-2xl p-4 shadow-sm">
-                  <div className="font-bold text-gray-900 text-sm mb-2">💡 选题</div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-bold text-gray-900 text-sm">💡 选题</div>
+                    <button
+                      onClick={() => { setBatchMode(!batchMode); setBatchSelected([]); setBatchResults([]) }}
+                      className={`text-[11px] px-3 py-1 rounded-full font-bold transition-all ${batchMode ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'}`}
+                    >
+                      {batchMode ? '✅ 批量模式' : '📦 批量模式'}
+                    </button>
+                  </div>
                   <textarea value={selectedTopic} onChange={e => setSelectedTopic(e.target.value)} placeholder="输入选题，例如：普通人如何用 AI 副业月入过万..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20 leading-relaxed" />
                   {savedTopics?.length > 0 && (
                     <div className="mt-2">
@@ -5408,6 +5455,69 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
                         </button>
                       ))}
                     </div>
+                  </div>
+                )}
+                {/* 批量模式UI */}
+                {batchMode && (
+                  <div className="bg-purple-50 rounded-2xl p-4 border border-purple-100">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="font-bold text-purple-700 text-sm">📦 批量生成</div>
+                      <span className="text-xs text-purple-500">{batchSelected.length} 个已选</span>
+                    </div>
+                    {savedTopics && savedTopics.length > 0 ? (
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {savedTopics.slice(0, 10).map((t: string, i: number) => (
+                          <button
+                            key={i}
+                            onClick={() => setBatchSelected(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])}
+                            className={`w-full text-left px-3 py-2 rounded-xl text-xs transition-all ${batchSelected.includes(t) ? 'bg-purple-500 text-white' : 'bg-white text-gray-700 border border-gray-100'}`}
+                          >
+                            {batchSelected.includes(t) ? '✅ ' : '○ '}{typeof t === 'string' ? t : (t as any).title || String(t)}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-400 text-center py-4">暂无收藏选题，请先在素材库收藏选题</div>
+                    )}
+                    {batchLoading && (
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between text-xs text-purple-600 mb-1">
+                          <span>批量生成中...</span>
+                          <span>{batchProgress}%</span>
+                        </div>
+                        <div className="h-2 bg-purple-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-purple-500 rounded-full transition-all" style={{ width: `${batchProgress}%` }} />
+                        </div>
+                      </div>
+                    )}
+                    {batchResults.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        <div className="text-xs font-bold text-gray-700 mb-2">生成结果：</div>
+                        {batchResults.map((r: any, i: number) => (
+                          <div key={i} className="bg-white rounded-xl p-3 border border-gray-100">
+                            <div className="text-xs font-bold text-gray-700 mb-1 truncate">{r.topic}</div>
+                            {r.success ? (
+                              <div className="space-y-1">
+                                <div className="text-xs text-gray-500 line-clamp-2">{r.copy.slice(0, 80)}...</div>
+                                <div className="flex gap-1">
+                                  <button onClick={() => { try { navigator.clipboard.writeText(r.copy) } catch {} showToast('✅ 已复制') }} className="flex-1 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-lg active:scale-95">复制</button>
+                                  <button onClick={() => { const updated = [{ topic: r.topic, style, versions: [{ style, copy: r.copy }], savedAt: new Date().toISOString() }, ...savedContents]; setSavedContents(updated); showToast('✅ 已保存') }} className="flex-1 py-1 bg-green-50 text-green-600 text-[10px] font-bold rounded-lg active:scale-95">保存</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-xs text-red-400">生成失败</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      onClick={batchGenerateCopy}
+                      disabled={batchLoading || batchSelected.length === 0}
+                      className="w-full mt-3 py-3 bg-gradient-to-r from-purple-500 to-pink-400 text-white font-bold rounded-xl text-sm disabled:opacity-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                    >
+                      {batchLoading ? <><Spinner /><span>批量生成中 {batchProgress}%</span></> : <><span>⚡</span><span>批量生成 {batchSelected.length} 条文案</span></>}
+                    </button>
                   </div>
                 )}
                 <button onClick={generateCopy} disabled={loading || !selectedTopic.trim()} className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm disabled:opacity-50 active:scale-[0.98] transition-all shadow-md">
