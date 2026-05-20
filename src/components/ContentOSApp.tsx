@@ -7043,6 +7043,7 @@ ${line}
                     localStorage.setItem(key, JSON.stringify([...existing, newItem]))
                     setShowVidScheduleModal(false)
                     showToast('✅ 已加入排期！可在运营中心查看')
+                    setTimeout(() => showToast('💡 发布后记得在运营中心录入数据'), 3000)
                   } catch { showToast('❌ 加入排期失败') }
                 }}
                 className="w-full mt-4 py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-black text-sm rounded-2xl active:scale-[0.98] transition-all"
@@ -8714,6 +8715,33 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
       const [hoveredIdx, setHoveredIdx] = React.useState<number | null>(null)
       const [chartType, setChartType] = React.useState<'line' | 'bar'>('line')
 
+      // 从真实videoRecords计算图表数据
+      const hasRealData = videoRecords && videoRecords.length > 0
+      const realPlaysData = React.useMemo(() => {
+        if (!hasRealData) return platformStats.plays
+        // 取最近7条记录的播放量（倒序）
+        const recent = [...videoRecords].slice(0, 7).reverse()
+        const arr = recent.map((r: any) => parseInt(r.plays) || 0)
+        while (arr.length < 7) arr.unshift(0)
+        return arr.slice(-7)
+      }, [videoRecords, hasRealData, platformStats.plays])
+
+      const realLikesData = React.useMemo(() => {
+        if (!hasRealData) return platformStats.likes
+        const recent = [...videoRecords].slice(0, 7).reverse()
+        const arr = recent.map((r: any) => parseInt(r.likes) || 0)
+        while (arr.length < 7) arr.unshift(0)
+        return arr.slice(-7)
+      }, [videoRecords, hasRealData, platformStats.likes])
+
+      const realTotalPlays = hasRealData
+        ? videoRecords.reduce((sum: number, r: any) => sum + (parseInt(r.plays) || 0), 0)
+        : platformStats.totalPlays
+
+      const realTotalEngagement = hasRealData
+        ? videoRecords.reduce((sum: number, r: any) => sum + (parseInt(r.likes) || 0) + (parseInt(r.comments) || 0) + (parseInt(r.collects) || 0), 0)
+        : (platformStats.likes[6] + platformStats.comments[6] + platformStats.collects[6])
+
       const chartConfig: any = {
         fans: {
           label: '粉丝增长',
@@ -8725,19 +8753,19 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
         },
         plays: {
           label: '播放量',
-          data: platformStats.plays,
+          data: realPlaysData,
           color: '#8B5CF6',
           unit: '',
-          summary: `峰值 ${Math.max(...platformStats.plays).toLocaleString()}`,
-          total: platformStats.totalPlays >= 10000 ? (platformStats.totalPlays / 10000).toFixed(1) + '万' : platformStats.totalPlays.toLocaleString(),
+          summary: hasRealData ? `共${videoRecords.length}条视频` : `峰值 ${Math.max(...platformStats.plays).toLocaleString()}`,
+          total: realTotalPlays >= 10000 ? (realTotalPlays / 10000).toFixed(1) + '万' : realTotalPlays.toLocaleString(),
         },
         engagement: {
           label: '互动数据',
-          data: platformStats.likes,
+          data: realLikesData,
           color: '#F59E0B',
           unit: '',
-          summary: `点赞+评论+收藏`,
-          total: (platformStats.likes[6] + platformStats.comments[6] + platformStats.collects[6]).toLocaleString(),
+          summary: hasRealData ? `${videoRecords.length}条视频互动总计` : `点赞+评论+收藏`,
+          total: realTotalEngagement.toLocaleString(),
         },
       }
 
