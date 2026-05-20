@@ -728,6 +728,16 @@ export default function ContentOSApp() {
   const [posAdvantage, setPosAdvantage] = useState('')
   const [posLoading, setPosLoading] = useState(false)
   const [posResult, setPosResult] = useState<any>(null)
+  // v16.3 新增：对话式引导 + 竞品分析
+  const [posMode, setPosMode] = useState<'chat'|'form'>('chat')
+  const [posChatMessages, setPosChatMessages] = useState<{role:'ai'|'user', text:string}[]>([])
+  const [posChatInput, setPosChatInput] = useState('')
+  const [posChatStep, setPosChatStep] = useState(0)
+  const [posCompetitors, setPosCompetitors] = useState('')
+  const [posCompAnalysis, setPosCompAnalysis] = useState<any>(null)
+  const [posCompLoading, setPosCompLoading] = useState(false)
+  const [posOptimizing, setPosOptimizing] = useState(false)
+  const [posOptResult, setPosOptResult] = useState<any>(null)
 
   const acc = accounts[accountIdx] || accounts[0]
 
@@ -1472,6 +1482,134 @@ export default function ContentOSApp() {
     }
   }
 
+  // v16.3: 对话式引导初始化
+  function startPosChat() {
+    const firstMsg = { role: 'ai' as const, text: `你好！我是你的账号定位顾问 🎯
+
+我会通过几个问题帮你找准账号方向。
+
+**第一步：你做的是什么行业？**
+
+比如：餐饮、健身、美妆、教育、本地服务...` }
+    setPosChatMessages([firstMsg])
+    setPosChatStep(1)
+    setPosChatInput('')
+  }
+
+  async function sendPosChat() {
+    if (!posChatInput.trim()) return
+    const userMsg = { role: 'user' as const, text: posChatInput.trim() }
+    const newMsgs = [...posChatMessages, userMsg]
+    setPosChatMessages(newMsgs)
+    setPosChatInput('')
+
+    const step = posChatStep
+    if (step === 1) {
+      setPosIndustry(posChatInput.trim())
+      setPosChatStep(2)
+      setTimeout(() => setPosChatMessages(m => [...m, { role: 'ai', text: `明白了，**${posChatInput.trim()}**行业 👍
+
+**第二步：你的核心产品或服务是什么？**
+
+比如：手工面条、私教课、护肤品套装...` }]), 400)
+    } else if (step === 2) {
+      setPosProduct(posChatInput.trim())
+      setPosChatStep(3)
+      setTimeout(() => setPosChatMessages(m => [...m, { role: 'ai', text: `好的，**${posChatInput.trim()}** 👍
+
+**第三步：你的目标客户是谁？**
+
+比如：周边3公里上班族、25-35岁宝妈、大学生...` }]), 400)
+    } else if (step === 3) {
+      setPosCustomer(posChatInput.trim())
+      setPosChatStep(4)
+      setTimeout(() => setPosChatMessages(m => [...m, { role: 'ai', text: `了解，目标客户是**${posChatInput.trim()}** 👍
+
+**第四步：你在哪个城市运营？**（可跳过，输入"全国"或直接跳过）` }]), 400)
+    } else if (step === 4) {
+      const cityVal = posChatInput.trim() === '跳过' ? '' : posChatInput.trim()
+      setPosCity(cityVal)
+      setPosChatStep(5)
+      setTimeout(() => setPosChatMessages(m => [...m, { role: 'ai', text: `好的 👍
+
+**最后一步：你有什么独特优势？**
+
+比如：10年经验、价格比同行低30%、独家配方、网红打卡地...
+
+（可以跳过，输入"跳过"）` }]), 400)
+    } else if (step === 5) {
+      const advVal = posChatInput.trim() === '跳过' ? '' : posChatInput.trim()
+      setPosAdvantage(advVal)
+      setPosChatStep(6)
+      setTimeout(() => setPosChatMessages(m => [...m, { role: 'ai', text: `完美！我已经收集到所有信息了 🎉
+
+点击下方按钮，我来为你生成专属定位报告！` }]), 400)
+    }
+  }
+
+  // v16.3: 竞品分析
+  async function analyzeCompetitors() {
+    if (!posCompetitors.trim()) { showToast('请输入竞品账号信息'); return }
+    setPosCompLoading(true)
+    try {
+      const res = await fetch('/api/generate-positioning', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'competitor',
+          industry: posIndustry || acc.industry,
+          product: posProduct || acc.name,
+          competitors: posCompetitors,
+          myPositioning: posResult?.positioning || acc.positioning,
+          aiModel, aiApiKey, aiApiBase
+        })
+      })
+      const data = await res.json()
+      if (data.competitorAnalysis) {
+        setPosCompAnalysis(data.competitorAnalysis)
+      } else {
+        showToast('分析失败，请重试')
+      }
+    } catch {
+      showToast('分析失败，请重试')
+    } finally {
+      setPosCompLoading(false)
+    }
+  }
+
+  // v16.3: 优化已有定位
+  async function optimizePositioning() {
+    if (!acc.positioning || acc.positioning === '待完善') { showToast('请先完成账号定位'); return }
+    setPosOptimizing(true)
+    try {
+      const res = await fetch('/api/generate-positioning', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'optimize',
+          industry: acc.industry,
+          product: acc.name,
+          currentPositioning: acc.positioning,
+          targetAudience: acc.targetAudience,
+          videoCount: videoRecords.length,
+          avgPlays: videoRecords.length > 0 ? Math.round(videoRecords.reduce((s: number, v: any) => s + (v.plays || 0), 0) / videoRecords.length) : 0,
+          aiModel, aiApiKey, aiApiBase
+        })
+      })
+      const data = await res.json()
+      if (data.optimizeResult) {
+        setPosOptResult(data.optimizeResult)
+        setPosStep(4)
+      } else {
+        showToast('优化失败，请重试')
+      }
+    } catch {
+      showToast('优化失败，请重试')
+    } finally {
+      setPosOptimizing(false)
+    }
+  }
+
   async function generatePositioning() {
     if (!posIndustry || !posProduct || !posCustomer) {
       showToast('请填写行业、产品和目标客户')
@@ -1752,36 +1890,109 @@ export default function ContentOSApp() {
     )
   }
 
-  // ─── Positioning Wizard Modal ─────────────────────────────
+  // ─── Positioning Wizard Modal v16.3 ─────────────────────────────
   if (showPositioning) {
+    const chatStepLabels = ['', '行业', '产品/服务', '目标客户', '城市', '优势', '准备生成']
     return (
       <div className="w-[390px] h-[844px] rounded-[50px] overflow-hidden bg-[#F2F2F7] flex flex-col shadow-[0_0_0_10px_#111,0_40px_100px_rgba(0,0,0,.7)] relative">
-        <div className="px-5 pt-12 pb-4 flex-shrink-0 flex items-center gap-3">
-          <button onClick={() => { setShowPositioning(false); setPosStep(1); setPosResult(null) }} className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center text-gray-500">←</button>
-          <div>
-            <h1 className="text-lg font-black text-gray-900">账号定位向导</h1>
-            <p className="text-xs text-gray-400">AI 帮你找准账号方向</p>
+        {/* Header */}
+        <div className="px-5 pt-12 pb-3 flex-shrink-0 flex items-center gap-3 bg-white/80 backdrop-blur-xl border-b border-gray-100">
+          <button onClick={() => { setShowPositioning(false); setPosStep(1); setPosResult(null); setPosChatMessages([]); setPosChatStep(0); setPosCompAnalysis(null); setPosOptResult(null) }} className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-lg">←</button>
+          <div className="flex-1">
+            <h1 className="text-base font-black text-gray-900">🎯 账号定位向导</h1>
+            <p className="text-[10px] text-gray-400">AI 顾问帮你找准账号方向</p>
           </div>
+          {posStep <= 2 && !posResult && (
+            <div className="flex bg-gray-100 rounded-xl p-0.5 gap-0.5">
+              <button onClick={() => { setPosMode('chat'); if(posChatMessages.length === 0) startPosChat() }} className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${posMode==='chat' ? 'bg-white text-blue-500 shadow-sm' : 'text-gray-400'}`}>💬 对话</button>
+              <button onClick={() => setPosMode('form')} className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${posMode==='form' ? 'bg-white text-blue-500 shadow-sm' : 'text-gray-400'}`}>📝 表单</button>
+            </div>
+          )}
         </div>
 
-        {/* Step indicator */}
-        <div className="px-5 mb-4 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            {['填写信息', '确认', '查看报告'].map((s, i) => (
-              <div key={i} className="flex items-center gap-2 flex-1">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${posStep > i + 1 ? 'bg-green-400 text-white' : posStep === i + 1 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
-                  {posStep > i + 1 ? '✓' : i + 1}
+        {(posMode === 'form' || posStep >= 3) && (
+          <div className="px-5 py-3 flex-shrink-0 bg-white/60">
+            <div className="flex items-center gap-1.5">
+              {(posStep <= 3 ? ['填写信息', '确认', '定位报告'] : ['填写信息', '确认', '定位报告', '优化建议']).map((s, i) => (
+                <div key={i} className="flex items-center gap-1 flex-1">
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${posStep > i + 1 ? 'bg-green-400 text-white' : posStep === i + 1 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                    {posStep > i + 1 ? '✓' : i + 1}
+                  </div>
+                  <span className={`text-[10px] ${posStep === i + 1 ? 'text-blue-500 font-semibold' : 'text-gray-400'}`}>{s}</span>
+                  {i < (posStep <= 3 ? 2 : 3) && <div className={`flex-1 h-px ${posStep > i + 1 ? 'bg-green-400' : 'bg-gray-200'}`} />}
                 </div>
-                <span className={`text-xs ${posStep === i + 1 ? 'text-blue-500 font-semibold' : 'text-gray-400'}`}>{s}</span>
-                {i < 2 && <div className={`flex-1 h-px ${posStep > i + 1 ? 'bg-green-400' : 'bg-gray-200'}`} />}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-6">
-          {posStep === 1 && (
-            <div className="space-y-3">
+        <div className="flex-1 overflow-y-auto scrollbar-hide pb-6">
+
+          {/* 对话模式 */}
+          {posMode === 'chat' && posStep <= 2 && (
+            <div className="flex flex-col h-full">
+              <div className="flex-1 overflow-y-auto scrollbar-hide px-4 py-4 space-y-3">
+                {posChatMessages.length === 0 && (
+                  <div className="text-center py-12">
+                    <div className="text-5xl mb-4">🎯</div>
+                    <p className="text-sm font-bold text-gray-700 mb-2">AI 定位顾问</p>
+                    <p className="text-xs text-gray-400 mb-6">通过对话帮你找准账号方向</p>
+                    <button onClick={startPosChat} className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-all">
+                      开始对话 →
+                    </button>
+                  </div>
+                )}
+                {posChatMessages.map((msg, i) => (
+                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} gap-2`}>
+                    {msg.role === 'ai' && <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-sm flex-shrink-0 mt-0.5">🤖</div>}
+                    <div className={`max-w-[78%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed whitespace-pre-line ${msg.role === 'ai' ? 'bg-white text-gray-800 shadow-sm rounded-tl-sm' : 'bg-blue-500 text-white rounded-tr-sm'}`}>
+                      {msg.text.replace(/\*\*(.*?)\*\*/g, '$1')}
+                    </div>
+                    {msg.role === 'user' && <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-sm flex-shrink-0 mt-0.5">👤</div>}
+                  </div>
+                ))}
+                {posChatStep > 0 && posChatStep < 6 && (
+                  <div className="flex justify-center">
+                    <div className="flex gap-1">
+                      {[1,2,3,4,5].map(s => (
+                        <div key={s} className={`w-1.5 h-1.5 rounded-full transition-all ${s < posChatStep ? 'bg-green-400' : s === posChatStep ? 'bg-blue-500' : 'bg-gray-200'}`} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {posChatStep === 6 && (
+                  <div className="px-2">
+                    <button onClick={() => { setPosMode('form'); setPosStep(2) }} className="w-full py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-all">
+                      ✨ 生成我的定位报告
+                    </button>
+                  </div>
+                )}
+              </div>
+              {posChatStep > 0 && posChatStep < 6 && (
+                <div className="px-4 pb-4 flex-shrink-0">
+                  <div className="flex gap-2 bg-white rounded-2xl shadow-sm p-2">
+                    <input
+                      value={posChatInput}
+                      onChange={e => setPosChatInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && sendPosChat()}
+                      placeholder={posChatStep <= 3 ? `输入你的${chatStepLabels[posChatStep]}...` : '输入或说"跳过"'}
+                      className="flex-1 px-2 text-sm outline-none bg-transparent"
+                    />
+                    <button onClick={sendPosChat} disabled={!posChatInput.trim()} className="w-9 h-9 rounded-xl bg-blue-500 text-white flex items-center justify-center disabled:opacity-40 active:scale-95 transition-all">
+                      ↑
+                    </button>
+                  </div>
+                  {posChatStep >= 4 && (
+                    <button onClick={() => { setPosChatInput('跳过'); setTimeout(sendPosChat, 50) }} className="w-full mt-2 py-1.5 text-xs text-gray-400 text-center">跳过此步</button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 表单模式 Step 1 */}
+          {posMode === 'form' && posStep === 1 && (
+            <div className="space-y-3 px-5 pt-4">
               <div className="bg-white rounded-2xl p-4 shadow-sm">
                 <label className="text-xs font-bold text-gray-500 mb-2 block">行业 *</label>
                 <input value={posIndustry} onChange={e => setPosIndustry(e.target.value)} placeholder="如：餐饮、健身、美妆、教育..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none" />
@@ -1802,6 +2013,11 @@ export default function ContentOSApp() {
                 <label className="text-xs font-bold text-gray-500 mb-2 block">你的优势（可选）</label>
                 <textarea value={posAdvantage} onChange={e => setPosAdvantage(e.target.value)} placeholder="如：10年厨师经验、价格比同行低30%、独家配方..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20" />
               </div>
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <label className="text-xs font-bold text-gray-500 mb-1 block">竞品账号（可选）</label>
+                <p className="text-[10px] text-gray-400 mb-2">填写竞品账号名称，AI 将分析竞争格局，帮你找差异化空间</p>
+                <textarea value={posCompetitors} onChange={e => setPosCompetitors(e.target.value)} placeholder="如：@老王面馆、@张记牛肉面..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-16" />
+              </div>
               <button
                 onClick={() => { if (!posIndustry || !posProduct || !posCustomer) { showToast('请填写必填项'); return }; setPosStep(2) }}
                 className="w-full py-3 bg-blue-500 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all"
@@ -1811,14 +2027,16 @@ export default function ContentOSApp() {
             </div>
           )}
 
+          {/* Step 2: 确认 */}
           {posStep === 2 && (
-            <div className="space-y-3">
+            <div className="space-y-3 px-5 pt-4">
               <div className="bg-white rounded-2xl p-4 shadow-sm">
                 <h3 className="font-bold text-gray-900 text-sm mb-3">📋 确认信息</h3>
                 {[
                   ['行业', posIndustry], ['产品/服务', posProduct],
                   ['目标客户', posCustomer], ['城市', posCity || '不限'],
-                  ['优势', posAdvantage || '未填写']
+                  ['优势', posAdvantage || '未填写'],
+                  ...(posCompetitors ? [['竞品账号', posCompetitors]] : [])
                 ].map(([k, v]) => (
                   <div key={k} className="flex justify-between py-2 border-b border-gray-50 last:border-0">
                     <span className="text-xs text-gray-400">{k}</span>
@@ -1827,16 +2045,17 @@ export default function ContentOSApp() {
                 ))}
               </div>
               <div className="bg-blue-50 rounded-2xl p-4">
-                <p className="text-xs text-blue-600 leading-relaxed">✨ AI 将根据以上信息，为你生成完整的账号定位方案，包括：定位一句话、内容方向、目标人群画像、差异化优势、账号名称建议和4周内容计划。</p>
+                <p className="text-xs text-blue-600 leading-relaxed">✨ AI 将生成：定位一句话、内容方向、人群画像、差异化优势、账号名称建议、4周内容计划{posCompetitors ? '、竞品分析报告' : ''}。</p>
               </div>
               {posLoading && (
                 <div className="bg-white rounded-2xl p-6 text-center shadow-sm">
                   <Spinner size="md" />
-                  <p className="text-sm text-gray-500 mt-3">AI 正在分析，请稍候...</p>
+                  <p className="text-sm text-gray-500 mt-3">AI 正在深度分析，请稍候...</p>
+                  <p className="text-xs text-gray-400 mt-1">通常需要 10-20 秒</p>
                 </div>
               )}
               <div className="flex gap-3">
-                <button onClick={() => setPosStep(1)} className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-2xl text-sm">← 返回修改</button>
+                <button onClick={() => { setPosStep(1); setPosMode('form') }} className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-2xl text-sm">← 返回修改</button>
                 <button onClick={generatePositioning} disabled={posLoading} className="flex-2 flex-1 py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm disabled:opacity-60">
                   {posLoading ? '生成中...' : '✨ 生成定位报告'}
                 </button>
@@ -1844,32 +2063,31 @@ export default function ContentOSApp() {
             </div>
           )}
 
+          {/* Step 3: 定位报告 */}
           {posStep === 3 && posResult && (
-            <div className="space-y-3">
+            <div className="space-y-3 px-5 pt-4">
               <div className="bg-gradient-to-br from-blue-500 to-cyan-400 rounded-2xl p-5 text-white shadow-lg">
-                <div className="text-xs font-bold text-white/70 mb-1">账号定位</div>
+                <div className="text-xs font-bold text-white/70 mb-1">✨ 账号定位</div>
                 <div className="text-lg font-black leading-snug">{posResult.positioning}</div>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {posResult.directions?.map((d: string, i: number) => (
+                    <span key={i} className="px-2.5 py-1 bg-white/20 text-white text-[10px] font-semibold rounded-lg">{d}</span>
+                  ))}
+                </div>
               </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
-                <h3 className="font-bold text-gray-900 text-sm mb-3">🎯 内容方向</h3>
-                {posResult.directions?.map((d: string, i: number) => (
-                  <div key={i} className="flex items-start gap-2 py-1.5 border-b border-gray-50 last:border-0">
-                    <span className="text-blue-400 font-bold text-xs mt-0.5">{i + 1}.</span>
-                    <span className="text-sm text-gray-700">{d}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
-                <h3 className="font-bold text-gray-900 text-sm mb-2">👥 目标人群</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">{posResult.audience}</p>
-              </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
-                <h3 className="font-bold text-gray-900 text-sm mb-2">⚡ 差异化优势</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">{posResult.advantage}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-white rounded-2xl p-3.5 shadow-sm">
+                  <div className="text-[10px] font-bold text-gray-400 mb-1.5">👥 目标人群</div>
+                  <p className="text-xs text-gray-700 leading-relaxed">{posResult.audience}</p>
+                </div>
+                <div className="bg-white rounded-2xl p-3.5 shadow-sm">
+                  <div className="text-[10px] font-bold text-gray-400 mb-1.5">⚡ 差异化优势</div>
+                  <p className="text-xs text-gray-700 leading-relaxed">{posResult.advantage}</p>
+                </div>
               </div>
               {posResult.names && (
                 <div className="bg-white rounded-2xl p-4 shadow-sm">
-                  <h3 className="font-bold text-gray-900 text-sm mb-3">💡 账号名称建议</h3>
+                  <h3 className="font-bold text-gray-900 text-xs mb-2.5">💡 账号名称建议</h3>
                   <div className="flex flex-wrap gap-2">
                     {posResult.names.map((n: string, i: number) => (
                       <span key={i} className="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-semibold rounded-xl">{n}</span>
@@ -1879,10 +2097,10 @@ export default function ContentOSApp() {
               )}
               {posResult.plan && (
                 <div className="bg-white rounded-2xl p-4 shadow-sm">
-                  <h3 className="font-bold text-gray-900 text-sm mb-3">📅 4周内容计划</h3>
+                  <h3 className="font-bold text-gray-900 text-xs mb-3">📅 4周内容计划</h3>
                   {posResult.plan.map((w: any, i: number) => (
                     <div key={i} className="mb-3 last:mb-0">
-                      <div className="text-xs font-bold text-blue-500 mb-1.5">第{w.week}周 · {w.theme}</div>
+                      <div className="text-[10px] font-bold text-blue-500 mb-1.5">第{w.week}周 · {w.theme}</div>
                       {w.topics?.map((t: string, j: number) => (
                         <div key={j} className="text-xs text-gray-600 py-1 pl-3 border-l-2 border-blue-100 mb-1">{t}</div>
                       ))}
@@ -1890,6 +2108,42 @@ export default function ContentOSApp() {
                   ))}
                 </div>
               )}
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-bold text-gray-900 text-xs">🔍 竞品分析</h3>
+                  {!posCompAnalysis && <span className="text-[10px] text-gray-400">可选填竞品账号</span>}
+                </div>
+                {!posCompAnalysis ? (
+                  <div className="space-y-2">
+                    <textarea value={posCompetitors} onChange={e => setPosCompetitors(e.target.value)} placeholder="输入竞品账号名称，如：@老王面馆..." className="w-full px-3 py-2 rounded-xl bg-gray-100 text-xs outline-none resize-none h-14" />
+                    <button onClick={analyzeCompetitors} disabled={posCompLoading || !posCompetitors.trim()} className="w-full py-2.5 bg-orange-500 text-white font-bold rounded-xl text-xs disabled:opacity-50 active:scale-[0.98] transition-all">
+                      {posCompLoading ? '分析中...' : '🔍 分析竞争格局'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="bg-orange-50 rounded-xl p-3">
+                      <div className="text-[10px] font-bold text-orange-600 mb-1">竞争格局</div>
+                      <p className="text-xs text-gray-700">{posCompAnalysis.landscape}</p>
+                    </div>
+                    <div className="bg-green-50 rounded-xl p-3">
+                      <div className="text-[10px] font-bold text-green-600 mb-1">🌊 蓝海机会</div>
+                      <p className="text-xs text-gray-700">{posCompAnalysis.blueOcean}</p>
+                    </div>
+                    <div className="bg-blue-50 rounded-xl p-3">
+                      <div className="text-[10px] font-bold text-blue-600 mb-1">🎯 差异化策略</div>
+                      <p className="text-xs text-gray-700">{posCompAnalysis.strategy}</p>
+                    </div>
+                    {posCompAnalysis.avoidPoints && (
+                      <div className="bg-red-50 rounded-xl p-3">
+                        <div className="text-[10px] font-bold text-red-500 mb-1">⚠️ 避坑建议</div>
+                        <p className="text-xs text-gray-700">{posCompAnalysis.avoidPoints}</p>
+                      </div>
+                    )}
+                    <button onClick={() => setPosCompAnalysis(null)} className="text-[10px] text-gray-400 w-full text-center py-1">重新分析</button>
+                  </div>
+                )}
+              </div>
               <button
                 onClick={() => {
                   const newAcc: Account = {
@@ -1907,18 +2161,71 @@ export default function ContentOSApp() {
                   saveToLocal('contentos_accounts', updated)
                   setAccountIdx(updated.length - 1)
                   setShowPositioning(false)
-                  setPosStep(1); setPosResult(null)
+                  setPosStep(1); setPosResult(null); setPosChatMessages([]); setPosChatStep(0)
                   showToast('✅ 定位已保存，账号已创建')
                 }}
                 className="w-full py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md"
               >
                 ✅ 保存定位，创建账号
               </button>
-              <button onClick={() => { setShowPositioning(false); setPosStep(1); setPosResult(null) }} className="w-full py-2 text-sm text-gray-400">
+              {acc.positioning && acc.positioning !== '待完善' && (
+                <button onClick={optimizePositioning} disabled={posOptimizing} className="w-full py-2.5 bg-purple-500 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all disabled:opacity-60">
+                  {posOptimizing ? '优化中...' : '🔮 优化现有账号定位'}
+                </button>
+              )}
+              <button onClick={() => { setShowPositioning(false); setPosStep(1); setPosResult(null); setPosChatMessages([]); setPosChatStep(0) }} className="w-full py-2 text-sm text-gray-400">
                 稍后再说
               </button>
             </div>
           )}
+
+          {/* Step 4: 定位优化建议 */}
+          {posStep === 4 && posOptResult && (
+            <div className="space-y-3 px-5 pt-4">
+              <div className="bg-gradient-to-br from-purple-500 to-pink-400 rounded-2xl p-5 text-white shadow-lg">
+                <div className="text-xs font-bold text-white/70 mb-1">🔮 优化后定位</div>
+                <div className="text-base font-black leading-snug">{posOptResult.newPositioning}</div>
+              </div>
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <h3 className="font-bold text-gray-900 text-xs mb-2">📊 现状分析</h3>
+                <p className="text-xs text-gray-600 leading-relaxed">{posOptResult.currentAnalysis}</p>
+              </div>
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <h3 className="font-bold text-gray-900 text-xs mb-2.5">🚀 优化建议</h3>
+                <div className="space-y-2">
+                  {posOptResult.suggestions?.map((s: string, i: number) => (
+                    <div key={i} className="flex gap-2 text-xs text-gray-700">
+                      <span className="text-purple-500 font-bold flex-shrink-0">{i+1}.</span>
+                      <span>{s}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {posOptResult.contentAdjustments && (
+                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                  <h3 className="font-bold text-gray-900 text-xs mb-2">🎬 内容调整方向</h3>
+                  <p className="text-xs text-gray-600 leading-relaxed">{posOptResult.contentAdjustments}</p>
+                </div>
+              )}
+              <button
+                onClick={() => {
+                  const updated = accounts.map((a: Account, i: number) =>
+                    i === accountIdx ? { ...a, positioning: posOptResult.newPositioning } : a
+                  )
+                  setAccounts(updated)
+                  saveToLocal('contentos_accounts', updated)
+                  setShowPositioning(false)
+                  setPosStep(1); setPosResult(null); setPosOptResult(null)
+                  showToast('✅ 定位已更新')
+                }}
+                className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md"
+              >
+                ✅ 应用优化定位
+              </button>
+              <button onClick={() => setPosStep(3)} className="w-full py-2 text-sm text-gray-400">← 返回定位报告</button>
+            </div>
+          )}
+
         </div>
       </div>
     )
