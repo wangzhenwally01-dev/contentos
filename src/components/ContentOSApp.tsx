@@ -5244,7 +5244,7 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
   )
 }
 
-    function ContentCenter({ acc, showToast, savedContents, setSavedContents, savedTopics, setTab }: any) {
+    function ContentCenter({ acc, showToast, savedContents, setSavedContents, savedTopics, setTab, setVideoCopy }: any) {
       const [step, setStep] = React.useState(1)
       const [selectedTopic, setSelectedTopic] = React.useState('')
       const [style, setStyle] = React.useState('犀利观点')
@@ -5442,7 +5442,7 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
                         <p className="text-sm text-gray-800 leading-relaxed">{v.content}</p>
                         <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
                           <div className="flex items-center gap-3"><span className="text-[11px] text-gray-400">{v.content?.length || 0} 字</span><span className="text-[11px] text-gray-400">≈ {Math.ceil((v.content?.length || 0) / 4)} 秒</span></div>
-                          <button onClick={() => { setVideoCopy(v.content); setTab('video'); showToast('✅ 文案已带入视频工作室') }} className="text-[11px] font-bold text-white bg-gradient-to-r from-purple-500 to-pink-400 px-3 py-1.5 rounded-xl active:scale-95">🎬 去做视频</button>
+                          <button onClick={() => { try { localStorage.setItem('contentos_video_copy_transfer', v.content) } catch {}; setTab('video'); showToast('✅ 文案已带入视频工作室') }} className="text-[11px] font-bold text-white bg-gradient-to-r from-purple-500 to-pink-400 px-3 py-1.5 rounded-xl active:scale-95">🎬 去做视频</button>
                         </div>
                       </div>
                     </div>
@@ -5652,6 +5652,17 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
   const [vidScheduleTime, setVidScheduleTime] = React.useState('')
   const [vidSchedulePlatform, setVidSchedulePlatform] = React.useState('抖音')
   const [vidScheduleTitle, setVidScheduleTitle] = React.useState('')
+
+  // 读取从内容中心传来的文案
+  React.useEffect(() => {
+    try {
+      const transfer = localStorage.getItem('contentos_video_copy_transfer')
+      if (transfer) {
+        setVideoCopy(transfer)
+        localStorage.removeItem('contentos_video_copy_transfer')
+      }
+    } catch {}
+  }, [])
 
   // 草稿自动保存
   React.useEffect(() => {
