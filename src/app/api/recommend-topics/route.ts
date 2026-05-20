@@ -10,6 +10,10 @@ export async function POST(req: Request) {
       savedTopics = [],
       videoRecords = [],
       trendingItems = [],
+      topVideos = [],
+      avgPlays = 0,
+      bestPlatformFromHistory = '',
+      savedContentsCount = 0,
       contentPlan = '',
       preferredTypes = [],
       aiModel, aiApiKey, aiApiBase, aiTemperature
@@ -23,16 +27,26 @@ export async function POST(req: Request) {
     const client = new OpenAI({ apiKey, baseURL })
 
     // 分析历史数据，找出高表现规律
-    const topVideos = [...videoRecords]
-      .sort((a: any, b: any) => (b.plays || 0) - (a.plays || 0))
-      .slice(0, 5)
-
-    const avgPlays = videoRecords.length > 0
-      ? Math.round(videoRecords.reduce((s: number, v: any) => s + (v.plays || 0), 0) / videoRecords.length)
-      : 0
-
-    // 找出高于平均播放量的视频特征
     const highPerformers = videoRecords.filter((v: any) => (v.plays || 0) > avgPlays * 1.5)
+    const totalEngagement = videoRecords.reduce((s: number, v: any) =>
+      s + (v.likes || 0) + (v.comments || 0) + (v.collects || 0), 0)
+    const avgEngagementRate = videoRecords.length > 0 && avgPlays > 0
+      ? ((totalEngagement / videoRecords.length / avgPlays) * 100).toFixed(1) + '%'
+      : '暂无数据'
+
+    // 分析最佳发布时间
+    const timeMap: Record<string, number> = {}
+    videoRecords.forEach((v: any) => {
+      if (v.publishedAt) {
+        const hour = new Date(v.publishedAt).getHours()
+        const slot = hour < 12 ? '上午' : hour < 18 ? '下午' : '晚上'
+        timeMap[slot] = (timeMap[slot] || 0) + (v.plays || 0)
+      }
+    })
+    const bestTimeSlot = Object.entries(timeMap).sort((a, b) => b[1] - a[1])[0]?.[0] || '晚上18-21点'
+
+    // 分析高表现内容特征
+    const highPerfTitles = highPerformers.slice(0, 3).map((v: any) => v.title || '').filter(Boolean)
 
     const hotspotContext = hotspots.length > 0
       ? `\n📊 当前热点（优先结合）：\n${hotspots.slice(0, 8).map((h: any) => `- ${h.title || h} (热度:${h.heat || '高'}, 标签:${h.tag || ''})`).join('\n')}`
@@ -43,7 +57,7 @@ export async function POST(req: Request) {
       : ''
 
     const historyContext = topVideos.length > 0
-      ? `\n📈 历史高播放量视频（学习规律）：\n${topVideos.map((v: any) => `- "${v.title}" 播放:${v.plays || 0} 点赞:${v.likes || 0} 完播率:${v.completionRate || 0}%`).join('\n')}\n平均播放量：${avgPlays}，高表现视频数：${highPerformers.length}`
+      ? `\n📈 历史高播放量视频（学习规律）：\n${topVideos.map((v: any) => `- "${v.title}" 播放:${v.plays || 0} 点赞:${v.likes || 0} 完播率:${v.completionRate || 0}%`).join('\n')}\n平均播放量：${avgPlays}，高表现视频数：${highPerformers.length}，平均互动率：${avgEngagementRate}`
       : ''
 
     const savedContext = savedTopics.length > 0
@@ -68,6 +82,10 @@ export async function POST(req: Request) {
 - 账号名：${accountName}
 - 行业：${industry}
 - 定位：${positioning}
+- 已发布视频：${videoRecords.length}条，平均播放：${avgPlays}，互动率：${avgEngagementRate}
+- 最佳发布时段：${bestTimeSlot}
+- 主要平台：${bestPlatformFromHistory || '抖音'}
+- 高表现内容：${highPerfTitles.join('、') || '暂无'}
 ${hotspotContext}
 ${knowledgeContext}
 ${historyContext}
@@ -76,7 +94,7 @@ ${savedContext}
 ${planContext}
 ${preferredContext}
 
-请基于以上所有信息，生成15个高质量个性化选题推荐。
+请基于以上所有信息，生成15个高质量个性化选题推荐，并提供账号数据分析。
 
 核心要求：
 1. 每个选题必须与账号定位高度相关，体现专业性
@@ -101,13 +119,22 @@ ${preferredContext}
       "tags": ["标签1", "标签2"],
       "type": "类型（热点/干货/情感/产品/故事/对比/数据）",
       "dataSource": "数据来源（热点/知识库/历史数据/爆款素材）",
-      "estimatedPlays": "预估播放量区间（如：5000-20000）"
+      "estimatedPlays": "预估播放量区间（如：5000-20000）",
+      "hotspotMatch": "与热点的关联度（高/中/低）"
     }
   ],
   "insight": "本次推荐的核心洞察（一句话总结）",
   "strategy": "内容策略建议（2-3条）",
   "bestType": "当前最适合的内容类型",
-  "bestPlatform": "当前最适合的发布平台"
+  "bestPlatform": "当前最适合的发布平台",
+  "analysis": {
+    "bestContentType": "最佳内容类型（如：干货教程）",
+    "bestPostTime": "最佳发布时间（如：工作日18:30-20:00）",
+    "avgEngagement": "${avgEngagementRate}",
+    "hotspotMatch": "当前热点与账号的匹配度（如：高度匹配）",
+    "keyPattern": "高表现内容的核心规律（一句话）",
+    "growthSuggestion": "增长建议（一句话）"
+  }
 }`
 
     const completion = await client.chat.completions.create({
@@ -128,6 +155,7 @@ ${preferredContext}
       strategy: result.strategy || '',
       bestType: result.bestType || '',
       bestPlatform: result.bestPlatform || '',
+      analysis: result.analysis || null,
       total: result.topics?.length || 0,
     })
   } catch (e: any) {

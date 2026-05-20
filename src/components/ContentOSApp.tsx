@@ -568,6 +568,7 @@ export default function ContentOSApp() {
 
   // AI 选题推荐引擎状态
   const [recommendTopics, setRecommendTopics] = useState<any[]>([])
+  const [recommendAnalysis, setRecommendAnalysis] = useState<any>(null)
   const [recommendLoading, setRecommendLoading] = useState(false)
   const [recommendInsight, setRecommendInsight] = useState('')
   const [showRecommendPanel, setShowRecommendPanel] = useState(false)
@@ -920,6 +921,15 @@ export default function ContentOSApp() {
     setRecommendLoading(true)
     setShowRecommendPanel(true)
     try {
+      // 分析历史数据
+      const topVideos = [...videoRecords].sort((a: any, b: any) => (b.plays || 0) - (a.plays || 0)).slice(0, 5)
+      const avgPlays = videoRecords.length > 0
+        ? Math.round(videoRecords.reduce((s: number, v: any) => s + (v.plays || 0), 0) / videoRecords.length)
+        : 0
+      const platformDist: Record<string, number> = {}
+      videoRecords.forEach((v: any) => { const p = v.platform || '抖音'; platformDist[p] = (platformDist[p] || 0) + 1 })
+      const bestPlatformFromHistory = Object.entries(platformDist).sort((a, b) => b[1] - a[1])[0]?.[0] || ''
+
       const res = await fetch('/api/recommend-topics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -932,6 +942,10 @@ export default function ContentOSApp() {
           savedTopics,
           videoRecords,
           trendingItems,
+          topVideos,
+          avgPlays,
+          bestPlatformFromHistory,
+          savedContentsCount: savedContents.length,
           aiModel, aiApiKey, aiApiBase, aiTemperature,
         }),
       })
@@ -945,6 +959,7 @@ export default function ContentOSApp() {
         })
         setRecommendTopics(topicsWithMeta)
         setRecommendInsight(data.insight || '')
+        setRecommendAnalysis(data.analysis || null)
         showToast(`✅ AI 推荐了 ${data.topics.length} 个个性化选题`)
       } else {
         showToast('推荐失败，请重试')
@@ -1957,6 +1972,9 @@ export default function ContentOSApp() {
                 savedTopicsCount={savedTopics.length}
                 setShowSuperGen={setShowSuperGen}
                 knowledgeItems={knowledgeItems}
+                setShowRecommendPanel={setShowRecommendPanel}
+                recommendTopicsFn={recommendTopicsFn}
+                recommendLoading={recommendLoading}
               />
             )}
         {tab === 'materials' && (
@@ -2014,6 +2032,7 @@ export default function ContentOSApp() {
                 fetchTrendingMaterials={fetchTrendingMaterials}
                 recommendTopics={recommendTopics} recommendLoading={recommendLoading}
                 recommendInsight={recommendInsight}
+                recommendAnalysis={recommendAnalysis}
                 showRecommendPanel={showRecommendPanel} setShowRecommendPanel={setShowRecommendPanel}
                 recommendTopicsFn={recommendTopicsFn}
                     fetchTrendAnalysis={fetchTrendAnalysis}
@@ -2166,7 +2185,7 @@ export default function ContentOSApp() {
 // ═══════════════════════════════════════════════════════════
 // DASHBOARD v2 — 工作台首页（每日任务+快捷入口+数据概览）
 // ═══════════════════════════════════════════════════════════
-function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab, showToast, user, onLogout, savedContents, schedule, onPositioning, showAddAccount, setShowAddAccount, newAccName, setNewAccName, newAccIndustry, setNewAccIndustry, newAccEmoji, setNewAccEmoji, addAccount, hotspots, radarData, fetchRadar, radarLoading, savedTopics, setShowAiPanel, videoRecords, savedTopicsCount, setShowGlobalSearch, setShowSuperGen, knowledgeItems }: any) {
+function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab, showToast, user, onLogout, savedContents, schedule, onPositioning, showAddAccount, setShowAddAccount, newAccName, setNewAccName, newAccIndustry, setNewAccIndustry, newAccEmoji, setNewAccEmoji, addAccount, hotspots, radarData, fetchRadar, radarLoading, savedTopics, setShowAiPanel, videoRecords, savedTopicsCount, setShowGlobalSearch, setShowSuperGen, knowledgeItems, setShowRecommendPanel, recommendTopicsFn, recommendLoading }: any) {
   const [showAccSwitcher, setShowAccSwitcher] = React.useState(false)
       const EMOJIS = ['🏪', '🍜', '💪', '💄', '📚', '🏠', '🚗', '🎵', '🌿', '☕']
 
@@ -2368,6 +2387,22 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                 <div className="text-white/80 text-[10px]">热点 × 知识库({(knowledgeItems||[]).length}条) × 风格 三合一</div>
               </div>
               <div className="text-white/80 text-sm font-bold">立即 →</div>
+            </div>
+
+            {/* 智能选题推荐入口 */}
+            <div
+              onClick={() => { setTab('materials'); setTimeout(() => { setShowRecommendPanel(true); if (recommendTopicsFn) recommendTopicsFn() }, 300) }}
+              className="mx-4 mb-3 bg-white rounded-2xl px-4 py-3 flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer shadow-sm border border-gray-100"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center text-xl flex-shrink-0">🧠</div>
+              <div className="flex-1">
+                <div className="font-bold text-gray-900 text-sm">AI 智能选题推荐</div>
+                <div className="text-gray-400 text-[10px]">基于历史数据 · 热点匹配 · 个性化推荐</div>
+              </div>
+              <div className="flex items-center gap-1">
+                {recommendLoading && <div className="w-3 h-3 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />}
+                <div className="text-violet-500 text-sm font-bold">→</div>
+              </div>
             </div>
 
             {/* 每日内容计划弹层 */}
@@ -2689,7 +2724,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
     }
     
 
-function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, topicFilter, setTopicFilter, topicSearch, setTopicSearch, batchCount, setBatchCount, topicCategories, selectedCategory, setSelectedCategory, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy, setShowAiPanel, creatorAnalysisTab, setCreatorAnalysisTab, selectedScript, setSelectedScript, showScriptDetail, setShowScriptDetail, knowledgeItems, knowledgeInput, setKnowledgeInput, knowledgeTitle, setKnowledgeTitle, knowledgeCategory, setKnowledgeCategory, showAddKnowledge, setShowAddKnowledge, knowledgeSearch, setKnowledgeSearch, addKnowledgeItem, deleteKnowledgeItem, showSuperGen, setShowSuperGen, superGenLoading, superGenResult, setSuperGenResult, superGenTopic, setSuperGenTopic, superGenHotspot, setSuperGenHotspot, superGenStyle, setSuperGenStyle, superGenKnowledge, setSuperGenKnowledge, superGenerate, acc: accProp, trendingItems, trendingLoading, trendingCategory, setTrendingCategory, trendingSort, setTrendingSort, fetchTrendingMaterials, recommendTopics, recommendLoading, recommendInsight, showRecommendPanel, setShowRecommendPanel, recommendTopicsFn, hotspots: hotspotsProp, videoRecords: videoRecordsProp, fetchTrendAnalysis, trendData, trendLoading, showTrendPanel, setShowTrendPanel, generateBorrowScript, borrowLoading, showBorrowPanel, setShowBorrowPanel, borrowResult, borrowHotspot, schedule, setSchedule }: any) {
+function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, topicFilter, setTopicFilter, topicSearch, setTopicSearch, batchCount, setBatchCount, topicCategories, selectedCategory, setSelectedCategory, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy, setShowAiPanel, creatorAnalysisTab, setCreatorAnalysisTab, selectedScript, setSelectedScript, showScriptDetail, setShowScriptDetail, knowledgeItems, knowledgeInput, setKnowledgeInput, knowledgeTitle, setKnowledgeTitle, knowledgeCategory, setKnowledgeCategory, showAddKnowledge, setShowAddKnowledge, knowledgeSearch, setKnowledgeSearch, addKnowledgeItem, deleteKnowledgeItem, showSuperGen, setShowSuperGen, superGenLoading, superGenResult, setSuperGenResult, superGenTopic, setSuperGenTopic, superGenHotspot, setSuperGenHotspot, superGenStyle, setSuperGenStyle, superGenKnowledge, setSuperGenKnowledge, superGenerate, acc: accProp, trendingItems, trendingLoading, trendingCategory, setTrendingCategory, trendingSort, setTrendingSort, fetchTrendingMaterials, recommendTopics, recommendLoading, recommendInsight, recommendAnalysis, showRecommendPanel, setShowRecommendPanel, recommendTopicsFn, hotspots: hotspotsProp, videoRecords: videoRecordsProp, fetchTrendAnalysis, trendData, trendLoading, showTrendPanel, setShowTrendPanel, generateBorrowScript, borrowLoading, showBorrowPanel, setShowBorrowPanel, borrowResult, borrowHotspot, schedule, setSchedule }: any) {
   const TABS = [
     { id: 'discover', label: '🔥 发现' },
     { id: 'trending', label: '💎 爆款库' },
@@ -2799,6 +2834,44 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
           ) : (
             <div className="space-y-3">
               {/* 洞察 + 策略卡片 */}
+              {/* 数据洞察卡片 */}
+              {recommendAnalysis && (
+                <div className="bg-white rounded-2xl p-4 shadow-sm mb-3">
+                  <div className="font-bold text-gray-900 text-sm mb-3">📊 账号数据洞察</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {recommendAnalysis.bestContentType && (
+                      <div className="bg-violet-50 rounded-xl p-3">
+                        <div className="text-[10px] text-violet-400 mb-1">最佳内容类型</div>
+                        <div className="text-xs font-bold text-violet-700">{recommendAnalysis.bestContentType}</div>
+                      </div>
+                    )}
+                    {recommendAnalysis.bestPostTime && (
+                      <div className="bg-blue-50 rounded-xl p-3">
+                        <div className="text-[10px] text-blue-400 mb-1">最佳发布时间</div>
+                        <div className="text-xs font-bold text-blue-700">{recommendAnalysis.bestPostTime}</div>
+                      </div>
+                    )}
+                    {recommendAnalysis.avgEngagement && (
+                      <div className="bg-green-50 rounded-xl p-3">
+                        <div className="text-[10px] text-green-400 mb-1">平均互动率</div>
+                        <div className="text-xs font-bold text-green-700">{recommendAnalysis.avgEngagement}</div>
+                      </div>
+                    )}
+                    {recommendAnalysis.hotspotMatch && (
+                      <div className="bg-orange-50 rounded-xl p-3">
+                        <div className="text-[10px] text-orange-400 mb-1">热点匹配度</div>
+                        <div className="text-xs font-bold text-orange-700">{recommendAnalysis.hotspotMatch}</div>
+                      </div>
+                    )}
+                  </div>
+                  {recommendAnalysis.keyPattern && (
+                    <div className="mt-2 bg-amber-50 rounded-xl px-3 py-2">
+                      <div className="text-[10px] text-amber-500 font-bold mb-0.5">🔑 高表现规律</div>
+                      <div className="text-xs text-amber-700">{recommendAnalysis.keyPattern}</div>
+                    </div>
+                  )}
+                </div>
+              )}
               {recommendInsight && (
                 <div className="bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl p-4 text-white shadow-lg">
                   <div className="text-xs font-bold text-white/70 mb-1">💡 AI 核心洞察</div>
