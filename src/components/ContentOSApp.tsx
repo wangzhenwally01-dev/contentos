@@ -716,17 +716,6 @@ export default function ContentOSApp() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [editingAccount, setEditingAccount] = useState<any>(null)
 
-  // Pay Modal States
-  const [showPayModal, setShowPayModal] = useState(false)
-  const [payModalPkg, setPayModalPkg] = useState<any>(null)
-  const [payMethod, setPayMethod] = useState<'wechat' | 'alipay'>('wechat')
-  const [payOrderId, setPayOrderId] = useState('')
-  const [payQrUrl, setPayQrUrl] = useState('')
-  const [payCountdown, setPayCountdown] = useState(900)
-  const [payStatus, setPayStatus] = useState<'idle' | 'loading' | 'reviewing' | 'done'>('idle')
-  const [payTransferNo, setPayTransferNo] = useState('')
-  const [payCountdownTimer, setPayCountdownTimer] = useState<any>(null)
-
   // Positioning Wizard
   const [showPositioning, setShowPositioning] = useState(false)
   const [posStep, setPosStep] = useState(1)
@@ -9287,6 +9276,17 @@ function Profile({
     'from-indigo-500 to-blue-400',
   ]
 
+  // Pay Modal States (inside Profile component)
+  const [showPayModal, setShowPayModal] = React.useState(false)
+  const [payModalPkg, setPayModalPkg] = React.useState<any>(null)
+  const [payMethod, setPayMethod] = React.useState<'wechat' | 'alipay'>('wechat')
+  const [payOrderId, setPayOrderId] = React.useState('')
+  const [payQrUrl, setPayQrUrl] = React.useState('')
+  const [payCountdown, setPayCountdown] = React.useState(900)
+  const [payStatus, setPayStatus] = React.useState<'idle' | 'loading' | 'reviewing' | 'done'>('idle')
+  const [payTransferNo, setPayTransferNo] = React.useState('')
+  const [payCountdownTimer, setPayCountdownTimer] = React.useState<any>(null)
+
   async function openPayModal(pkg: any) {
     setPayModalPkg(pkg)
     setPayMethod('wechat')
@@ -9313,7 +9313,6 @@ function Profile({
         setPayOrderId(data.orderId)
         setPayQrUrl(data.qrUrl)
         setPayStatus('idle')
-        // 启动倒计时
         const timer = setInterval(() => {
           setPayCountdown((c: number) => {
             if (c <= 1) { clearInterval(timer); return 0 }
