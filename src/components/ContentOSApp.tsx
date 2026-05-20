@@ -495,6 +495,7 @@ export default function ContentOSApp() {
   // Accounts
   const [accounts, setAccounts] = useState<Account[]>(DEFAULT_ACCOUNTS)
   const [accountIdx, setAccountIdx] = useState(0)
+  const [accSwitching, setAccSwitching] = useState(false)
   const [showAddAccount, setShowAddAccount] = useState(false)
   const [newAccName, setNewAccName] = useState('')
   const [newAccIndustry, setNewAccIndustry] = useState('')
@@ -736,9 +737,11 @@ export default function ContentOSApp() {
     if (!acc?.id) return
     if (prevAccIdRef.current === acc.id) return
     if (prevAccIdRef.current) {
-      // 切换账号：加载新账号数据
+      // 切换账号：显示加载动画，加载新账号数据
+      setAccSwitching(true)
       loadAccData(acc.id)
       localStorage.setItem('contentos_account_idx', String(accountIdx))
+      setTimeout(() => setAccSwitching(false), 600)
     }
     prevAccIdRef.current = acc.id
   }, [acc?.id])
@@ -749,6 +752,7 @@ export default function ContentOSApp() {
   React.useEffect(() => { if (acc?.id) { saveAccData(acc.id, 'video_records', videoRecords); autoSync() } }, [videoRecords])
   React.useEffect(() => { if (acc?.id) { saveAccData(acc.id, 'schedule', schedule); autoSync() } }, [schedule])
   React.useEffect(() => { if (acc?.id) { saveAccData(acc.id, 'knowledge', knowledgeItems); autoSync() } }, [knowledgeItems])
+  React.useEffect(() => { if (acc?.id) { saveAccData(acc.id, 'platform_stats', platformStats) } }, [platformStats])
 
   // 切换到运营中心时，从 localStorage 重新加载排期（合并文案/视频页写入的数据）
   React.useEffect(() => {
@@ -817,6 +821,17 @@ export default function ContentOSApp() {
       const vr = localStorage.getItem(getAccKey(accId, 'video_records')); setVideoRecords(vr ? JSON.parse(vr) : [])
       const sch = localStorage.getItem(getAccKey(accId, 'schedule')); setSchedule(sch ? JSON.parse(sch) : [])
       const kb = localStorage.getItem(getAccKey(accId, 'knowledge')); setKnowledgeItems(kb ? JSON.parse(kb) : [])
+      // 加载账号专属的platformStats
+      const ps = localStorage.getItem(getAccKey(accId, 'platform_stats'))
+      if (ps) setPlatformStats(JSON.parse(ps))
+      else setPlatformStats({
+        fans: [0, 0, 0, 0, 0, 0, 0],
+        plays: [0, 0, 0, 0, 0, 0, 0],
+        likes: [0, 0, 0, 0, 0, 0, 0],
+        comments: [0, 0, 0, 0, 0, 0, 0],
+        collects: [0, 0, 0, 0, 0, 0, 0],
+        totalFans: 0, totalPlays: 0, avgEngagement: 0, weeklyPosts: 0, lastSync: null, platform: '抖音',
+      })
     } catch {}
   }
   function saveAccData(accId: string, key: string, data: any) {
@@ -1952,7 +1967,20 @@ export default function ContentOSApp() {
         modulePrompts={modulePrompts} setModulePrompts={setModulePrompts}
         saveToLocal={saveToLocal} showToast={showToast}
       />
-      <div key={tab} className="flex-1 overflow-hidden flex flex-col page-enter">
+      <div key={tab} className="flex-1 overflow-hidden flex flex-col page-enter relative">
+        {/* 账号切换遮罩 */}
+        {accSwitching && (
+          <div className="absolute inset-0 bg-white/90 z-50 flex flex-col items-center justify-center">
+            <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center mb-3 shadow-lg">
+              <span className="text-3xl">{acc?.emoji || '🏪'}</span>
+            </div>
+            <div className="font-bold text-gray-900 text-sm mb-1">切换到「{acc?.name}」</div>
+            <div className="text-xs text-gray-400">正在加载账号数据...</div>
+            <div className="flex gap-1 mt-3">
+              {[0,1,2].map(i => <div key={i} className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay:`${i*0.15}s`}} />)}
+            </div>
+          </div>
+        )}
         {tab === 'dashboard' && (
           <Dashboard
                 acc={acc} accounts={accounts} accountIdx={accountIdx}
@@ -1975,6 +2003,7 @@ export default function ContentOSApp() {
                 setShowRecommendPanel={setShowRecommendPanel}
                 recommendTopicsFn={recommendTopicsFn}
                 recommendLoading={recommendLoading}
+                accSwitching={accSwitching}
               />
             )}
         {tab === 'materials' && (
@@ -2162,6 +2191,7 @@ export default function ContentOSApp() {
             exportTopics={exportTopics} exportContents={exportContents}
             theme={theme} setTheme={setTheme}
             accentColor={accentColor} setAccentColor={setAccentColor}
+            videoRecords={videoRecords} schedule={schedule}
           />
         )}
       </div>
@@ -2185,7 +2215,7 @@ export default function ContentOSApp() {
 // ═══════════════════════════════════════════════════════════
 // DASHBOARD v2 — 工作台首页（每日任务+快捷入口+数据概览）
 // ═══════════════════════════════════════════════════════════
-function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab, showToast, user, onLogout, savedContents, schedule, onPositioning, showAddAccount, setShowAddAccount, newAccName, setNewAccName, newAccIndustry, setNewAccIndustry, newAccEmoji, setNewAccEmoji, addAccount, hotspots, radarData, fetchRadar, radarLoading, savedTopics, setShowAiPanel, videoRecords, savedTopicsCount, setShowGlobalSearch, setShowSuperGen, knowledgeItems, setShowRecommendPanel, recommendTopicsFn, recommendLoading }: any) {
+function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab, showToast, user, onLogout, savedContents, schedule, onPositioning, showAddAccount, setShowAddAccount, newAccName, setNewAccName, newAccIndustry, setNewAccIndustry, newAccEmoji, setNewAccEmoji, addAccount, hotspots, radarData, fetchRadar, radarLoading, savedTopics, setShowAiPanel, videoRecords, savedTopicsCount, setShowGlobalSearch, setShowSuperGen, knowledgeItems, setShowRecommendPanel, recommendTopicsFn, recommendLoading, accSwitching }: any) {
   const [showAccSwitcher, setShowAccSwitcher] = React.useState(false)
       const EMOJIS = ['🏪', '🍜', '💪', '💄', '📚', '🏠', '🚗', '🎵', '🌿', '☕']
 
@@ -2325,23 +2355,33 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
 
             {/* 账号切换 */}
             <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-              {accounts.map((a: any, i: number) => (
-                <button
-                  key={a.id}
-                  onClick={() => { setAccountIdx(i); if (typeof navigator !== 'undefined') navigator.vibrate?.(10) }}
-                  className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 ${i === accountIdx ? 'bg-blue-500 text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-                >
-                  <span>{a.emoji || '🏪'}</span>
-                  <span className="max-w-[60px] truncate">{a.name}</span>
-                  {i === accountIdx && <span className="w-1.5 h-1.5 rounded-full bg-white/70 flex-shrink-0" />}
-                </button>
-              ))}
+              {accounts.map((a: any, i: number) => {
+                // 读取各账号的视频数和排期数
+                const accVR = (() => { try { const k = `contentos_${a.id}_video_records`; const d = localStorage.getItem(k); return d ? JSON.parse(d).length : 0 } catch { return 0 } })()
+                const accSch = (() => { try { const k = `contentos_${a.id}_schedule`; const d = localStorage.getItem(k); return d ? JSON.parse(d).filter((s: any) => s.status !== '已发布').length : 0 } catch { return 0 } })()
+                return (
+                  <button
+                    key={a.id}
+                    onClick={() => { setAccountIdx(i); if (typeof navigator !== 'undefined') navigator.vibrate?.(10) }}
+                    className={`flex-shrink-0 flex flex-col items-start gap-0.5 px-3 py-2 rounded-2xl text-xs font-semibold transition-all active:scale-95 ${i === accountIdx ? 'bg-blue-500 text-white shadow-sm' : 'bg-white text-gray-600 shadow-sm border border-gray-100'}`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>{a.emoji || '🏪'}</span>
+                      <span className="max-w-[60px] truncate font-bold">{a.name}</span>
+                      {i === accountIdx && accSwitching && <div className="w-3 h-3 border-2 border-white/60 border-t-transparent rounded-full animate-spin" />}
+                    </div>
+                    <div className={`text-[9px] ${i === accountIdx ? 'text-white/70' : 'text-gray-400'}`}>
+                      {accVR}视频 · {accSch}排期
+                    </div>
+                  </button>
+                )
+              })}
               <button
                 onClick={() => setShowAddAccount(true)}
-                className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-dashed border-2 border-dashed border-gray-200 text-gray-400 hover:border-blue-300 hover:text-blue-400 transition-all"
+                className="flex-shrink-0 flex flex-col items-center justify-center gap-0.5 px-3 py-2 rounded-2xl text-xs font-semibold border-2 border-dashed border-gray-200 text-gray-400 hover:border-blue-300 hover:text-blue-400 transition-all"
               >
-                <span>＋</span>
-                <span>新账号</span>
+                <span className="text-base">＋</span>
+                <span className="text-[9px]">新账号</span>
               </button>
             </div>
           </div>
@@ -9920,6 +9960,7 @@ function Profile({
   accentColor, setAccentColor,
   syncToCloud, loadFromCloud,
   syncLoading, lastSyncTime,
+  videoRecords, schedule,
 }: any) {
   const TABS = [
     { id: 'ai', label: '🤖 AI 设置' },
@@ -10272,11 +10313,12 @@ function Profile({
           <>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { label: '管理账号', value: accounts.length, unit: '个' },
-                { label: '已保存文案', value: savedContents.length, unit: '条' },
-                { label: '收藏选题', value: savedTopics.length, unit: '个' },
+                { label: '管理账号', value: accounts.length, unit: '个', icon: '🏪' },
+                { label: '已发布视频', value: videoRecords.length, unit: '条', icon: '📹' },
+                { label: '待发排期', value: schedule.filter((s: any) => s.status !== '已发布').length, unit: '个', icon: '📅' },
               ].map((s, i) => (
                 <div key={i} className="bg-white rounded-2xl p-3 shadow-sm text-center">
+                  <div className="text-lg mb-0.5">{s.icon}</div>
                   <div className="text-xl font-black text-gray-900">{s.value}<span className="text-xs font-medium text-gray-400 ml-0.5">{s.unit}</span></div>
                   <div className="text-[10px] text-gray-400 mt-0.5">{s.label}</div>
                 </div>
@@ -10301,10 +10343,23 @@ function Profile({
                         <span>行业：{a.industry}</span>
                         <span>受众：{a.targetAudience}</span>
                       </div>
+                      {/* 账号数据统计 */}
+                      {(() => {
+                        const vr = (() => { try { const k = `contentos_${a.id}_video_records`; const d = localStorage.getItem(k); return d ? JSON.parse(d).length : 0 } catch { return 0 } })()
+                        const sc = (() => { try { const k = `contentos_${a.id}_saved`; const d = localStorage.getItem(k); return d ? JSON.parse(d).length : 0 } catch { return 0 } })()
+                        const sch = (() => { try { const k = `contentos_${a.id}_schedule`; const d = localStorage.getItem(k); return d ? JSON.parse(d).length : 0 } catch { return 0 } })()
+                        return (
+                          <div className="flex gap-3 mt-1.5 text-[10px] text-white/90 bg-white/10 rounded-lg px-2 py-1">
+                            <span>📹 {vr}条视频</span>
+                            <span>💾 {sc}条文案</span>
+                            <span>📅 {sch}个排期</span>
+                          </div>
+                        )
+                      })()}
                     </div>
                     <div className="flex gap-2 p-2 bg-gray-50">
-                      <button onClick={() => setAccountIdx(i)} className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${i === accountIdx ? 'bg-blue-500 text-white' : 'bg-white text-gray-600 shadow-sm'}`}>
-                        {i === accountIdx ? '✓ 使用中' : '切换'}
+                      <button onClick={() => { setAccountIdx(i); showToast(`✅ 已切换到「${a.name}」`) }} className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${i === accountIdx ? 'bg-blue-500 text-white' : 'bg-white text-gray-600 shadow-sm'}`}>
+                        {i === accountIdx ? '✓ 使用中' : '🔄 切换'}
                       </button>
                       <button onClick={() => setEditingAccount({ ...a })} className="flex-1 py-1.5 rounded-xl text-xs font-bold bg-white text-gray-600 shadow-sm">编辑</button>
                       <button onClick={() => setShowDeleteConfirm(a.id)} className="px-3 py-1.5 rounded-xl text-xs font-bold bg-red-50 text-red-400">删除</button>
