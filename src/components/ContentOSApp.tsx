@@ -4788,8 +4788,6 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
           </div>
         )}
 
-        {/* ── 内容方案 ── */}
-            )}
           </div>
         )}
 
