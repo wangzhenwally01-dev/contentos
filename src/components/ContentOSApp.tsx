@@ -10,7 +10,7 @@ const supabase = createClient(
 
 // ─── Types ───────────────────────────────────────────────
 type Tab = 'dashboard' | 'materials' | 'content' | 'video' | 'operations' | 'profile'
-type MatTab = 'hotspot' | 'topics' | 'radar' | 'creator' | 'style' | 'knowledge' | 'trending' | 'extract' | 'plan'
+type MatTab = 'discover' | 'trending' | 'mine' | 'topics'
 type OpsTab = 'schedule' | 'stats' | 'goals'
 type VideoStep = 'input' | 'voice' | 'avatar' | 'preview'
 type ContentStep = 1 | 2 | 3
@@ -459,7 +459,7 @@ function GlobalSearch({ show, onClose, savedTopics, savedContents, trackedCreato
               onClick={() => {
                 if (r.action === 'topics') { setTab('materials'); setMatTab('topics') }
                 else if (r.action === 'content') { setTab('content') }
-                else if (r.action === 'creator') { setTab('materials'); setMatTab('creator') }
+                else if (r.action === 'creator') { setTab('materials'); setMatTab('trending') }
                 onClose()
               }}
               className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 border-b border-gray-50 last:border-0 text-left transition-colors"
@@ -516,7 +516,7 @@ export default function ContentOSApp() {
   const [showHistory, setShowHistory] = useState(false)
 
   // Materials
-  const [matTab, setMatTab] = useState<MatTab>('hotspot')
+  const [matTab, setMatTab] = useState<MatTab>('discover')
   const [aiTopics, setAiTopics] = useState<Topic[]>([])
   const [topicsLoading, setTopicsLoading] = useState(false)
   const [savedTopics, setSavedTopics] = useState<string[]>([])
@@ -2246,8 +2246,8 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
         else if (action === 'content') { setTab('content') }
         else if (action === 'topics') { setTab('materials'); setMatTab('topics') }
         else if (action === 'operations') { setTab('operations') }
-        else if (action === 'radar') { setTab('materials'); setMatTab('hotspot') }
-        else if (action === 'knowledge') { setTab('materials'); setMatTab('knowledge') }
+        else if (action === 'radar') { setTab('materials'); setMatTab('discover') }
+        else if (action === 'knowledge') { setTab('materials'); setMatTab('mine') }
       }
 
       // 生成每日内容计划
@@ -2359,7 +2359,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
 
             {/* 超级生成横幅 */}
             <div
-              onClick={() => { setTab('materials'); setMatTab('knowledge'); setTimeout(()=>setShowSuperGen(true),300) }}
+              onClick={() => { setTab('materials'); setMatTab('mine'); setTimeout(()=>setShowSuperGen(true),300) }}
               className="mx-4 mb-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl px-4 py-3 flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer shadow-lg shadow-purple-200/50"
             >
               <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl flex-shrink-0">⚡</div>
@@ -2426,7 +2426,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
               {statsCards.map((card: any) => (
                 <button
                   key={card.label}
-                  onClick={() => { if (card.action === 'topics') { setTab('materials'); setMatTab('topics') } else if (card.action === 'knowledge') { setTab('materials'); setMatTab('knowledge') } else setTab(card.action) }}
+                  onClick={() => { if (card.action === 'topics') { setTab('materials'); setMatTab('topics') } else if (card.action === 'knowledge') { setTab('materials'); setMatTab('mine') } else setTab(card.action) }}
                   className="bg-white rounded-2xl p-3 shadow-sm text-center active:scale-95 transition-transform"
                 >
                   <div className="text-lg mb-1">{card.icon}</div>
@@ -2556,16 +2556,16 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
               <div className="font-bold text-gray-900 text-sm mb-3">⚡ 快捷入口</div>
               <div className="grid grid-cols-4 gap-2">
                 {[
-                  { icon: '📡', label: '情报雷达', action: () => { setTab('materials'); setMatTab('hotspot') }, color: 'bg-blue-50' },
+                  { icon: '📡', label: '情报雷达', action: () => { setTab('materials'); setMatTab('discover') }, color: 'bg-blue-50' },
                   { icon: '💡', label: '生成选题', action: () => { setTab('materials'); setMatTab('topics') }, color: 'bg-purple-50' },
                   { icon: '✍️', label: '写文案', action: () => setTab('content'), color: 'bg-green-50' },
                   { icon: '🎬', label: '做视频', action: () => setTab('video'), color: 'bg-orange-50' },
                   { icon: '📊', label: '运营中心', action: () => setTab('operations'), color: 'bg-red-50' },
-                  { icon: '🎨', label: '风格模板', action: () => { setTab('materials'); setMatTab('style') }, color: 'bg-pink-50' },
-                  { icon: '👥', label: '博主追踪', action: () => { setTab('materials'); setMatTab('creator') }, color: 'bg-cyan-50' },
-                  { icon: '⚡', label: '超级生成', action: () => { setTab('materials'); setMatTab('knowledge'); setTimeout(()=>setShowSuperGen(true),300) }, color: 'bg-gradient-to-br from-purple-50 to-pink-50' },
-                  { icon: '🎙️', label: '口播提取', action: () => { setTab('materials'); setMatTab('extract') }, color: 'bg-violet-50' },
-                  { icon: '🧠', label: '知识库', action: () => { setTab('materials'); setMatTab('knowledge') }, color: 'bg-indigo-50' },
+                  { icon: '🎨', label: '风格模板', action: () => { setTab('materials'); setMatTab('mine') }, color: 'bg-pink-50' },
+                  { icon: '👥', label: '博主追踪', action: () => { setTab('materials'); setMatTab('trending') }, color: 'bg-cyan-50' },
+                  { icon: '⚡', label: '超级生成', action: () => { setTab('materials'); setMatTab('mine'); setTimeout(()=>setShowSuperGen(true),300) }, color: 'bg-gradient-to-br from-purple-50 to-pink-50' },
+                  { icon: '🎙️', label: '口播提取', action: () => { setTab('materials'); setMatTab('mine') }, color: 'bg-violet-50' },
+                  { icon: '🧠', label: '知识库', action: () => { setTab('materials'); setMatTab('mine') }, color: 'bg-indigo-50' },
                   { icon: '📥', label: '导出数据', action: () => { setTab('profile') }, color: 'bg-teal-50' },
                   { icon: '🎯', label: '账号定位', action: onPositioning, color: 'bg-amber-50' },
                 ].map((item: any, i: number) => (
@@ -2587,7 +2587,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                 <div className="flex items-center justify-between mb-3">
                   <div className="font-bold text-gray-900 text-sm">🔥 今日热点</div>
                   <button
-                    onClick={() => { setTab('materials'); setMatTab('hotspot') }}
+                    onClick={() => { setTab('materials'); setMatTab('discover') }}
                     className="text-xs text-blue-500 font-medium"
                   >查看全部 →</button>
                 </div>
@@ -2691,16 +2691,15 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
 
 function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, topicFilter, setTopicFilter, topicSearch, setTopicSearch, batchCount, setBatchCount, topicCategories, selectedCategory, setSelectedCategory, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy, setShowAiPanel, creatorAnalysisTab, setCreatorAnalysisTab, selectedScript, setSelectedScript, showScriptDetail, setShowScriptDetail, knowledgeItems, knowledgeInput, setKnowledgeInput, knowledgeTitle, setKnowledgeTitle, knowledgeCategory, setKnowledgeCategory, showAddKnowledge, setShowAddKnowledge, knowledgeSearch, setKnowledgeSearch, addKnowledgeItem, deleteKnowledgeItem, showSuperGen, setShowSuperGen, superGenLoading, superGenResult, setSuperGenResult, superGenTopic, setSuperGenTopic, superGenHotspot, setSuperGenHotspot, superGenStyle, setSuperGenStyle, superGenKnowledge, setSuperGenKnowledge, superGenerate, acc: accProp, trendingItems, trendingLoading, trendingCategory, setTrendingCategory, trendingSort, setTrendingSort, fetchTrendingMaterials, recommendTopics, recommendLoading, recommendInsight, showRecommendPanel, setShowRecommendPanel, recommendTopicsFn, hotspots: hotspotsProp, videoRecords: videoRecordsProp, fetchTrendAnalysis, trendData, trendLoading, showTrendPanel, setShowTrendPanel, generateBorrowScript, borrowLoading, showBorrowPanel, setShowBorrowPanel, borrowResult, borrowHotspot, schedule, setSchedule }: any) {
   const TABS = [
-    { id: 'hotspot', label: '🔥 热点' },
-    { id: 'trending', label: '💎 爆款' },
+    { id: 'discover', label: '🔥 发现' },
+    { id: 'trending', label: '💎 爆款库' },
     { id: 'topics', label: '💡 选题库' },
-    { id: 'plan', label: '📋 内容方案' },
-    { id: 'radar', label: '📡 情报' },
-    { id: 'creator', label: '🎯 博主' },
-    { id: 'style', label: '🎨 风格' },
-    { id: 'knowledge', label: '🧠 知识库' },
-    { id: 'extract', label: '🎙️ 口播提取' },
+    { id: 'mine', label: '🧠 我的素材' },
   ]
+  const [discoverSubTab, setDiscoverSubTab] = React.useState<'hotspot' | 'radar'>('hotspot')
+  const [trendingSubTab, setTrendingSubTab] = React.useState<'trending' | 'creator'>('trending')
+  const [mineSubTab, setMineSubTab] = React.useState<'knowledge' | 'style' | 'extract'>('knowledge')
+  const [topicsSubTab, setTopicsSubTab] = React.useState<'topics' | 'plan'>('topics')
 
   // 口播提取状态
   const [extractUrl, setExtractUrl] = React.useState('')
@@ -2896,72 +2895,21 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
 
       <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4">
 
-                {/* ── 爆款素材 Tab ── */}
-            {matTab === 'trending' && (
-              <div>
-                <div className="flex items-center justify-between mb-3 mt-1">
-                  <div className="flex gap-2">
-                    <button onClick={() => setTrendingSort('heat')} className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${trendingSort === 'heat' ? 'bg-orange-500 text-white' : 'bg-white text-gray-500 shadow-sm'}`}>🔥 热度</button>
-                    <button onClick={() => setTrendingSort('relevance')} className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${trendingSort === 'relevance' ? 'bg-blue-500 text-white' : 'bg-white text-gray-500 shadow-sm'}`}>🎯 相关</button>
-                  </div>
-                  <button onClick={fetchTrendingMaterials} disabled={trendingLoading} className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-xl text-xs font-bold disabled:opacity-60 active:scale-95 transition-all">
-                    {trendingLoading ? <><Spinner /><span>抓取中...</span></> : <><span>⚡</span><span>一键抓取</span></>}
-                  </button>
-                </div>
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 mb-3">
-                  {['全部', '娱乐', '教育', '生活', '美食', '科技', '情感', '搞笑', '励志', '行业'].map(cat => (
-                    <button key={cat} onClick={() => setTrendingCategory(cat)} className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-all ${trendingCategory === cat ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 shadow-sm'}`}>{cat}</button>
-                  ))}
-                </div>
-                {trendingItems.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="text-5xl mb-4">💎</div>
-                    <p className="text-gray-500 font-semibold mb-1">点击「一键抓取」获取爆款素材</p>
-                    <p className="text-xs text-gray-400">AI 自动分析全平台热门内容<br/>并评估与你账号的相关性</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {[...trendingItems]
-                      .filter(item => trendingCategory === '全部' || item.category === trendingCategory)
-                      .sort((a, b) => trendingSort === 'heat' ? b.heat - a.heat : b.relevance - a.relevance)
-                      .map((item: any) => (
-                        <div key={item.id} className="bg-white rounded-2xl p-4 shadow-sm">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">{item.platform}</span>
-                                <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full">{item.category}</span>
-                              </div>
-                              <p className="text-sm font-bold text-gray-900 leading-snug">{item.title}</p>
-                            </div>
-                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                              <span className="text-xs text-orange-500 font-bold">🔥{item.heat}</span>
-                              <span className="text-xs text-blue-500 font-bold">🎯{item.relevance}%</span>
-                            </div>
-                          </div>
-                          {item.angle && <div className="bg-blue-50 rounded-xl px-3 py-2 mb-2"><p className="text-xs text-blue-600">💡 {item.angle}</p></div>}
-                          <div className="flex items-center justify-between">
-                            <div className="flex gap-1 flex-wrap">
-                              {(item.tags || []).map((tag: string) => <span key={tag} className="text-xs px-2 py-0.5 bg-gray-50 text-gray-400 rounded-full">{tag}</span>)}
-                            </div>
-                            <button onClick={() => useTopic(item.title)} className="flex-shrink-0 px-3 py-1.5 bg-blue-500 text-white rounded-xl text-xs font-bold active:scale-95 transition-all">用于选题</button>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-    {/* ── 热点 Tab ── */}
-        {matTab === 'hotspot' && (
+        {/* 🔥 发现 Tab */}
+        {matTab === 'discover' && (
+          <div>
+            <div className="flex gap-2 mb-3 mt-1">
+              <button onClick={() => setDiscoverSubTab('hotspot')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${discoverSubTab === 'hotspot' ? 'bg-orange-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>🔥 今日热点</button>
+              <button onClick={() => setDiscoverSubTab('radar')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${discoverSubTab === 'radar' ? 'bg-blue-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>📡 情报雷达</button>
+            </div>
+            {discoverSubTab === 'hotspot' && (
           <div className="space-y-2">
             <p className="text-xs text-gray-400 mb-3 mt-1">今日热点 · 点击直接使用</p>
             {hotspots.map((h: any, i: number) => (
               <div
                 key={i}
                 className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3 active:scale-[0.98] transition-transform cursor-pointer"
-                onClick={() => useTopic(h.title)}
+                onClick={() => {}}
               >
                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-sm flex-shrink-0 ${i === 0 ? 'bg-red-400' : i === 1 ? 'bg-orange-400' : i === 2 ? 'bg-amber-400' : 'bg-gray-300'}`}>
                   {i + 1}
@@ -2972,7 +2920,10 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   {h.heat && <span className="text-xs text-red-400 font-bold">{h.heat}</span>}
-                  <span className="text-gray-300 text-xs">→</span>
+                  <button
+                    onClick={e => { e.stopPropagation(); useTopic(h.title); setMatTab('topics'); setTopicsSubTab('topics'); }}
+                    className="px-2.5 py-1 bg-orange-500 text-white rounded-xl text-xs font-bold active:scale-95 transition-all"
+                  >用这个</button>
                 </div>
               </div>
             ))}
@@ -2980,193 +2931,8 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
         )}
 
         {/* ── 选题库 Tab ── */}
-        {matTab === 'topics' && (
-          <div className="space-y-3 mt-1">
-            {/* 搜索栏 */}
-            <div className="bg-white rounded-2xl px-3 py-2.5 shadow-sm flex items-center gap-2">
-              <span className="text-gray-400 text-sm">🔍</span>
-              <input
-                value={topicSearch}
-                onChange={(e: any) => setTopicSearch(e.target.value)}
-                placeholder="搜索选题..."
-                className="flex-1 text-sm outline-none bg-transparent text-gray-700 placeholder:text-gray-300"
-              />
-              {topicSearch && (
-                <button onClick={() => setTopicSearch('')} className="text-gray-300 text-sm">✕</button>
-              )}
-            </div>
-
-            {/* 分类筛选 */}
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-0.5">
-              {topicCategories.map((cat: string) => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${selectedCategory === cat ? 'bg-blue-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}
-                >{cat}</button>
-              ))}
-            </div>
-
-            {/* 操作栏 */}
-            <div className="flex items-center gap-2">
-              <div className="flex gap-1 bg-white rounded-xl p-1 shadow-sm flex-1">
-                {[{id:'all',label:'全部'},{id:'ai',label:'AI生成'},{id:'saved',label:'已收藏'}].map((f: any) => (
-                  <button
-                    key={f.id}
-                    onClick={() => setTopicFilter(f.id)}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${topicFilter === f.id ? 'bg-blue-500 text-white' : 'text-gray-400'}`}
-                  >{f.label}</button>
-                ))}
-              </div>
-              <div className="flex items-center gap-1 bg-white rounded-xl px-2 py-1.5 shadow-sm">
-                <span className="text-xs text-gray-400">批量</span>
-                <select
-                  value={batchCount}
-                  onChange={(e: any) => setBatchCount(parseInt(e.target.value))}
-                  className="text-xs font-bold text-gray-700 outline-none bg-transparent"
-                >
-                  {[5,8,12,20].map(n => <option key={n} value={n}>{n}个</option>)}
-                </select>
-              </div>
-            </div>
-
-            {/* AI 推荐引擎入口 */}
-            <button
-              onClick={recommendTopicsFn}
-              disabled={recommendLoading}
-              className="w-full py-3 bg-gradient-to-r from-violet-600 to-purple-500 text-white text-sm font-bold rounded-2xl disabled:opacity-60 active:scale-[0.98] transition-transform shadow-md flex items-center justify-center gap-2"
-            >
-              {recommendLoading ? (
-                <><Spinner /><span>AI 分析中...</span></>
-              ) : (
-                <><span>🧠</span><span>AI 个性化推荐</span><span className="text-xs opacity-80">（结合热点+知识库+历史数据）</span></>
-              )}
-            </button>
-
-            {/* 生成按钮组 */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => generateTopics(batchCount, selectedCategory)}
-                disabled={topicsLoading}
-                className="py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white text-sm font-bold rounded-2xl disabled:opacity-60 active:scale-[0.98] transition-transform shadow-md"
-              >
-                {topicsLoading ? '🤔 生成中...' : '✨ AI 生成选题'}
-              </button>
-              <button
-                onClick={() => generateTopics(batchCount, selectedCategory)}
-                disabled={topicsLoading || aiTopics.length === 0}
-                className="py-3 bg-gradient-to-r from-purple-500 to-pink-400 text-white text-sm font-bold rounded-2xl disabled:opacity-60 active:scale-[0.98] transition-transform shadow-md"
-              >
-                {topicsLoading ? '...' : '➕ 追加更多'}
-              </button>
-            </div>
-
-            {topicsLoading && (
-              <div className="space-y-3 animate-fade-in">
-                {[1,2,3].map(i => (
-                  <div key={i} className="bg-white rounded-2xl p-4 shadow-sm" style={{animationDelay: `${i*0.1}s`}}>
-                    <div className="skeleton h-4 w-3/4 rounded-lg mb-3" />
-                    <div className="skeleton h-3 w-full rounded-lg mb-2" />
-                    <div className="skeleton h-3 w-2/3 rounded-lg" />
-                  </div>
-                ))}
-              </div>
             )}
-
-            {/* 空状态 */}
-            {!topicsLoading && aiTopics.length === 0 && savedTopics.length === 0 && (
-              <div className="bg-white rounded-3xl p-8 text-center shadow-sm animate-fade-in-up">
-                <div className="text-5xl mb-3 animate-float">💡</div>
-                <div className="font-black text-gray-800 text-base mb-1">选题库空空如也</div>
-                <div className="text-xs text-gray-400 leading-relaxed mb-4">
-                  点击上方按钮<br />AI 为你生成专属爆款选题
-                </div>
-                <div className="flex justify-center gap-4 text-xs text-gray-400">
-                  <span>🎯 精准定向</span>
-                  <span>🔥 热点结合</span>
-                  <span>📈 高转化</span>
-                </div>
-              </div>
-            )}
-
-            {/* AI 生成选题列表 */}
-            {(() => {
-              const allTopics = [
-                ...(topicFilter !== 'saved' ? aiTopics : []),
-                ...(topicFilter !== 'ai' ? savedTopics.map((t: any) => ({ title: typeof t === 'string' ? t : t.title, isSaved: true })) : [])
-              ]
-              const filtered = allTopics.filter((t: any) => {
-                const title = typeof t === 'string' ? t : (t.title || '')
-                const matchSearch = !topicSearch || title.toLowerCase().includes(topicSearch.toLowerCase())
-                const matchCat = selectedCategory === '全部' || (t.category === selectedCategory)
-                return matchSearch && matchCat
-              })
-              if (filtered.length === 0 && (aiTopics.length > 0 || savedTopics.length > 0)) {
-                return (
-                  <div className="text-center py-6">
-                    <div className="text-2xl mb-2">🔍</div>
-                    <p className="text-xs text-gray-400">没有找到匹配的选题，换个关键词试试</p>
-                  </div>
-                )
-              }
-              return (
-                <div className="space-y-2">
-                  {filtered.map((t: any, i: number) => {
-                    const title = typeof t === 'string' ? t : (t.title || t)
-                    const isSaved = savedTopics.some((s: any) => (typeof s === 'string' ? s : s.title) === title)
-                    return (
-                      <div key={i} className="bg-white rounded-2xl p-4 shadow-sm animate-fade-in-up" style={{animationDelay:`${i*30}ms`}}>
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <div className="flex-1">
-                            <div className="text-sm font-semibold text-gray-800 leading-snug">{title}</div>
-                            {t.category && t.category !== '全部' && (
-                              <span className="text-[10px] bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded-full font-medium mt-1 inline-block">{t.category}</span>
-                            )}
-                          </div>
-                          <div className="flex gap-1.5 flex-shrink-0">
-                            <button
-                              onClick={() => saveTopic(t)}
-                              className={`text-xs font-semibold px-2 py-0.5 rounded-lg transition-all ${isSaved ? 'bg-orange-50 text-orange-500' : 'bg-gray-100 text-gray-500'}`}
-                            >{isSaved ? '⭐' : '☆'}</button>
-                            <button
-                              onClick={() => useTopic(title)}
-                              className="text-xs text-white font-semibold px-2.5 py-0.5 bg-blue-500 rounded-lg active:scale-95 transition-transform"
-                            >写文案</button>
-                          </div>
-                        </div>
-                        {t.reason && <div className="text-xs text-gray-400 leading-relaxed mb-1.5">{t.reason}</div>}
-                        {t.hook && <div className="text-xs text-orange-500 bg-orange-50 px-2 py-1 rounded-lg">💡 {t.hook}</div>}
-                        {/* 快速操作 */}
-                        <div className="flex gap-2 mt-2.5 pt-2.5 border-t border-gray-50">
-                          <button
-                            onClick={() => { useTopic(title); }}
-                            className="flex-1 py-1.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white text-xs font-bold rounded-xl active:scale-[0.97] transition-transform"
-                          >✍️ 一键写文案</button>
-                          <button
-                            onClick={() => {
-                              const videoTitle = title
-                              setVideoCopy(videoTitle)
-                              setTab('video')
-                              showToast('✅ 已跳转视频生成')
-                            }}
-                            className="flex-1 py-1.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white text-xs font-bold rounded-xl active:scale-[0.97] transition-transform"
-                          >🎬 直接做视频</button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                  {/* 底部统计 */}
-                  <div className="text-center py-2">
-                    <span className="text-xs text-gray-400">共 {filtered.length} 个选题 · AI生成 {aiTopics.length} · 已收藏 {savedTopics.length}</span>
-                  </div>
-                </div>
-              )
-            })()}
-          </div>
-        )}
-
-                {/* ── 情报雷达 Tab ── */}
-            {matTab === 'radar' && (
+            {discoverSubTab === 'radar' && (
               <div className="mt-1">
                 {/* 借势文案弹窗 */}
                 {showBorrowPanel && (
@@ -3737,9 +3503,75 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                 )}
               </div>
             )}
+          </div>
+        )}
 
-        {/* ── 博主追踪 Tab ── */}
-        {matTab === 'creator' && (
+        {/* 💎 爆款库 Tab */}
+        {matTab === 'trending' && (
+          <div>
+            <div className="flex gap-2 mb-3 mt-1">
+              <button onClick={() => setTrendingSubTab('trending')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${trendingSubTab === 'trending' ? 'bg-orange-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>💎 爆款素材</button>
+              <button onClick={() => setTrendingSubTab('creator')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${trendingSubTab === 'creator' ? 'bg-cyan-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>🎯 博主追踪</button>
+            </div>
+            {trendingSubTab === 'trending' && (
+              <div>
+                <div className="flex items-center justify-between mb-3 mt-1">
+                  <div className="flex gap-2">
+                    <button onClick={() => setTrendingSort('heat')} className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${trendingSort === 'heat' ? 'bg-orange-500 text-white' : 'bg-white text-gray-500 shadow-sm'}`}>🔥 热度</button>
+                    <button onClick={() => setTrendingSort('relevance')} className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${trendingSort === 'relevance' ? 'bg-blue-500 text-white' : 'bg-white text-gray-500 shadow-sm'}`}>🎯 相关</button>
+                  </div>
+                  <button onClick={fetchTrendingMaterials} disabled={trendingLoading} className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-xl text-xs font-bold disabled:opacity-60 active:scale-95 transition-all">
+                    {trendingLoading ? <><Spinner /><span>抓取中...</span></> : <><span>⚡</span><span>一键抓取</span></>}
+                  </button>
+                </div>
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 mb-3">
+                  {['全部', '娱乐', '教育', '生活', '美食', '科技', '情感', '搞笑', '励志', '行业'].map(cat => (
+                    <button key={cat} onClick={() => setTrendingCategory(cat)} className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-all ${trendingCategory === cat ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 shadow-sm'}`}>{cat}</button>
+                  ))}
+                </div>
+                {trendingItems.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="text-5xl mb-4">💎</div>
+                    <p className="text-gray-500 font-semibold mb-1">点击「一键抓取」获取爆款素材</p>
+                    <p className="text-xs text-gray-400">AI 自动分析全平台热门内容<br/>并评估与你账号的相关性</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {[...trendingItems]
+                      .filter(item => trendingCategory === '全部' || item.category === trendingCategory)
+                      .sort((a, b) => trendingSort === 'heat' ? b.heat - a.heat : b.relevance - a.relevance)
+                      .map((item: any) => (
+                        <div key={item.id} className="bg-white rounded-2xl p-4 shadow-sm">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">{item.platform}</span>
+                                <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full">{item.category}</span>
+                              </div>
+                              <p className="text-sm font-bold text-gray-900 leading-snug">{item.title}</p>
+                            </div>
+                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                              <span className="text-xs text-orange-500 font-bold">🔥{item.heat}</span>
+                              <span className="text-xs text-blue-500 font-bold">🎯{item.relevance}%</span>
+                            </div>
+                          </div>
+                          {item.angle && <div className="bg-blue-50 rounded-xl px-3 py-2 mb-2"><p className="text-xs text-blue-600">💡 {item.angle}</p></div>}
+                          <div className="flex items-center justify-between">
+                            <div className="flex gap-1 flex-wrap">
+                              {(item.tags || []).map((tag: string) => <span key={tag} className="text-xs px-2 py-0.5 bg-gray-50 text-gray-400 rounded-full">{tag}</span>)}
+                            </div>
+                            <button onClick={() => useTopic(item.title)} className="flex-shrink-0 px-3 py-1.5 bg-blue-500 text-white rounded-xl text-xs font-bold active:scale-95 transition-all">用于选题</button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+    {/* ── 热点 Tab ── */}
+            )}
+            {trendingSubTab === 'creator' && (
           <div className="mt-1 space-y-3">
             {/* 搜索框 */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
@@ -4256,70 +4088,230 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
         )}
 
         {/* ── 风格 Tab ── */}
-        {matTab === 'style' && (
-          <div className="mt-1 space-y-3">
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-3">🔮 分析文案风格</div>
-              <input
-                value={styleUrl}
-                onChange={e => setStyleUrl(e.target.value)}
-                placeholder="博主主页链接（可选）"
-                className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none mb-2"
-              />
-              <input
-                value={styleName}
-                onChange={e => setStyleName(e.target.value)}
-                placeholder="模板名称（如：犀利观点派）"
-                className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none mb-2"
-              />
-              <textarea
-                value={styleText}
-                onChange={e => setStyleText(e.target.value)}
-                placeholder="或粘贴文案样本（AI 分析风格特征）..."
-                className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20 mb-2"
-              />
-              <button
-                onClick={analyzeStyle}
-                disabled={styleLoading}
-                className="w-full py-2.5 bg-purple-500 text-white text-sm font-bold rounded-xl disabled:opacity-60 active:scale-[0.98] transition-transform"
-              >
-                {styleLoading ? '分析中...' : '✨ 分析并保存风格'}
-              </button>
-            </div>
-            {styleTemplates.length === 0 ? (
-              <div className="bg-white rounded-3xl p-8 text-center shadow-sm">
-                <div className="text-4xl mb-2">🎨</div>
-                <div className="text-sm font-bold text-gray-700 mb-1">还没有风格模板</div>
-                <div className="text-xs text-gray-400">分析博主风格后自动保存，生成文案时可一键应用</div>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {styleTemplates.map((t: any) => (
-                  <div key={t.id} className="bg-white rounded-2xl p-4 shadow-sm">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="font-bold text-gray-900 text-sm">{t.name}</div>
-                      <div className="flex gap-2">
-                        <button onClick={() => applyTemplate(t)} className="text-xs text-blue-500 font-semibold px-2 py-0.5 bg-blue-50 rounded-lg">应用</button>
-                        <button onClick={() => deleteTemplate(t.id)} className="text-xs text-red-400 px-2 py-0.5 bg-red-50 rounded-lg">删除</button>
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-500 leading-relaxed">{t.description || t.summary}</div>
-                    {t.features && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {t.features?.slice(0, 3).map((f: string, i: number) => (
-                          <span key={i} className="text-[10px] px-2 py-0.5 bg-purple-50 text-purple-500 rounded-full">{f}</span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
             )}
           </div>
         )}
 
-        {/* ── 知识库 Tab ── */}
-        {matTab === 'knowledge' && (
+        {/* 💡 选题库 Tab */}
+        {matTab === 'topics' && (
+          <div>
+            <div className="flex gap-2 mb-3 mt-1">
+              <button onClick={() => setTopicsSubTab('topics')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${topicsSubTab === 'topics' ? 'bg-purple-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>💡 选题库</button>
+              <button onClick={() => setTopicsSubTab('plan')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${topicsSubTab === 'plan' ? 'bg-indigo-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>📋 内容方案</button>
+            </div>
+            {topicsSubTab === 'topics' && (
+          <div className="space-y-3 mt-1">
+            {/* 搜索栏 */}
+            <div className="bg-white rounded-2xl px-3 py-2.5 shadow-sm flex items-center gap-2">
+              <span className="text-gray-400 text-sm">🔍</span>
+              <input
+                value={topicSearch}
+                onChange={(e: any) => setTopicSearch(e.target.value)}
+                placeholder="搜索选题..."
+                className="flex-1 text-sm outline-none bg-transparent text-gray-700 placeholder:text-gray-300"
+              />
+              {topicSearch && (
+                <button onClick={() => setTopicSearch('')} className="text-gray-300 text-sm">✕</button>
+              )}
+            </div>
+
+            {/* 分类筛选 */}
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-0.5">
+              {topicCategories.map((cat: string) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${selectedCategory === cat ? 'bg-blue-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}
+                >{cat}</button>
+              ))}
+            </div>
+
+            {/* 操作栏 */}
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1 bg-white rounded-xl p-1 shadow-sm flex-1">
+                {[{id:'all',label:'全部'},{id:'ai',label:'AI生成'},{id:'saved',label:'已收藏'}].map((f: any) => (
+                  <button
+                    key={f.id}
+                    onClick={() => setTopicFilter(f.id)}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${topicFilter === f.id ? 'bg-blue-500 text-white' : 'text-gray-400'}`}
+                  >{f.label}</button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1 bg-white rounded-xl px-2 py-1.5 shadow-sm">
+                <span className="text-xs text-gray-400">批量</span>
+                <select
+                  value={batchCount}
+                  onChange={(e: any) => setBatchCount(parseInt(e.target.value))}
+                  className="text-xs font-bold text-gray-700 outline-none bg-transparent"
+                >
+                  {[5,8,12,20].map(n => <option key={n} value={n}>{n}个</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* AI 推荐引擎入口 */}
+            <button
+              onClick={recommendTopicsFn}
+              disabled={recommendLoading}
+              className="w-full py-3 bg-gradient-to-r from-violet-600 to-purple-500 text-white text-sm font-bold rounded-2xl disabled:opacity-60 active:scale-[0.98] transition-transform shadow-md flex items-center justify-center gap-2"
+            >
+              {recommendLoading ? (
+                <><Spinner /><span>AI 分析中...</span></>
+              ) : (
+                <><span>🧠</span><span>AI 个性化推荐</span><span className="text-xs opacity-80">（结合热点+知识库+历史数据）</span></>
+              )}
+            </button>
+
+            {/* 生成按钮组 */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => generateTopics(batchCount, selectedCategory)}
+                disabled={topicsLoading}
+                className="py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white text-sm font-bold rounded-2xl disabled:opacity-60 active:scale-[0.98] transition-transform shadow-md"
+              >
+                {topicsLoading ? '🤔 生成中...' : '✨ AI 生成选题'}
+              </button>
+              <button
+                onClick={() => generateTopics(batchCount, selectedCategory)}
+                disabled={topicsLoading || aiTopics.length === 0}
+                className="py-3 bg-gradient-to-r from-purple-500 to-pink-400 text-white text-sm font-bold rounded-2xl disabled:opacity-60 active:scale-[0.98] transition-transform shadow-md"
+              >
+                {topicsLoading ? '...' : '➕ 追加更多'}
+              </button>
+            </div>
+
+            {topicsLoading && (
+              <div className="space-y-3 animate-fade-in">
+                {[1,2,3].map(i => (
+                  <div key={i} className="bg-white rounded-2xl p-4 shadow-sm" style={{animationDelay: `${i*0.1}s`}}>
+                    <div className="skeleton h-4 w-3/4 rounded-lg mb-3" />
+                    <div className="skeleton h-3 w-full rounded-lg mb-2" />
+                    <div className="skeleton h-3 w-2/3 rounded-lg" />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 空状态 */}
+            {!topicsLoading && aiTopics.length === 0 && savedTopics.length === 0 && (
+              <div className="bg-white rounded-3xl p-8 text-center shadow-sm animate-fade-in-up">
+                <div className="text-5xl mb-3 animate-float">💡</div>
+                <div className="font-black text-gray-800 text-base mb-1">选题库空空如也</div>
+                <div className="text-xs text-gray-400 leading-relaxed mb-4">
+                  点击上方按钮<br />AI 为你生成专属爆款选题
+                </div>
+                <div className="flex justify-center gap-4 text-xs text-gray-400">
+                  <span>🎯 精准定向</span>
+                  <span>🔥 热点结合</span>
+                  <span>📈 高转化</span>
+                </div>
+              </div>
+            )}
+
+            {/* AI 生成选题列表 */}
+            {(() => {
+              const allTopics = [
+                ...(topicFilter !== 'saved' ? aiTopics : []),
+                ...(topicFilter !== 'ai' ? savedTopics.map((t: any) => ({ title: typeof t === 'string' ? t : t.title, isSaved: true })) : [])
+              ]
+              const filtered = allTopics.filter((t: any) => {
+                const title = typeof t === 'string' ? t : (t.title || '')
+                const matchSearch = !topicSearch || title.toLowerCase().includes(topicSearch.toLowerCase())
+                const matchCat = selectedCategory === '全部' || (t.category === selectedCategory)
+                return matchSearch && matchCat
+              })
+              if (filtered.length === 0 && (aiTopics.length > 0 || savedTopics.length > 0)) {
+                return (
+                  <div className="text-center py-6">
+                    <div className="text-2xl mb-2">🔍</div>
+                    <p className="text-xs text-gray-400">没有找到匹配的选题，换个关键词试试</p>
+                  </div>
+                )
+              }
+              return (
+                <div className="space-y-2">
+                  {filtered.map((t: any, i: number) => {
+                    const title = typeof t === 'string' ? t : (t.title || t)
+                    const isSaved = savedTopics.some((s: any) => (typeof s === 'string' ? s : s.title) === title)
+                    return (
+                      <div key={i} className="bg-white rounded-2xl p-4 shadow-sm animate-fade-in-up" style={{animationDelay:`${i*30}ms`}}>
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="flex-1">
+                            <div className="text-sm font-semibold text-gray-800 leading-snug">{title}</div>
+                            {t.category && t.category !== '全部' && (
+                              <span className="text-[10px] bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded-full font-medium mt-1 inline-block">{t.category}</span>
+                            )}
+                          </div>
+                          <div className="flex gap-1.5 flex-shrink-0">
+                            <button
+                              onClick={() => saveTopic(t)}
+                              className={`text-xs font-semibold px-2 py-0.5 rounded-lg transition-all ${isSaved ? 'bg-orange-50 text-orange-500' : 'bg-gray-100 text-gray-500'}`}
+                            >{isSaved ? '⭐' : '☆'}</button>
+                            <button
+                              onClick={() => useTopic(title)}
+                              className="text-xs text-white font-semibold px-2.5 py-0.5 bg-blue-500 rounded-lg active:scale-95 transition-transform"
+                            >写文案</button>
+                          </div>
+                        </div>
+                        {t.reason && <div className="text-xs text-gray-400 leading-relaxed mb-1.5">{t.reason}</div>}
+                        {t.hook && <div className="text-xs text-orange-500 bg-orange-50 px-2 py-1 rounded-lg">💡 {t.hook}</div>}
+                        {/* 快速操作 */}
+                        <div className="flex gap-2 mt-2.5 pt-2.5 border-t border-gray-50">
+                          <button
+                            onClick={() => { useTopic(title); setTab('content'); showToast('✅ 已带入内容中心'); }}
+                            className="flex-1 py-1.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white text-xs font-bold rounded-xl active:scale-[0.97] transition-transform"
+                          >✍️ 一键写文案</button>
+                          <button
+                            onClick={() => {
+                              const videoTitle = title
+                              setVideoCopy(videoTitle)
+                              setTab('video')
+                              showToast('✅ 已跳转视频生成')
+                            }}
+                            className="flex-1 py-1.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white text-xs font-bold rounded-xl active:scale-[0.97] transition-transform"
+                          >🎬 直接做视频</button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {/* 底部统计 */}
+                  <div className="text-center py-2">
+                    <span className="text-xs text-gray-400">共 {filtered.length} 个选题 · AI生成 {aiTopics.length} · 已收藏 {savedTopics.length}</span>
+                  </div>
+                </div>
+              )
+            })()}
+          </div>
+        )}
+
+                {/* ── 情报雷达 Tab ── */}
+            )}
+            {topicsSubTab === 'plan' && (
+          <ContentPlanTab
+            acc={acc}
+            showToast={showToast}
+            hotspots={hotspotsProp || hotspots}
+            knowledgeItems={knowledgeItems}
+            videoRecords={videoRecordsProp}
+            savedTopics={savedTopics}
+            useTopic={useTopic}
+            setTab={setTab}
+            schedule={schedule}
+            setSchedule={setSchedule}
+          />
+            )}
+          </div>
+        )}
+
+        {/* 🧠 我的素材 Tab */}
+        {matTab === 'mine' && (
+          <div>
+            <div className="flex gap-2 mb-3 mt-1">
+              <button onClick={() => setMineSubTab('knowledge')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${mineSubTab === 'knowledge' ? 'bg-indigo-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>🧠 知识库</button>
+              <button onClick={() => setMineSubTab('style')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${mineSubTab === 'style' ? 'bg-pink-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>🎨 风格</button>
+              <button onClick={() => setMineSubTab('extract')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${mineSubTab === 'extract' ? 'bg-violet-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>🎙️ 口播</button>
+            </div>
+            {mineSubTab === 'knowledge' && (
           <div className="space-y-3 pb-4">
             {/* 顶部操作栏 */}
             <div className="flex items-center gap-2 mt-1">
@@ -4589,8 +4581,72 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
               </div>
             )}
           </div>
+            )}
+            {mineSubTab === 'style' && (
+          <div className="mt-1 space-y-3">
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="font-bold text-gray-900 text-sm mb-3">🔮 分析文案风格</div>
+              <input
+                value={styleUrl}
+                onChange={e => setStyleUrl(e.target.value)}
+                placeholder="博主主页链接（可选）"
+                className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none mb-2"
+              />
+              <input
+                value={styleName}
+                onChange={e => setStyleName(e.target.value)}
+                placeholder="模板名称（如：犀利观点派）"
+                className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none mb-2"
+              />
+              <textarea
+                value={styleText}
+                onChange={e => setStyleText(e.target.value)}
+                placeholder="或粘贴文案样本（AI 分析风格特征）..."
+                className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20 mb-2"
+              />
+              <button
+                onClick={analyzeStyle}
+                disabled={styleLoading}
+                className="w-full py-2.5 bg-purple-500 text-white text-sm font-bold rounded-xl disabled:opacity-60 active:scale-[0.98] transition-transform"
+              >
+                {styleLoading ? '分析中...' : '✨ 分析并保存风格'}
+              </button>
+            </div>
+            {styleTemplates.length === 0 ? (
+              <div className="bg-white rounded-3xl p-8 text-center shadow-sm">
+                <div className="text-4xl mb-2">🎨</div>
+                <div className="text-sm font-bold text-gray-700 mb-1">还没有风格模板</div>
+                <div className="text-xs text-gray-400">分析博主风格后自动保存，生成文案时可一键应用</div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {styleTemplates.map((t: any) => (
+                  <div key={t.id} className="bg-white rounded-2xl p-4 shadow-sm">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="font-bold text-gray-900 text-sm">{t.name}</div>
+                      <div className="flex gap-2">
+                        <button onClick={() => applyTemplate(t)} className="text-xs text-blue-500 font-semibold px-2 py-0.5 bg-blue-50 rounded-lg">应用</button>
+                        <button onClick={() => deleteTemplate(t.id)} className="text-xs text-red-400 px-2 py-0.5 bg-red-50 rounded-lg">删除</button>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-500 leading-relaxed">{t.description || t.summary}</div>
+                    {t.features && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {t.features?.slice(0, 3).map((f: string, i: number) => (
+                          <span key={i} className="text-[10px] px-2 py-0.5 bg-purple-50 text-purple-500 rounded-full">{f}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
-        {matTab === 'extract' && (
+
+        {/* ── 知识库 Tab ── */}
+            )}
+            {mineSubTab === 'extract' && (
           <div className="space-y-4 pb-4">
             {/* 说明卡片 */}
             <div className="bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl p-4 shadow-lg">
@@ -4743,20 +4799,10 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
         )}
 
         {/* ── 内容方案 ── */}
-        {matTab === 'plan' && (
-          <ContentPlanTab
-            acc={acc}
-            showToast={showToast}
-            hotspots={hotspotsProp || hotspots}
-            knowledgeItems={knowledgeItems}
-            videoRecords={videoRecordsProp}
-            savedTopics={savedTopics}
-            useTopic={useTopic}
-            setTab={setTab}
-            schedule={schedule}
-            setSchedule={setSchedule}
-          />
+            )}
+          </div>
         )}
+
       </div>
     </div>
   )
@@ -5236,8 +5282,15 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
 
       const BUILTIN_TEMPLATES = [
         { id: 'hook', name: '问题钩子', icon: '🎣', desc: '用问题开头，引发好奇', prompt: '用一个尖锐的问题开头，引发读者强烈好奇心，然后给出意想不到的答案' },
-        { id: 'contrast', name: '对比故事', icon: '⚡', desc: '前后对比，制造反差', prompt: '用"以前...现在..."的对比结构，制造强烈反差感，让读者产生共鸣' },
+        { id: 'contrast', name: '对比反差', icon: '⚡', desc: '前后对比，制造反差', prompt: '用"以前...现在..."的对比结构，制造强烈反差感，让读者产生共鸣' },
         { id: 'list', name: '干货清单', icon: '📋', desc: '数字列表，清晰实用', prompt: '用"X个方法/技巧/秘诀"的清单形式，每条简洁有力，让读者觉得干货满满' },
+        { id: 'story', name: '故事共鸣', icon: '📖', desc: '真实故事，引发共鸣', prompt: '用第一人称讲述一个真实的亲身经历故事，有起伏有转折，结尾给出启发或收获' },
+        { id: 'secret', name: '揭秘爆料', icon: '🔍', desc: '揭露内幕，制造悬念', prompt: '用"很多人不知道的秘密"开头，揭露行业内幕或鲜为人知的真相，让读者有"原来如此"的感觉' },
+        { id: 'pain', name: '痛点共鸣', icon: '💊', desc: '戳中痛点，给出解法', prompt: '先描述目标用户最痛的痛点场景，让读者感同身受，然后给出简单有效的解决方案' },
+        { id: 'challenge', name: '挑战质疑', icon: '🔥', desc: '反常识，颠覆认知', prompt: '用"你以为...其实..."的结构，颠覆读者的固有认知，给出反常识的观点，引发思考和讨论' },
+        { id: 'tutorial', name: '教程步骤', icon: '🎯', desc: '手把手教学，简单易懂', prompt: '用"第一步...第二步..."的步骤式结构，手把手教读者完成某件事，每步简洁清晰，可操作性强' },
+        { id: 'emotion', name: '情感共鸣', icon: '❤️', desc: '触动情感，引发转发', prompt: '用温暖或感人的情感故事开头，触动读者内心，结尾升华主题，让读者有强烈的转发冲动' },
+        { id: 'trend', name: '蹭热点', icon: '📈', desc: '结合热点，借势传播', prompt: '结合当前热点话题，用"最近大家都在说..."开头，把选题与热点巧妙结合，借势获得更多曝光' },
         { id: 'sharp', name: '犀利观点', icon: '🔥', desc: '直接表达，有争议性', prompt: '用犀利、有争议的观点开头，敢于说别人不敢说的，引发讨论' },
         { id: 'humor', name: '幽默自嘲', icon: '😄', desc: '自嘲拉近距离', prompt: '用幽默自嘲的方式开头，让读者觉得真实可爱，拉近距离后再给出干货' },
         { id: 'inspire', name: '励志行动', icon: '💪', desc: '激励行动，正能量', prompt: '用激励性的语言，让读者感受到紧迫感和行动力，结尾给出明确的行动指引' },
@@ -5401,7 +5454,7 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
                         <p className="text-sm text-gray-800 leading-relaxed">{v.content}</p>
                         <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
                           <div className="flex items-center gap-3"><span className="text-[11px] text-gray-400">{v.content?.length || 0} 字</span><span className="text-[11px] text-gray-400">≈ {Math.ceil((v.content?.length || 0) / 4)} 秒</span></div>
-                          <button onClick={() => { setTab('video'); showToast('✅ 已跳转到视频生成') }} className="text-[11px] font-bold text-purple-500 bg-purple-50 px-3 py-1.5 rounded-xl active:scale-95">去生成视频 →</button>
+                          <button onClick={() => { setVideoCopy(v.content); setTab('video'); showToast('✅ 文案已带入视频工作室') }} className="text-[11px] font-bold text-white bg-gradient-to-r from-purple-500 to-pink-400 px-3 py-1.5 rounded-xl active:scale-95">🎬 去做视频</button>
                         </div>
                       </div>
                     </div>
@@ -5611,6 +5664,13 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
   const [vidScheduleTime, setVidScheduleTime] = React.useState('')
   const [vidSchedulePlatform, setVidSchedulePlatform] = React.useState('抖音')
   const [vidScheduleTitle, setVidScheduleTitle] = React.useState('')
+
+  // 草稿自动保存
+  React.useEffect(() => {
+    if (videoCopy) {
+      try { localStorage.setItem('contentos_video_draft', JSON.stringify({ copy: videoCopy, voiceId, speed, avatarType, savedAt: Date.now() })) } catch {}
+    }
+  }, [videoCopy, voiceId, speed, avatarType])
 
   const VOICES = [
     { id: 'female-shaonv', label: '少女音', emoji: '👧', desc: '清甜活泼，适合生活类' },
