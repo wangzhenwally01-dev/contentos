@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <rect width="200" height="200" fill="#fff" rx="12"/>
+  <rect x="10" y="10" width="180" height="180" fill="none" stroke="#1677FF" stroke-width="3" rx="8"/>
+  <text x="100" y="85" text-anchor="middle" font-size="40">💙</text>
+  <text x="100" y="115" text-anchor="middle" font-size="13" fill="#1677FF" font-weight="bold">支付宝收款码</text>
+  <text x="100" y="135" text-anchor="middle" font-size="10" fill="#999">请替换为真实收款码</text>
+  <text x="100" y="155" text-anchor="middle" font-size="10" fill="#999">联系客服获取</text>
+</svg>

@@ -716,6 +716,17 @@ export default function ContentOSApp() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [editingAccount, setEditingAccount] = useState<any>(null)
 
+  // Pay Modal States
+  const [showPayModal, setShowPayModal] = useState(false)
+  const [payModalPkg, setPayModalPkg] = useState<any>(null)
+  const [payMethod, setPayMethod] = useState<'wechat' | 'alipay'>('wechat')
+  const [payOrderId, setPayOrderId] = useState('')
+  const [payQrUrl, setPayQrUrl] = useState('')
+  const [payCountdown, setPayCountdown] = useState(900)
+  const [payStatus, setPayStatus] = useState<'idle' | 'loading' | 'reviewing' | 'done'>('idle')
+  const [payTransferNo, setPayTransferNo] = useState('')
+  const [payCountdownTimer, setPayCountdownTimer] = useState<any>(null)
+
   // Positioning Wizard
   const [showPositioning, setShowPositioning] = useState(false)
   const [posStep, setPosStep] = useState(1)
@@ -7260,13 +7271,18 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, s
       }
 
       const guide = showPublishGuide ? PLATFORM_GUIDES[showPublishGuide] : null
+      const guideItem = showPublishGuide ? schedule.find((s: any) => s.platform === showPublishGuide && (s.status === '待发布' || s.status === '计划中')) : null
+      const PLATFORM_URLS_GUIDE: Record<string, string> = {
+        '抖音': 'https://www.douyin.com', '小红书': 'https://www.xiaohongshu.com',
+        'B站': 'https://www.bilibili.com', '视频号': 'https://channels.weixin.qq.com', '快手': 'https://www.kuaishou.com',
+      }
 
       return (
         <div className="space-y-3">
-          {/* 发布指引弹窗 */}
+          {/* 发布指引弹窗（升级版） */}
           {guide && showPublishGuide && (
             <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setShowPublishGuide(null)}>
-              <div className="w-full bg-white rounded-t-3xl p-5 pb-8 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <div className="w-full bg-white rounded-t-3xl p-5 pb-8 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${guide.color} flex items-center justify-center text-lg`}>{guide.icon}</div>
@@ -7277,7 +7293,44 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, s
                   </div>
                   <button onClick={() => setShowPublishGuide(null)} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">✕</button>
                 </div>
+
+                {/* 文案预览 + 复制 */}
+                {guideItem?.copy && (
+                  <div className="bg-gray-50 rounded-2xl p-3 mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-xs font-bold text-gray-700">📝 待发布文案</div>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(guideItem.copy || '').then(() => showToast('✅ 文案已复制')).catch(() => showToast('复制失败'))}
+                        className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-lg active:scale-95"
+                      >一键复制</button>
+                    </div>
+                    <div className="text-xs text-gray-600 leading-relaxed line-clamp-4">{guideItem.copy}</div>
+                  </div>
+                )}
+
+                {/* 打开平台按钮 */}
+                <button
+                  onClick={() => window.open(PLATFORM_URLS_GUIDE[showPublishGuide] || '#', '_blank')}
+                  className={`w-full py-3 mb-4 rounded-2xl text-white font-bold text-sm bg-gradient-to-r ${guide.color} active:scale-95 flex items-center justify-center gap-2`}
+                >
+                  <span>{guide.icon}</span> 打开 {showPublishGuide}
+                </button>
+
                 <div className="space-y-4">
+                  {/* 发布检查清单 */}
+                  <div>
+                    <div className="font-bold text-gray-800 text-sm mb-2">✅ 发布检查清单</div>
+                    <div className="space-y-2">
+                      {['视频已剪辑完成', '文案/标题已准备好', '封面图已选好', '话题标签已添加', '发布时间已确认'].map((item, i) => (
+                        <label key={i} className="flex items-center gap-2.5 cursor-pointer">
+                          <input type="checkbox" className="w-4 h-4 rounded accent-orange-400" />
+                          <span className="text-sm text-gray-700">{item}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 发布步骤 */}
                   <div>
                     <div className="font-bold text-gray-800 text-sm mb-2">📋 发布步骤</div>
                     <div className="space-y-2">
@@ -7289,6 +7342,7 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, s
                       ))}
                     </div>
                   </div>
+
                   <div className="bg-amber-50 rounded-2xl p-3">
                     <div className="font-bold text-amber-700 text-sm mb-2">💡 发布技巧</div>
                     <div className="space-y-1">
@@ -7325,6 +7379,14 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, s
               <div className="space-y-3">
                 {pendingToday.map((item: any) => {
                   const platformGuide = PLATFORM_GUIDES[item.platform]
+                  const PLATFORM_URLS: Record<string, string> = {
+                    '抖音': 'https://www.douyin.com',
+                    '小红书': 'https://www.xiaohongshu.com',
+                    'B站': 'https://www.bilibili.com',
+                    '视频号': 'https://channels.weixin.qq.com',
+                    '快手': 'https://www.kuaishou.com',
+                  }
+                  const platformUrl = PLATFORM_URLS[item.platform] || '#'
                   return (
                     <div key={item.id} className="border border-gray-100 rounded-2xl overflow-hidden">
                       <div className="flex items-center gap-3 p-3">
@@ -7340,20 +7402,36 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, s
                             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${item.status === '待发布' ? 'bg-orange-100 text-orange-500' : 'bg-blue-100 text-blue-500'}`}>{item.status}</span>
                           </div>
                         </div>
+                        <button
+                          onClick={() => { window.open(platformUrl, '_blank') }}
+                          className={`flex-shrink-0 px-2.5 py-1.5 rounded-xl text-[10px] font-bold bg-gradient-to-br ${platformGuide?.color || 'from-gray-400 to-gray-500'} text-white active:scale-95`}
+                        >打开App</button>
                       </div>
+                      {item.copy && (
+                        <div className="mx-3 mb-2 bg-gray-50 rounded-xl p-2.5">
+                          <div className="text-[10px] text-gray-400 mb-1 font-medium">📝 文案预览</div>
+                          <div className="text-xs text-gray-700 line-clamp-2 leading-relaxed">{item.copy}</div>
+                        </div>
+                      )}
                       <div className="flex gap-1 px-3 pb-3">
                         <button
                           onClick={() => setShowPublishGuide(item.platform)}
                           className="flex-1 py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-xl active:scale-95"
-                        >📋 发布指引</button>
+                        >📋 指引</button>
+                        {item.copy && (
+                          <button
+                            onClick={() => { navigator.clipboard.writeText(item.copy || '').then(() => showToast('✅ 文案已复制')).catch(() => showToast('复制失败')) }}
+                            className="flex-1 py-2 bg-purple-50 text-purple-600 text-xs font-bold rounded-xl active:scale-95"
+                          >📋 复制文案</button>
+                        )}
                         <button
                           onClick={() => markPublished(item.id)}
                           className="flex-1 py-2 bg-green-50 text-green-600 text-xs font-bold rounded-xl active:scale-95"
-                        >✅ 标记已发</button>
+                        >✅ 已发</button>
                         <button
                           onClick={() => markFailed(item.id)}
                           className="flex-1 py-2 bg-red-50 text-red-400 text-xs font-bold rounded-xl active:scale-95"
-                        >❌ 发布失败</button>
+                        >❌ 失败</button>
                       </div>
                     </div>
                   )
@@ -9209,6 +9287,116 @@ function Profile({
     'from-indigo-500 to-blue-400',
   ]
 
+  async function openPayModal(pkg: any) {
+    setPayModalPkg(pkg)
+    setPayMethod('wechat')
+    setPayStatus('loading')
+    setPayTransferNo('')
+    setPayOrderId('')
+    setPayQrUrl('')
+    setPayCountdown(900)
+    setShowPayModal(true)
+    try {
+      const res = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          packageId: `pkg_${pkg.credits}`,
+          credits: pkg.credits,
+          price: pkg.price,
+          payMethod: 'wechat',
+          userId: 'user_local',
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setPayOrderId(data.orderId)
+        setPayQrUrl(data.qrUrl)
+        setPayStatus('idle')
+        // 启动倒计时
+        const timer = setInterval(() => {
+          setPayCountdown((c: number) => {
+            if (c <= 1) { clearInterval(timer); return 0 }
+            return c - 1
+          })
+        }, 1000)
+        setPayCountdownTimer(timer)
+      } else {
+        setPayStatus('idle')
+        setPayQrUrl('/pay/wechat-qr.svg')
+        setPayOrderId(`CO${Date.now()}`)
+      }
+    } catch {
+      setPayStatus('idle')
+      setPayQrUrl('/pay/wechat-qr.svg')
+      setPayOrderId(`CO${Date.now()}`)
+    }
+  }
+
+  async function switchPayMethod(method: 'wechat' | 'alipay') {
+    setPayMethod(method)
+    if (payModalPkg) {
+      setPayStatus('loading')
+      try {
+        const res = await fetch('/api/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            packageId: `pkg_${payModalPkg.credits}`,
+            credits: payModalPkg.credits,
+            price: payModalPkg.price,
+            payMethod: method,
+            userId: 'user_local',
+          }),
+        })
+        const data = await res.json()
+        if (data.success) {
+          setPayOrderId(data.orderId)
+          setPayQrUrl(data.qrUrl)
+        } else {
+          setPayQrUrl(method === 'alipay' ? '/pay/alipay-qr.svg' : '/pay/wechat-qr.svg')
+        }
+      } catch {
+        setPayQrUrl(method === 'alipay' ? '/pay/alipay-qr.svg' : '/pay/wechat-qr.svg')
+      }
+      setPayStatus('idle')
+    }
+  }
+
+  async function submitPayment() {
+    if (!payTransferNo.trim()) {
+      showToast('请填写转账单号或备注')
+      return
+    }
+    setPayStatus('loading')
+    try {
+      const res = await fetch('/api/verify-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: payOrderId, transferNo: payTransferNo, userId: 'user_local' }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setPayStatus('reviewing')
+      } else {
+        showToast('提交失败，请重试')
+        setPayStatus('idle')
+      }
+    } catch {
+      showToast('网络错误，请重试')
+      setPayStatus('idle')
+    }
+  }
+
+  function closePayModal() {
+    if (payCountdownTimer) clearInterval(payCountdownTimer)
+    setShowPayModal(false)
+    setPayModalPkg(null)
+    setPayStatus('idle')
+    setPayTransferNo('')
+    setPayCountdown(900)
+  }
+
   function saveAiSettings() {
     saveToLocal('contentos_ai_settings', {
       model: aiModel, apiKey: aiApiKey,
@@ -9504,7 +9692,7 @@ function Profile({
                       </div>
                       <div className="text-xs text-gray-400 mt-0.5">约可生成 {Math.floor(pkg.credits / 20)} 次文案</div>
                     </div>
-                    <button onClick={() => showToast('支付功能开发中，敬请期待')} className={`px-4 py-2 rounded-xl text-sm font-bold active:scale-95 transition-transform ${pkg.popular ? 'bg-orange-400 text-white shadow-md' : 'bg-gray-200 text-gray-700'}`}>
+                    <button onClick={() => openPayModal(pkg)} className={`px-4 py-2 rounded-xl text-sm font-bold active:scale-95 transition-transform ${pkg.popular ? 'bg-orange-400 text-white shadow-md' : 'bg-gray-200 text-gray-700'}`}>
                       {pkg.price}
                     </button>
                   </div>
@@ -9552,6 +9740,109 @@ function Profile({
               </div>
             </div>
           </>
+        )}
+
+        {/* ── 支付弹窗 ── */}
+        {showPayModal && payModalPkg && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-end" onClick={closePayModal}>
+            <div className="w-full bg-white rounded-t-3xl p-5 pb-8 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              {/* 标题栏 */}
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <div className="font-black text-gray-900 text-base">💎 积分充值</div>
+                  <div className="text-xs text-gray-400 mt-0.5">{payModalPkg.credits.toLocaleString()} 积分{payModalPkg.bonus ? ` ${payModalPkg.bonus}` : ''} · {payModalPkg.price}</div>
+                </div>
+                <button onClick={closePayModal} className="w-8 h-8 flex items-center justify-center text-gray-400 text-xl">✕</button>
+              </div>
+
+              {payStatus === 'reviewing' ? (
+                /* 审核中状态 */
+                <div className="text-center py-8">
+                  <div className="text-5xl mb-4">⏳</div>
+                  <div className="font-black text-gray-900 text-lg mb-2">已收到付款凭证</div>
+                  <div className="text-sm text-gray-500 leading-relaxed mb-4">人工审核通常在 1-2 小时内完成<br/>审核通过后积分将自动到账</div>
+                  <div className="bg-blue-50 rounded-2xl p-3 text-xs text-blue-600 mb-4">
+                    订单号：{payOrderId}
+                  </div>
+                  <button onClick={closePayModal} className="w-full py-3 bg-gradient-to-r from-orange-400 to-amber-500 text-white font-bold rounded-2xl active:scale-95">
+                    好的，我知道了
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* 支付方式选择 */}
+                  <div className="flex gap-2 mb-4">
+                    <button
+                      onClick={() => switchPayMethod('wechat')}
+                      className={`flex-1 py-2.5 rounded-2xl text-sm font-bold flex items-center justify-center gap-1.5 transition-all ${payMethod === 'wechat' ? 'bg-green-500 text-white shadow-md' : 'bg-gray-100 text-gray-600'}`}
+                    >
+                      <span>💚</span> 微信支付
+                    </button>
+                    <button
+                      onClick={() => switchPayMethod('alipay')}
+                      className={`flex-1 py-2.5 rounded-2xl text-sm font-bold flex items-center justify-center gap-1.5 transition-all ${payMethod === 'alipay' ? 'bg-blue-500 text-white shadow-md' : 'bg-gray-100 text-gray-600'}`}
+                    >
+                      <span>💙</span> 支付宝
+                    </button>
+                  </div>
+
+                  {/* 收款码 */}
+                  <div className="flex flex-col items-center mb-4">
+                    <div className="bg-gray-50 rounded-3xl p-4 mb-3">
+                      {payStatus === 'loading' ? (
+                        <div className="w-[160px] h-[160px] flex items-center justify-center">
+                          <div className="w-8 h-8 border-3 border-orange-400 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                      ) : (
+                        <img src={payQrUrl || (payMethod === 'alipay' ? '/pay/alipay-qr.svg' : '/pay/wechat-qr.svg')} alt="收款码" className="w-[160px] h-[160px] rounded-xl" />
+                      )}
+                    </div>
+                    <div className="text-center">
+                      <div className="font-black text-2xl text-gray-900">{payModalPkg.price}</div>
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        {payCountdown > 0
+                          ? `二维码有效期 ${Math.floor(payCountdown / 60).toString().padStart(2, '0')}:${(payCountdown % 60).toString().padStart(2, '0')}`
+                          : '二维码已过期，请重新打开'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 转账单号 */}
+                  <div className="mb-4">
+                    <div className="text-xs font-bold text-gray-700 mb-1.5">转账单号 / 备注（必填）</div>
+                    <input
+                      type="text"
+                      value={payTransferNo}
+                      onChange={e => setPayTransferNo(e.target.value)}
+                      placeholder="请填写转账备注或流水号，方便核对"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-orange-400"
+                    />
+                  </div>
+
+                  {/* 订单号 */}
+                  {payOrderId && (
+                    <div className="bg-gray-50 rounded-xl px-3 py-2 mb-4 flex items-center justify-between">
+                      <span className="text-xs text-gray-400">订单号</span>
+                      <span className="text-xs text-gray-600 font-mono">{payOrderId}</span>
+                    </div>
+                  )}
+
+                  {/* 提交按钮 */}
+                  <button
+                    onClick={submitPayment}
+                    disabled={payStatus === 'loading' || payCountdown === 0}
+                    className="w-full py-3.5 bg-gradient-to-r from-orange-400 to-amber-500 text-white font-black rounded-2xl active:scale-95 disabled:opacity-50 text-base shadow-lg mb-3"
+                  >
+                    {payStatus === 'loading' ? '处理中...' : '✅ 我已付款'}
+                  </button>
+
+                  <div className="text-center text-xs text-gray-400">
+                    付款后填写转账单号，人工审核 1-2 小时内到账
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         )}
 
         {/* ── 关于 ── */}
