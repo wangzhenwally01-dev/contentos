@@ -2930,8 +2930,6 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
           </div>
         )}
 
-        {/* ── 选题库 Tab ── */}
-            )}
             {discoverSubTab === 'radar' && (
               <div className="mt-1">
                 {/* 借势文案弹窗 */}
@@ -3569,8 +3567,6 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
               </div>
             )}
 
-    {/* ── 热点 Tab ── */}
-            )}
             {trendingSubTab === 'creator' && (
           <div className="mt-1 space-y-3">
             {/* 搜索框 */}
@@ -4087,8 +4083,6 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
           </div>
         )}
 
-        {/* ── 风格 Tab ── */}
-            )}
           </div>
         )}
 
@@ -4284,8 +4278,6 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
           </div>
         )}
 
-                {/* ── 情报雷达 Tab ── */}
-            )}
             {topicsSubTab === 'plan' && (
           <ContentPlanTab
             acc={acc}
@@ -4644,8 +4636,6 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
           </div>
         )}
 
-        {/* ── 知识库 Tab ── */}
-            )}
             {mineSubTab === 'extract' && (
           <div className="space-y-4 pb-4">
             {/* 说明卡片 */}
