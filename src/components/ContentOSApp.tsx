@@ -12,7 +12,7 @@ const supabase = createClient(
 type Tab = 'dashboard' | 'materials' | 'content' | 'video' | 'operations' | 'profile'
 type MatTab = 'discover' | 'trending' | 'mine' | 'topics'
 type OpsTab = 'schedule' | 'stats' | 'goals'
-type VideoStep = 'input' | 'voice' | 'avatar' | 'preview'
+type VideoStep = 'input' | 'voice' | 'preview'
 type ContentStep = 1 | 2 | 3
 
 interface Account {
@@ -1486,7 +1486,7 @@ export default function ContentOSApp() {
       if (data.audio) {
         setVideoAudioB64(data.audio)
         showToast('✅ 语音合成成功')
-        setVideoStep('avatar')
+        setVideoStep('voice')
       } else {
         setVideoError(
           data.configured === false
@@ -5647,6 +5647,36 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
     }
     
 function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCopy, voiceId, setVoiceId, speed, setSpeed, avatarType, setAvatarType, avatarPreset, setAvatarPreset, bgType, setBgType, bgColor, setBgColor, loading, audioB64, error, generateTTS, showToast, savedContents, setTab, setShowAiPanel, setQuickRecordData, setShowVideoRecord, videoSegments, setVideoSegments, segmentMode, setSegmentMode, activeSegment, setActiveSegment, segmentAudios, setSegmentAudios, segmentLoading, setSegmentLoading, subtitlePreview, setSubtitlePreview, subtitleLines, setSubtitleLines, currentSubLine, setCurrentSubLine, clonedVoices, setClonedVoices, isCloning, setIsCloning, cloneProgress, setCloneProgress, showClonePanel, setShowClonePanel, cloneVoiceName, setCloneVoiceName }: any) {
+  // 封面生成状态
+  const [coverLoading, setCoverLoading] = React.useState(false)
+  const [coverImageUrl, setCoverImageUrl] = React.useState('')
+
+  async function generateCover() {
+    if (!videoCopy) { showToast('请先输入文案'); return }
+    setCoverLoading(true)
+    try {
+      const res = await fetch('/api/generate-copy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `为以下短视频文案生成一个封面标题（10字以内，吸引眼球，不加引号）：\n${videoCopy.slice(0, 200)}`,
+          type: 'cover'
+        })
+      })
+      const data = await res.json()
+      const title = (data.result || data.copy || '精彩内容').replace(/["""'']/g, '').slice(0, 15)
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="540" height="960" viewBox="0 0 540 960"><defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#7c3aed"/><stop offset="100%" style="stop-color:#ec4899"/></linearGradient></defs><rect width="540" height="960" fill="url(#bg)"/><rect x="40" y="360" width="460" height="240" rx="24" fill="rgba(0,0,0,0.35)"/><text x="270" y="450" font-family="Arial,sans-serif" font-size="52" font-weight="bold" fill="white" text-anchor="middle">${title}</text><text x="270" y="520" font-family="Arial,sans-serif" font-size="26" fill="rgba(255,255,255,0.85)" text-anchor="middle">点击查看完整内容</text><circle cx="270" cy="720" r="44" fill="rgba(255,255,255,0.25)"/><text x="270" y="732" font-family="Arial,sans-serif" font-size="32" fill="white" text-anchor="middle">▶</text></svg>`
+      const blob = new Blob([svg], { type: 'image/svg+xml' })
+      const url = URL.createObjectURL(blob)
+      setCoverImageUrl(url)
+      showToast('✅ 封面生成成功')
+    } catch(e: any) {
+      showToast('封面生成失败：' + (e as any).message)
+    } finally {
+      setCoverLoading(false)
+    }
+  }
+
   // 排期弹窗状态
   const [showVidScheduleModal, setShowVidScheduleModal] = React.useState(false)
   const [vidScheduleTime, setVidScheduleTime] = React.useState('')
@@ -5784,7 +5814,7 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
     { color: '#667eea', label: '梦幻蓝', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
     { color: '#b91d73', label: '玫瑰粉', gradient: 'linear-gradient(135deg, #f953c6 0%, #b91d73 100%)' },
   ]
-  const STEPS = ['文案', '声音', '形象', '预览']
+  const STEPS = ['文案', '配置', '预览']
   const stepIdx = ['input', 'voice', 'avatar', 'preview'].indexOf(step)
 
   // 音频播放状态
@@ -5997,7 +6027,7 @@ ${line}
             <div key={i} className="flex items-center gap-1">
               <button
                 onClick={() => {
-                  const steps = ['input', 'voice', 'avatar', 'preview']
+                  const steps = ['input', 'voice', 'preview']
                   if (i <= stepIdx || (i === 1 && videoCopy.trim()) || (i === 2 && audioB64) || (i === 3 && audioB64)) {
                     setStep(steps[i])
                   }
@@ -6306,7 +6336,7 @@ ${line}
           </>
         )}
 
-        {/* ── Step 2: 声音选择 ── */}
+        {/* ── Step 2: 配置（声音+背景） ── */}
         {step === 'voice' && (
           <>
             <div className="bg-white rounded-2xl p-4 shadow-sm">
@@ -6567,7 +6597,7 @@ ${line}
                         {segmentMode ? ` · ${videoSegments.length} 段` : ''}
                       </div>
                     </div>
-                    <button onClick={() => setStep('avatar')} className="text-[11px] font-bold text-white bg-green-500 px-3 py-1.5 rounded-xl active:scale-95 flex-shrink-0">下一步 →</button>
+                    <button onClick={() => setStep('preview')} className="text-[11px] font-bold text-white bg-green-500 px-3 py-1.5 rounded-xl active:scale-95 flex-shrink-0">下一步 →</button>
                   </div>
                 )}
 
@@ -6580,152 +6610,7 @@ ${line}
                     <span className="flex items-center justify-center gap-2 opacity-0">占位</span>
                   ) : audioB64 ? '🔄 重新合成' : segmentMode ? `🎙️ 合成 ${videoSegments.length} 段语音` : '🎙️ 合成语音'}
                 </button>
-                <button onClick={() => setStep('input')} className="w-full py-2 text-sm text-gray-400">← 返回</button>
-              </>
-        )}
 
-        {/* ── Step 3: 形象选择 ── */}
-        {step === 'avatar' && (
-          <>
-            {/* 语音合成成功提示 + 播放器 */}
-            {audioB64 && (
-              <div className="bg-gradient-to-br from-purple-500 to-pink-400 rounded-2xl p-4 text-white shadow-lg">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-lg">🎙️</span>
-                  <div>
-                    <div className="font-bold text-sm">语音合成成功</div>
-                    <div className="text-white/70 text-xs">{VOICES.find(v => v.id === voiceId)?.label} · {speed}x · {audioDuration > 0 ? formatTime(audioDuration) : `≈${Math.ceil(estimatedDuration / speed)}秒`}</div>
-                  </div>
-                </div>
-                {/* 播放器 */}
-                <div className="bg-white/20 rounded-xl p-3">
-                  <div className="flex items-center gap-3 mb-2">
-                    <button
-                      onClick={togglePlay}
-                      className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-purple-500 font-bold text-sm active:scale-95 transition-transform flex-shrink-0"
-                    >
-                      {isPlaying ? '⏸' : '▶'}
-                    </button>
-                    <div className="flex-1">
-                      <div className="h-1.5 bg-white/30 rounded-full overflow-hidden cursor-pointer"
-                        onClick={e => {
-                          if (!audioRef.current) return
-                          const rect = e.currentTarget.getBoundingClientRect()
-                          const pct = (e.clientX - rect.left) / rect.width
-                          audioRef.current.currentTime = pct * audioRef.current.duration
-                        }}
-                      >
-                        <div className="h-full bg-white rounded-full transition-all" style={{ width: `${audioProgress}%` }} />
-                      </div>
-                    </div>
-                    <span className="text-white/80 text-xs flex-shrink-0">
-                      {formatTime(audioCurrentTime)} / {audioDuration > 0 ? formatTime(audioDuration) : '--:--'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-3">🎭 选择形象</div>
-              <div className="flex gap-1.5 mb-3 bg-gray-100 rounded-xl p-1">
-                {[
-                  { id: 'preset', label: '预设形象', icon: '🎭' },
-                  { id: 'upload', label: '上传照片', icon: '📷' },
-                  { id: 'ai', label: 'AI数字人', icon: '🤖' },
-                ].map((m: any) => (
-                  <button
-                    key={m.id}
-                    onClick={() => setAvatarMode(m.id as any)}
-                    className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-medium transition-all ${avatarMode === m.id ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500'}`}
-                  >
-                    <span>{m.icon}</span>
-                    <span>{m.label}</span>
-                  </button>
-                ))}
-              </div>
-              {avatarMode === 'preset' && (
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  {AVATARS.map((a: any) => (
-                    <button
-                      key={a.id}
-                      onClick={() => { setAvatarType('preset'); setAvatarPreset(a.id) }}
-                      className={`flex items-center gap-2 px-3 py-3 rounded-xl transition-all active:scale-[0.98] ${avatarPreset === a.id && avatarType === 'preset' ? 'bg-purple-50 border-2 border-purple-400' : 'bg-gray-50 border-2 border-transparent'}`}
-                    >
-                      <span className="text-2xl">{a.emoji}</span>
-                      <span className={`text-xs font-semibold ${avatarPreset === a.id && avatarType === 'preset' ? 'text-purple-700' : 'text-gray-700'}`}>{a.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {avatarMode === 'upload' && (
-                <div className="mb-3">
-                  <input
-                    ref={photoInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e: any) => {
-                      const file = e.target.files?.[0]
-                      if (!file) return
-                      const reader = new FileReader()
-                      reader.onload = (ev: any) => {
-                        setUploadedPhoto(ev.target?.result as string)
-                        setAvatarType('upload')
-                        showToast('✅ 照片上传成功')
-                      }
-                      reader.readAsDataURL(file)
-                    }}
-                  />
-                  {uploadedPhoto ? (
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-purple-300 shadow-lg">
-                        <img src={uploadedPhoto} alt="上传照片" className="w-full h-full object-cover" />
-                      </div>
-                      <div className="text-xs text-gray-500">已上传照片，将用于视频合成</div>
-                      <button onClick={() => photoInputRef.current?.click()} className="text-xs text-purple-500 font-medium">重新上传</button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => photoInputRef.current?.click()}
-                      className="w-full h-32 border-2 border-dashed border-purple-300 rounded-2xl flex flex-col items-center justify-center gap-2 text-purple-400 active:bg-purple-50 transition-all"
-                    >
-                      <span className="text-3xl">📷</span>
-                      <span className="text-sm font-medium">点击上传真人照片</span>
-                      <span className="text-xs text-gray-400">支持 JPG/PNG，建议正面照</span>
-                    </button>
-                  )}
-                </div>
-              )}
-              {avatarMode === 'ai' && (
-                <div className="mb-3 space-y-2">
-                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-3 text-center">
-                    <div className="text-3xl mb-2">🤖</div>
-                    <div className="font-semibold text-gray-800 text-sm">AI 数字人生成</div>
-                    <div className="text-xs text-gray-500 mt-1">基于文字描述生成专属数字人形象</div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { label: '知性女主播', emoji: '👩‍💼', desc: '专业、优雅' },
-                      { label: '阳光男博主', emoji: '👨‍💻', desc: '活力、亲切' },
-                      { label: '时尚达人', emoji: '💃', desc: '潮流、个性' },
-                      { label: '科技极客', emoji: '🧑‍💻', desc: '专业、理性' },
-                    ].map((ai: any) => (
-                      <button
-                        key={ai.label}
-                        onClick={() => { setAvatarType('ai'); setAvatarPreset(ai.label); showToast('✅ 已选择「' + ai.label + '」数字人') }}
-                        className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-all ${avatarPreset === ai.label && avatarType === 'ai' ? 'bg-purple-50 border-2 border-purple-400' : 'bg-gray-50 border-2 border-transparent'}`}
-                      >
-                        <span className="text-2xl">{ai.emoji}</span>
-                        <span className="text-xs font-semibold text-gray-700">{ai.label}</span>
-                        <span className="text-[10px] text-gray-400">{ai.desc}</span>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="text-[10px] text-gray-400 text-center">AI数字人功能即将上线，敬请期待</div>
-                </div>
-              )}
-            </div>
             {/* 背景颜色 */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
@@ -6757,17 +6642,12 @@ ${line}
                 ))}
               </div>
             </div>
-            <button
-              onClick={() => setStep('preview')}
-              className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md"
-            >
-              下一步：预览 →
-            </button>
-            <button onClick={() => setStep('voice')} className="w-full py-2 text-sm text-gray-400">← 返回</button>
-          </>
+
+                <button onClick={() => setStep('input')} className="w-full py-2 text-sm text-gray-400">← 返回</button>
+              </>
         )}
 
-        {/* ── Step 4: 预览 ── */}
+        {/* ── Step 3: 预览 ── */}
         {step === 'preview' && (
           <>
             {/* 视频预览框 */}
@@ -7064,6 +6944,30 @@ ${line}
 
             {/* MiniMax 视频生成 */}
             <VideoComposePanel videoCopy={videoCopy} audioB64={audioB64} showToast={showToast} videoRatio={videoRatio} subtitleStyle={subtitleStyle} subtitleFontSize={subtitleFontSize} subtitleColor={subtitleColor} />
+            {/* 封面生成卡片 */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-bold text-gray-900 text-sm">🖼️ 封面生成</div>
+                {coverImageUrl && <span className="text-xs text-green-500 font-bold">✅ 已生成</span>}
+              </div>
+              {coverImageUrl ? (
+                <div className="space-y-2">
+                  <img src={coverImageUrl} alt="封面" className="w-full rounded-xl object-cover aspect-[9/16] max-h-48 object-top" />
+                  <div className="flex gap-2">
+                    <button onClick={generateCover} disabled={coverLoading} className="flex-1 py-2 bg-gray-100 text-gray-600 text-xs font-bold rounded-xl active:scale-95 disabled:opacity-60">🔄 重新生成</button>
+                    <button onClick={() => { try { const a = document.createElement('a'); a.href = coverImageUrl; a.download = 'cover.svg'; a.click() } catch(err) {} showToast('✅ 封面下载中') }} className="flex-1 py-2 bg-blue-500 text-white text-xs font-bold rounded-xl active:scale-95">⬇️ 下载封面</button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={generateCover}
+                  disabled={coverLoading}
+                  className="w-full py-3 bg-gradient-to-r from-orange-400 to-pink-400 text-white font-bold rounded-xl text-sm active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {coverLoading ? <><Spinner /><span>AI生成中...</span></> : <><span>✨</span><span>AI生成封面图</span></>}
+                </button>
+              )}
+            </div>
             {/* 操作按钮组 */}
             <div className="grid grid-cols-2 gap-2">
               {/* 录入发布数据 */}
