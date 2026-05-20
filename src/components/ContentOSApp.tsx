@@ -3100,7 +3100,8 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
     { id: 'discover', label: '🔥 发现' },
     { id: 'trending', label: '💎 爆款库' },
     { id: 'topics', label: '💡 选题库' },
-    { id: 'mine', label: '🧠 我的素材' },
+    { id: 'mine', label: '🧠 我的' },
+    { id: 'extract', label: '🎙️ 提取' },
   ]
   const [discoverSubTab, setDiscoverSubTab] = React.useState<'hotspot' | 'radar'>('hotspot')
   const [trendingSubTab, setTrendingSubTab] = React.useState<'trending' | 'creator'>('trending')
@@ -4531,6 +4532,82 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
         )}
 
         {/* 💡 选题库 Tab */}
+        {matTab === 'extract' && (
+          <div className="space-y-3 pb-4 mt-1">
+            <div className="bg-gradient-to-r from-violet-500 to-purple-400 rounded-2xl p-4 text-white">
+              <div className="font-bold text-sm mb-1">🎙️ 口播文案提取</div>
+              <div className="text-white/80 text-xs">粘贴抖音/小红书视频链接，AI 提取完整口播文案</div>
+            </div>
+            <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+              <div className="font-bold text-gray-900 text-sm">📎 视频链接</div>
+              <input
+                value={extractUrl}
+                onChange={e => setExtractUrl(e.target.value)}
+                placeholder="粘贴抖音/小红书视频链接..."
+                className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none"
+              />
+              <button
+                onClick={async () => {
+                  if (!extractUrl.trim()) { showToast('请先输入视频链接'); return }
+                  setExtractLoading(true)
+                  setExtractResult(null)
+                  try {
+                    const res = await fetch('/api/oral-script-extract', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ url: extractUrl })
+                    })
+                    const data = await res.json()
+                    if (data.script) {
+                      setExtractResult(data)
+                      setExtractHistory((prev: any[]) => [{ url: extractUrl, ...data, extractedAt: new Date().toISOString() }, ...prev.slice(0, 9)])
+                      showToast('✅ 提取成功')
+                    } else {
+                      showToast('提取失败：' + (data.error || '未知错误'))
+                    }
+                  } catch(e: any) {
+                    showToast('提取失败：' + e.message)
+                  } finally {
+                    setExtractLoading(false)
+                  }
+                }}
+                disabled={extractLoading || !extractUrl.trim()}
+                className="w-full py-3 bg-gradient-to-r from-violet-500 to-purple-400 text-white font-bold rounded-2xl text-sm disabled:opacity-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              >
+                {extractLoading ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/><span>提取中...</span></> : <><span>🎙️</span><span>开始提取口播文案</span></>}
+              </button>
+            </div>
+            {extractResult && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="font-bold text-gray-900 text-sm">📝 提取结果</div>
+                  <div className="flex gap-2">
+                    <button onClick={() => { try { navigator.clipboard.writeText(extractResult.script) } catch {} showToast('✅ 已复制') }} className="text-xs font-bold text-blue-500 bg-blue-50 px-3 py-1 rounded-lg active:scale-95">复制</button>
+                    <button onClick={() => { setTab('content'); showToast('✅ 已导入内容中心') }} className="text-xs font-bold text-white bg-gradient-to-r from-purple-500 to-pink-400 px-3 py-1 rounded-lg active:scale-95">用此文案</button>
+                  </div>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{extractResult.script}</div>
+                {extractResult.title && <div className="text-xs text-gray-400">标题：{extractResult.title}</div>}
+              </div>
+            )}
+            {extractHistory.length > 0 && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="font-bold text-gray-900 text-sm mb-3">📋 提取历史</div>
+                <div className="space-y-2">
+                  {extractHistory.slice(0, 5).map((h: any, i: number) => (
+                    <div key={i} className="flex items-start gap-2 p-2 bg-gray-50 rounded-xl">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs text-gray-500 truncate">{h.url}</div>
+                        <div className="text-xs text-gray-700 mt-1 line-clamp-2">{h.script?.substring(0, 60)}...</div>
+                      </div>
+                      <button onClick={() => setExtractResult(h)} className="text-[10px] font-bold text-purple-500 bg-purple-50 px-2 py-1 rounded-lg flex-shrink-0 active:scale-95">查看</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         {matTab === 'topics' && (
           <div>
             <div className="flex gap-1.5 mb-3 mt-1">
@@ -5688,9 +5765,14 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
   )
 }
 
-    function ContentCenter({ acc, showToast, savedContents, setSavedContents, savedTopics, setTab, setVideoCopy }: any) {
-      const [step, setStep] = React.useState(1)
-      const [selectedTopic, setSelectedTopic] = React.useState('')
+    function ContentCenter({ acc, showToast, savedContents, setSavedContents, savedTopics, setTab, setVideoCopy,
+      step: initStep, setStep: setStepExternal, topic: initTopic }: any) {
+      const [step, setStepInternal] = React.useState(initStep || 1)
+      const setStep = (s: any) => { setStepInternal(s); setStepExternal?.(s) }
+      const [selectedTopic, setSelectedTopic] = React.useState(initTopic || '')
+      // 当外部 topic 变化时同步
+      React.useEffect(() => { if (initTopic) setSelectedTopic(initTopic) }, [initTopic])
+      React.useEffect(() => { if (initStep) setStepInternal(initStep) }, [initStep])
       const [style, setStyle] = React.useState('犀利观点')
       const [loading, setLoading] = React.useState(false)
       const [versions, setVersions] = React.useState<any[]>([])
