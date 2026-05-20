@@ -2023,6 +2023,7 @@ export default function ContentOSApp() {
                     borrowLoading={borrowLoading}
                     showBorrowPanel={showBorrowPanel} setShowBorrowPanel={setShowBorrowPanel}
                     borrowResult={borrowResult} borrowHotspot={borrowHotspot}
+                    schedule={schedule} setSchedule={setSchedule}
                   />
             )}
         {tab === 'content' && (
@@ -2688,7 +2689,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
     }
     
 
-function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, topicFilter, setTopicFilter, topicSearch, setTopicSearch, batchCount, setBatchCount, topicCategories, selectedCategory, setSelectedCategory, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy, setShowAiPanel, creatorAnalysisTab, setCreatorAnalysisTab, selectedScript, setSelectedScript, showScriptDetail, setShowScriptDetail, knowledgeItems, knowledgeInput, setKnowledgeInput, knowledgeTitle, setKnowledgeTitle, knowledgeCategory, setKnowledgeCategory, showAddKnowledge, setShowAddKnowledge, knowledgeSearch, setKnowledgeSearch, addKnowledgeItem, deleteKnowledgeItem, showSuperGen, setShowSuperGen, superGenLoading, superGenResult, setSuperGenResult, superGenTopic, setSuperGenTopic, superGenHotspot, setSuperGenHotspot, superGenStyle, setSuperGenStyle, superGenKnowledge, setSuperGenKnowledge, superGenerate, acc: accProp, trendingItems, trendingLoading, trendingCategory, setTrendingCategory, trendingSort, setTrendingSort, fetchTrendingMaterials, recommendTopics, recommendLoading, recommendInsight, showRecommendPanel, setShowRecommendPanel, recommendTopicsFn, hotspots: hotspotsProp, videoRecords: videoRecordsProp, fetchTrendAnalysis, trendData, trendLoading, showTrendPanel, setShowTrendPanel, generateBorrowScript, borrowLoading, showBorrowPanel, setShowBorrowPanel, borrowResult, borrowHotspot }: any) {
+function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, topicFilter, setTopicFilter, topicSearch, setTopicSearch, batchCount, setBatchCount, topicCategories, selectedCategory, setSelectedCategory, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy, setShowAiPanel, creatorAnalysisTab, setCreatorAnalysisTab, selectedScript, setSelectedScript, showScriptDetail, setShowScriptDetail, knowledgeItems, knowledgeInput, setKnowledgeInput, knowledgeTitle, setKnowledgeTitle, knowledgeCategory, setKnowledgeCategory, showAddKnowledge, setShowAddKnowledge, knowledgeSearch, setKnowledgeSearch, addKnowledgeItem, deleteKnowledgeItem, showSuperGen, setShowSuperGen, superGenLoading, superGenResult, setSuperGenResult, superGenTopic, setSuperGenTopic, superGenHotspot, setSuperGenHotspot, superGenStyle, setSuperGenStyle, superGenKnowledge, setSuperGenKnowledge, superGenerate, acc: accProp, trendingItems, trendingLoading, trendingCategory, setTrendingCategory, trendingSort, setTrendingSort, fetchTrendingMaterials, recommendTopics, recommendLoading, recommendInsight, showRecommendPanel, setShowRecommendPanel, recommendTopicsFn, hotspots: hotspotsProp, videoRecords: videoRecordsProp, fetchTrendAnalysis, trendData, trendLoading, showTrendPanel, setShowTrendPanel, generateBorrowScript, borrowLoading, showBorrowPanel, setShowBorrowPanel, borrowResult, borrowHotspot, schedule, setSchedule }: any) {
   const TABS = [
     { id: 'hotspot', label: '🔥 热点' },
     { id: 'trending', label: '💎 爆款' },
@@ -4752,6 +4753,8 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
             savedTopics={savedTopics}
             useTopic={useTopic}
             setTab={setTab}
+            schedule={schedule}
+            setSchedule={setSchedule}
           />
         )}
       </div>
@@ -4762,7 +4765,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
 // ═══════════════════════════════════════════════════════════
 // CONTENT PLAN TAB — 内容方案功能
 // ═══════════════════════════════════════════════════════════
-function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords, savedTopics, useTopic, setTab }: any) {
+function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords, savedTopics, useTopic, setTab, schedule, setSchedule }: any) {
   const [planInput, setPlanInput] = React.useState('')
   const [loading, setLoading] = React.useState(false)
   const [result, setResult] = React.useState<any>(null)
@@ -4772,6 +4775,15 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
   const [expandedTopic, setExpandedTopic] = React.useState<number | null>(null)
   const [activeTab, setActiveTab] = React.useState<'topics' | 'copy' | 'strategy'>('topics')
   const [copiedIdx, setCopiedIdx] = React.useState<number | null>(null)
+  const [scheduleModal, setScheduleModal] = React.useState(false)
+  const [schedulingTopics, setSchedulingTopics] = React.useState<any[]>([])
+  const [scheduleStartDate, setScheduleStartDate] = React.useState(() => {
+    const d = new Date(); d.setDate(d.getDate() + 1)
+    return d.toISOString().split('T')[0]
+  })
+  const [schedulePlatform, setSchedulePlatform] = React.useState('抖音')
+  const [scheduleFreq, setScheduleFreq] = React.useState<'daily' | 'every2days' | 'every3days'>('every2days')
+  const [scheduleTime, setScheduleTime] = React.useState('18:30')
 
   const PLAN_EXAMPLES = [
     '我想做一个关于本地餐饮探店的系列内容，主要面向25-35岁的上班族，每周发布3条视频',
@@ -4819,6 +4831,47 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
       showToast('✅ 已复制')
       setTimeout(() => setCopiedIdx(null), 2000)
     }).catch(() => showToast('复制失败'))
+  }
+
+  function openScheduleModal() {
+    if (!result?.topics?.length) { showToast('请先分析方案'); return }
+    // 默认选中前5个选题
+    setSchedulingTopics(result.topics.slice(0, 5).map((t: any, i: number) => ({ ...t, selected: true, idx: i })))
+    setScheduleModal(true)
+  }
+
+  function pushToSchedule() {
+    if (!setSchedule) { showToast('排期功能不可用'); return }
+    const selected = schedulingTopics.filter(t => t.selected)
+    if (selected.length === 0) { showToast('请至少选择一个选题'); return }
+
+    const freqDays: Record<string, number> = { daily: 1, every2days: 2, every3days: 3 }
+    const gap = freqDays[scheduleFreq] || 2
+    const startDate = new Date(scheduleStartDate)
+
+    const newItems = selected.map((topic: any, i: number) => {
+      const d = new Date(startDate)
+      d.setDate(startDate.getDate() + i * gap)
+      const dateStr = d.toISOString().split('T')[0]
+      return {
+        id: `plan_${Date.now()}_${i}`,
+        title: topic.title,
+        platform: topic.platform || schedulePlatform,
+        status: '计划中' as const,
+        time: `${dateStr} ${scheduleTime}`,
+        publishDate: dateStr,
+        publishTime: scheduleTime,
+        copy: topic.copy || '',
+        reminder: false,
+        reminderMinutes: 30,
+      }
+    })
+
+    setSchedule((prev: any[]) => [...(prev || []), ...newItems])
+    setScheduleModal(false)
+    showToast(`✅ 已推送 ${newItems.length} 个选题到运营日历`)
+    // 跳转到运营中心
+    setTimeout(() => setTab && setTab('operations'), 800)
   }
 
   return (
@@ -4879,6 +4932,22 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
       {/* 分析结果 */}
       {result && (
         <>
+          {/* 操作按钮行 */}
+          <div className="flex gap-2">
+            <button
+              onClick={openScheduleModal}
+              className="flex-1 py-2.5 bg-gradient-to-r from-orange-400 to-amber-500 text-white text-sm font-bold rounded-2xl active:scale-95 flex items-center justify-center gap-1.5 shadow-sm"
+            >
+              📅 一键生成排期
+            </button>
+            <button
+              onClick={() => setTab && setTab('operations')}
+              className="px-4 py-2.5 bg-white border border-gray-200 text-gray-600 text-sm font-bold rounded-2xl active:scale-95"
+            >
+              查看日历 →
+            </button>
+          </div>
+
           {/* 方案摘要 */}
           <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-4 border border-indigo-100">
             <div className="font-bold text-indigo-800 text-sm mb-2">🎯 方案核心价值</div>
@@ -5016,6 +5085,124 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
                 </div>
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* 排期弹窗 */}
+      {scheduleModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end" onClick={() => setScheduleModal(false)}>
+          <div className="w-full bg-white rounded-t-3xl p-5 pb-8 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="font-black text-gray-900 text-base">📅 一键生成排期</div>
+                <div className="text-xs text-gray-400 mt-0.5">选择要排期的选题，推送到运营日历</div>
+              </div>
+              <button onClick={() => setScheduleModal(false)} className="w-8 h-8 flex items-center justify-center text-gray-400 text-xl">✕</button>
+            </div>
+
+            {/* 排期设置 */}
+            <div className="bg-gray-50 rounded-2xl p-4 mb-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-xs font-bold text-gray-600 mb-1.5">开始日期</div>
+                  <input
+                    type="date"
+                    value={scheduleStartDate}
+                    onChange={e => setScheduleStartDate(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                  />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-gray-600 mb-1.5">发布时间</div>
+                  <input
+                    type="time"
+                    value={scheduleTime}
+                    onChange={e => setScheduleTime(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                  />
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-bold text-gray-600 mb-1.5">发布频率</div>
+                <div className="flex gap-2">
+                  {[
+                    { value: 'daily', label: '每天' },
+                    { value: 'every2days', label: '每2天' },
+                    { value: 'every3days', label: '每3天' },
+                  ].map(f => (
+                    <button
+                      key={f.value}
+                      onClick={() => setScheduleFreq(f.value as any)}
+                      className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${scheduleFreq === f.value ? 'bg-indigo-500 text-white' : 'bg-white border border-gray-200 text-gray-600'}`}
+                    >{f.label}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-bold text-gray-600 mb-1.5">默认平台</div>
+                <div className="flex gap-2 flex-wrap">
+                  {['抖音', '小红书', 'B站', '视频号', '快手'].map(p => (
+                    <button
+                      key={p}
+                      onClick={() => setSchedulePlatform(p)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${schedulePlatform === p ? 'bg-indigo-500 text-white' : 'bg-white border border-gray-200 text-gray-600'}`}
+                    >{p}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 选题选择 */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-bold text-gray-800">选择要排期的选题</div>
+                <button
+                  onClick={() => setSchedulingTopics(t => t.map(x => ({ ...x, selected: !schedulingTopics.every(x => x.selected) })))}
+                  className="text-xs text-indigo-600 font-bold"
+                >
+                  {schedulingTopics.every(t => t.selected) ? '取消全选' : '全选'}
+                </button>
+              </div>
+              <div className="space-y-2">
+                {schedulingTopics.map((topic: any, i: number) => {
+                  const d = new Date(scheduleStartDate)
+                  const freqDays: Record<string, number> = { daily: 1, every2days: 2, every3days: 3 }
+                  d.setDate(d.getDate() + i * (freqDays[scheduleFreq] || 2))
+                  const dateStr = d.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric', weekday: 'short' })
+                  return (
+                    <label key={i} className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all ${topic.selected ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50 border border-transparent'}`}>
+                      <input
+                        type="checkbox"
+                        checked={topic.selected}
+                        onChange={e => setSchedulingTopics(prev => prev.map((t, ti) => ti === i ? { ...t, selected: e.target.checked } : t))}
+                        className="w-4 h-4 rounded accent-indigo-500 flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-gray-800 truncate">{topic.title}</div>
+                        <div className="text-[10px] text-gray-400 mt-0.5">{topic.platform || schedulePlatform} · {dateStr} {scheduleTime}</div>
+                      </div>
+                      <span className="text-xs text-indigo-500 font-bold flex-shrink-0">{dateStr}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* 预览 + 确认 */}
+            <div className="bg-indigo-50 rounded-2xl p-3 mb-4 text-xs text-indigo-600">
+              将推送 <span className="font-black">{schedulingTopics.filter(t => t.selected).length}</span> 个选题到运营日历，
+              从 <span className="font-bold">{scheduleStartDate}</span> 开始，
+              每 <span className="font-bold">{{ daily: '1', every2days: '2', every3days: '3' }[scheduleFreq]}</span> 天发布一条
+            </div>
+
+            <button
+              onClick={pushToSchedule}
+              disabled={schedulingTopics.filter(t => t.selected).length === 0}
+              className="w-full py-3.5 bg-gradient-to-r from-orange-400 to-amber-500 text-white font-black rounded-2xl active:scale-95 disabled:opacity-50 text-base shadow-lg"
+            >
+              📅 推送到运营日历
+            </button>
           </div>
         </div>
       )}
