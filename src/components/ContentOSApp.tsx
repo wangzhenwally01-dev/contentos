@@ -10,7 +10,7 @@ const supabase = createClient(
 
 // ─── Types ───────────────────────────────────────────────
 type Tab = 'dashboard' | 'materials' | 'content' | 'video' | 'operations' | 'profile'
-type MatTab = 'hotspot' | 'topics' | 'radar' | 'creator' | 'style' | 'knowledge' | 'trending' | 'extract'
+type MatTab = 'hotspot' | 'topics' | 'radar' | 'creator' | 'style' | 'knowledge' | 'trending' | 'extract' | 'plan'
 type OpsTab = 'schedule' | 'stats' | 'goals'
 type VideoStep = 'input' | 'voice' | 'avatar' | 'preview'
 type ContentStep = 1 | 2 | 3
@@ -937,7 +937,13 @@ export default function ContentOSApp() {
       })
       const data = await res.json()
       if (data.topics && data.topics.length > 0) {
-        setRecommendTopics(data.topics)
+        // 将策略和最佳类型附加到topics数组上（用于UI展示）
+        const topicsWithMeta = Object.assign([...data.topics], {
+          strategy: data.strategy || '',
+          bestType: data.bestType || '',
+          bestPlatform: data.bestPlatform || '',
+        })
+        setRecommendTopics(topicsWithMeta)
         setRecommendInsight(data.insight || '')
         showToast(`✅ AI 推荐了 ${data.topics.length} 个个性化选题`)
       } else {
@@ -2687,6 +2693,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
     { id: 'hotspot', label: '🔥 热点' },
     { id: 'trending', label: '💎 爆款' },
     { id: 'topics', label: '💡 选题库' },
+    { id: 'plan', label: '📋 内容方案' },
     { id: 'radar', label: '📡 情报' },
     { id: 'creator', label: '🎯 博主' },
     { id: 'style', label: '🎨 风格' },
@@ -2751,27 +2758,36 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
     showToast('✅ 文案已导入内容中心')
   }
 
-  // AI 推荐面板
+  // AI 推荐面板（升级版）
   if (showRecommendPanel) {
+    const strategyLines = (recommendTopics as any)?.strategy
+      ? ((recommendTopics as any).strategy as string).split(/[。
+]/).filter((s: string) => s.trim())
+      : []
     return (
       <div className="flex flex-col h-full bg-[#F2F2F7]">
         <div className="px-5 pt-12 pb-0 flex-shrink-0">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-3 mb-3">
             <button onClick={() => setShowRecommendPanel(false)} className="w-9 h-9 rounded-2xl bg-white shadow-sm flex items-center justify-center text-gray-500 active:scale-95 transition-transform">←</button>
-            <div>
+            <div className="flex-1">
               <h1 className="text-lg font-black text-gray-900">🧠 AI 个性化推荐</h1>
-              <p className="text-xs text-gray-400">基于热点 · 知识库 · 历史数据</p>
+              <p className="text-xs text-gray-400">基于账号定位 · 热点 · 知识库 · 历史数据</p>
             </div>
+            <button
+              onClick={recommendTopicsFn}
+              disabled={recommendLoading}
+              className="px-3 py-1.5 bg-violet-500 text-white text-xs font-bold rounded-xl active:scale-95 disabled:opacity-50"
+            >🔄 刷新</button>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4">
           {recommendLoading ? (
             <div className="flex flex-col items-center justify-center py-20">
-              <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-violet-500 to-purple-400 flex items-center justify-center mb-4 shadow-lg">
+              <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-violet-500 to-purple-400 flex items-center justify-center mb-4 shadow-lg animate-pulse">
                 <span className="text-3xl">🧠</span>
               </div>
               <p className="text-gray-600 font-bold mb-1">AI 正在深度分析...</p>
-              <p className="text-xs text-gray-400 text-center">结合你的账号定位、热点数据<br/>知识库内容和历史播放数据</p>
+              <p className="text-xs text-gray-400 text-center">结合账号定位、热点数据<br/>知识库内容和历史播放规律</p>
               <div className="flex gap-1 mt-4">
                 {[0,1,2].map(i => <div key={i} className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{animationDelay:`${i*0.15}s`}} />)}
               </div>
@@ -2779,35 +2795,59 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
           ) : recommendTopics.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <div className="text-5xl mb-4">🧠</div>
-              <p className="text-gray-500 font-semibold">点击下方按钮开始推荐</p>
+              <p className="text-gray-500 font-semibold mb-2">点击下方按钮开始推荐</p>
+              <p className="text-xs text-gray-400">AI 将综合分析你的账号数据<br/>生成15个高质量个性化选题</p>
             </div>
           ) : (
             <div className="space-y-3">
+              {/* 洞察 + 策略卡片 */}
               {recommendInsight && (
-                <div className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-2xl p-4 border border-violet-100">
-                  <p className="text-xs text-violet-500 font-semibold mb-1">💡 AI 洞察</p>
-                  <p className="text-sm text-gray-700 leading-relaxed">{recommendInsight}</p>
+                <div className="bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl p-4 text-white shadow-lg">
+                  <div className="text-xs font-bold text-white/70 mb-1">💡 AI 核心洞察</div>
+                  <p className="text-sm font-semibold leading-relaxed">{recommendInsight}</p>
+                  {(recommendTopics as any)?.bestType && (
+                    <div className="flex gap-2 mt-3">
+                      <span className="text-xs bg-white/20 px-2.5 py-1 rounded-full">🏆 最佳类型：{(recommendTopics as any).bestType}</span>
+                      {(recommendTopics as any)?.bestPlatform && (
+                        <span className="text-xs bg-white/20 px-2.5 py-1 rounded-full">📱 {(recommendTopics as any).bestPlatform}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
+
+              {/* 选题列表 */}
               {recommendTopics.map((topic: any, i: number) => (
                 <div key={i} className="bg-white rounded-2xl p-4 shadow-sm">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className="text-xs px-2 py-0.5 bg-violet-50 text-violet-500 rounded-full font-semibold">{topic.type || topic.category}</span>
-                        <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full">{topic.platform}</span>
-                        {topic.score && <span className="text-xs text-orange-500 font-bold">⭐{topic.score}</span>}
+                  <div className="flex items-start gap-3 mb-2">
+                    <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-violet-400 to-purple-500 text-white text-xs font-black flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                        <span className="text-[10px] px-1.5 py-0.5 bg-violet-50 text-violet-500 rounded-full font-semibold">{topic.type || topic.category}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded-full">{topic.platform}</span>
+                        {topic.dataSource && <span className="text-[10px] px-1.5 py-0.5 bg-green-50 text-green-500 rounded-full">📊 {topic.dataSource}</span>}
+                        {topic.score && <span className="text-[10px] text-orange-500 font-bold ml-auto">⭐{topic.score}</span>}
                       </div>
                       <p className="text-sm font-bold text-gray-900 leading-snug">{topic.title}</p>
                     </div>
                   </div>
-                  {topic.reason && <p className="text-xs text-gray-400 mb-2 leading-relaxed">📊 {topic.reason}</p>}
-                  {topic.hook && <div className="bg-orange-50 rounded-xl px-3 py-2 mb-2"><p className="text-xs text-orange-600">🎣 {topic.hook}</p></div>}
-                  {topic.bestTime && <p className="text-xs text-green-500 mb-2">⏰ 最佳发布：{topic.bestTime}</p>}
+                  {topic.reason && <p className="text-xs text-gray-400 mb-2 leading-relaxed bg-gray-50 rounded-xl px-2.5 py-1.5">📊 {topic.reason}</p>}
+                  {topic.hook && <div className="bg-amber-50 rounded-xl px-3 py-2 mb-2"><p className="text-xs text-amber-600">🎣 {topic.hook}</p></div>}
+                  <div className="flex items-center gap-3 mb-2">
+                    {topic.bestTime && <p className="text-[10px] text-green-500">⏰ {topic.bestTime}</p>}
+                    {topic.estimatedPlays && <p className="text-[10px] text-blue-400">📈 预估 {topic.estimatedPlays}</p>}
+                  </div>
+                  {topic.tags?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {topic.tags.map((tag: string, ti: number) => (
+                        <span key={ti} className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">#{tag}</span>
+                      ))}
+                    </div>
+                  )}
                   <div className="flex gap-2 pt-2 border-t border-gray-50">
                     <button
                       onClick={() => { useTopic(topic.title); setShowRecommendPanel(false) }}
-                      className="flex-1 py-1.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white text-xs font-bold rounded-xl active:scale-95 transition-all"
+                      className="flex-1 py-1.5 bg-gradient-to-r from-violet-500 to-purple-400 text-white text-xs font-bold rounded-xl active:scale-95 transition-all"
                     >✍️ 写文案</button>
                     <button
                       onClick={() => { saveTopic(topic.title); showToast('✅ 已收藏') }}
@@ -2824,7 +2864,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
             <button
               onClick={recommendTopicsFn}
               className="w-full py-3.5 bg-gradient-to-r from-violet-600 to-purple-500 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md"
-            >🔄 重新推荐</button>
+            >🔄 重新推荐（15个新选题）</button>
           </div>
         )}
       </div>
@@ -4702,12 +4742,288 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
             </div>
           </div>
         )}
+
+        {/* ── 内容方案 ── */}
+        {matTab === 'plan' && (
+          <ContentPlanTab
+            acc={acc}
+            showToast={showToast}
+            hotspots={hotspotsProp || hotspots}
+            knowledgeItems={knowledgeItems}
+            videoRecords={videoRecordsProp}
+            savedTopics={savedTopics}
+            useTopic={useTopic}
+            setTab={setTab}
+          />
+        )}
       </div>
     </div>
   )
 }
 
+// ═══════════════════════════════════════════════════════════
+// CONTENT PLAN TAB — 内容方案功能
+// ═══════════════════════════════════════════════════════════
+function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords, savedTopics, useTopic, setTab }: any) {
+  const [planInput, setPlanInput] = React.useState('')
+  const [loading, setLoading] = React.useState(false)
+  const [result, setResult] = React.useState<any>(null)
+  const [planHistory, setPlanHistory] = React.useState<any[]>(() => {
+    try { const h = localStorage.getItem('contentos_plan_history'); return h ? JSON.parse(h) : [] } catch { return [] }
+  })
+  const [expandedTopic, setExpandedTopic] = React.useState<number | null>(null)
+  const [activeTab, setActiveTab] = React.useState<'topics' | 'copy' | 'strategy'>('topics')
+  const [copiedIdx, setCopiedIdx] = React.useState<number | null>(null)
 
+  const PLAN_EXAMPLES = [
+    '我想做一个关于本地餐饮探店的系列内容，主要面向25-35岁的上班族，每周发布3条视频',
+    '我是一名健身教练，想通过短视频吸引私教学员，重点展示减脂和增肌的专业知识',
+    '我们是一家母婴用品店，想通过内容营销提升品牌知名度，目标客户是0-3岁宝宝的妈妈',
+  ]
+
+  async function analyzePlan() {
+    if (!planInput.trim()) { showToast('请先输入内容方案'); return }
+    setLoading(true)
+    setResult(null)
+    try {
+      const res = await fetch('/api/content-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          planInput: planInput.trim(),
+          accountName: acc?.name || '',
+          industry: acc?.industry || '',
+          positioning: acc?.positioning || '',
+          hotspots,
+          knowledgeItems,
+          videoRecords,
+        }),
+      })
+      const data = await res.json()
+      if (data.success && data.topics?.length > 0) {
+        setResult(data)
+        setActiveTab('topics')
+        // 保存到历史
+        const newHistory = [{ id: Date.now(), input: planInput.slice(0, 50) + '...', result: data, time: new Date().toLocaleString() }, ...planHistory].slice(0, 5)
+        setPlanHistory(newHistory)
+        localStorage.setItem('contentos_plan_history', JSON.stringify(newHistory))
+        showToast(`✅ 方案分析完成，生成 ${data.topics.length} 个选题`)
+      } else {
+        showToast('分析失败，请重试')
+      }
+    } catch { showToast('网络错误，请重试') }
+    setLoading(false)
+  }
+
+  function copyText(text: string, idx: number) {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedIdx(idx)
+      showToast('✅ 已复制')
+      setTimeout(() => setCopiedIdx(null), 2000)
+    }).catch(() => showToast('复制失败'))
+  }
+
+  return (
+    <div className="space-y-4 pb-4">
+      {/* 顶部说明 */}
+      <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-4 shadow-lg">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-2xl">📋</span>
+          <div>
+            <div className="font-black text-white text-base">内容方案分析</div>
+            <div className="text-white/70 text-xs">输入你的内容方案，AI 生成选题矩阵 + 爆款文案</div>
+          </div>
+        </div>
+      </div>
+
+      {/* 输入区域 */}
+      <div className="bg-white rounded-2xl p-4 shadow-sm">
+        <div className="font-bold text-gray-900 text-sm mb-2">📝 输入内容方案</div>
+        <textarea
+          value={planInput}
+          onChange={e => setPlanInput(e.target.value)}
+          placeholder="描述你的内容方案，例如：目标受众、内容方向、产品/服务、核心卖点、发布频率等..."
+          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-400 resize-none"
+          rows={5}
+        />
+        <div className="flex items-center justify-between mt-2">
+          <span className="text-xs text-gray-400">{planInput.length} 字</span>
+          <button
+            onClick={analyzePlan}
+            disabled={loading || !planInput.trim()}
+            className="px-5 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-bold rounded-xl active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+          >
+            {loading ? (
+              <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"></span> 分析中...</>
+            ) : '🚀 AI 分析方案'}
+          </button>
+        </div>
+
+        {/* 示例方案 */}
+        {!planInput && (
+          <div className="mt-3">
+            <div className="text-xs text-gray-400 mb-2">💡 示例方案（点击填入）</div>
+            <div className="space-y-1.5">
+              {PLAN_EXAMPLES.map((ex, i) => (
+                <button
+                  key={i}
+                  onClick={() => setPlanInput(ex)}
+                  className="w-full text-left text-xs text-gray-600 bg-gray-50 rounded-xl px-3 py-2 active:scale-[0.98] line-clamp-2"
+                >
+                  {ex}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 分析结果 */}
+      {result && (
+        <>
+          {/* 方案摘要 */}
+          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-4 border border-indigo-100">
+            <div className="font-bold text-indigo-800 text-sm mb-2">🎯 方案核心价值</div>
+            <p className="text-sm text-indigo-700 leading-relaxed">{result.planSummary}</p>
+            {result.contentPillars?.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {result.contentPillars.map((p: string, i: number) => (
+                  <span key={i} className="text-xs bg-indigo-100 text-indigo-600 px-2.5 py-1 rounded-full font-medium">{p}</span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Tab 切换 */}
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="flex border-b border-gray-100">
+              {[
+                { id: 'topics', label: `💡 选题矩阵 (${result.topics?.length || 0})` },
+                { id: 'copy', label: '✍️ 爆款文案' },
+                { id: 'strategy', label: '📊 发布策略' },
+              ].map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setActiveTab(t.id as any)}
+                  className={`flex-1 py-2.5 text-xs font-bold transition-colors ${activeTab === t.id ? 'text-indigo-600 border-b-2 border-indigo-500 bg-indigo-50' : 'text-gray-500'}`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="p-4">
+              {/* 选题矩阵 */}
+              {activeTab === 'topics' && (
+                <div className="space-y-3">
+                  {result.topics?.map((topic: any, i: number) => (
+                    <div key={i} className="border border-gray-100 rounded-2xl overflow-hidden">
+                      <div
+                        className="flex items-start gap-3 p-3 cursor-pointer active:bg-gray-50"
+                        onClick={() => setExpandedTopic(expandedTopic === i ? null : i)}
+                      >
+                        <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-indigo-400 to-purple-500 text-white text-xs font-black flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-gray-900 text-sm leading-tight">{topic.title}</div>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className="text-[10px] bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded-full">{topic.category}</span>
+                            <span className="text-[10px] bg-purple-50 text-purple-500 px-1.5 py-0.5 rounded-full">{topic.platform}</span>
+                            <span className="text-[10px] text-gray-400">{topic.bestTime}</span>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1 line-clamp-1">{topic.angle}</div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                          <div className="text-sm font-black text-indigo-600">{topic.score}</div>
+                          <div className="text-[9px] text-gray-400">分</div>
+                        </div>
+                      </div>
+                      {expandedTopic === i && (
+                        <div className="px-3 pb-3 space-y-2 border-t border-gray-50 pt-2">
+                          <div className="bg-amber-50 rounded-xl p-2.5">
+                            <div className="text-[10px] font-bold text-amber-700 mb-1">🎣 开头钩子</div>
+                            <div className="text-xs text-amber-600">{topic.hook}</div>
+                          </div>
+                          <div className="flex gap-1.5">
+                            <button
+                              onClick={() => useTopic && useTopic(topic.title)}
+                              className="flex-1 py-2 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-xl active:scale-95"
+                            >💡 用这个选题</button>
+                            <button
+                              onClick={() => setActiveTab('copy')}
+                              className="flex-1 py-2 bg-purple-50 text-purple-600 text-xs font-bold rounded-xl active:scale-95"
+                            >✍️ 查看文案</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 爆款文案 */}
+              {activeTab === 'copy' && (
+                <div className="space-y-4">
+                  {result.topics?.map((topic: any, i: number) => (
+                    <div key={i} className="border border-gray-100 rounded-2xl p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="font-bold text-gray-900 text-sm">{topic.title}</div>
+                        <button
+                          onClick={() => copyText(topic.copy || '', i)}
+                          className={`text-[10px] font-bold px-2.5 py-1 rounded-lg active:scale-95 ${copiedIdx === i ? 'bg-green-100 text-green-600' : 'bg-purple-50 text-purple-600'}`}
+                        >{copiedIdx === i ? '✅ 已复制' : '复制'}</button>
+                      </div>
+                      <div className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap bg-gray-50 rounded-xl p-3">{topic.copy}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 发布策略 */}
+              {activeTab === 'strategy' && (
+                <div className="space-y-3">
+                  {result.insight && (
+                    <div className="bg-indigo-50 rounded-2xl p-3">
+                      <div className="text-xs font-bold text-indigo-700 mb-1">💡 核心洞察</div>
+                      <div className="text-sm text-indigo-600">{result.insight}</div>
+                    </div>
+                  )}
+                  {result.publishStrategy && (
+                    <div className="bg-white border border-gray-100 rounded-2xl p-3">
+                      <div className="text-xs font-bold text-gray-700 mb-2">📊 发布策略</div>
+                      <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{result.publishStrategy}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* 历史方案 */}
+      {planHistory.length > 0 && !result && (
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="font-bold text-gray-900 text-sm mb-3">🕐 历史方案</div>
+          <div className="space-y-2">
+            {planHistory.map((h: any) => (
+              <button
+                key={h.id}
+                onClick={() => { setResult(h.result); setPlanInput(h.result?.planSummary || '') }}
+                className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl active:scale-[0.98] text-left"
+              >
+                <span className="text-lg">📋</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-semibold text-gray-800 truncate">{h.input}</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">{h.time} · {h.result?.topics?.length || 0} 个选题</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
     function ContentCenter({ acc, showToast, savedContents, setSavedContents, savedTopics, setTab }: any) {
       const [step, setStep] = React.useState(1)
