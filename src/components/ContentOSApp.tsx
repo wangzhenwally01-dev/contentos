@@ -9,7 +9,7 @@ const supabase = createClient(
 )
 
 // ─── Types ───────────────────────────────────────────────
-type Tab = 'dashboard' | 'materials' | 'content' | 'video' | 'operations' | 'profile'
+type Tab = 'dashboard' | 'materials' | 'content' | 'video' | 'operations' | 'profile' | 'create'
 type MatTab = 'discover' | 'trending' | 'mine' | 'topics'
 type OpsTab = 'schedule' | 'stats' | 'goals'
 type VideoStep = 'input' | 'voice' | 'preview'
@@ -2235,11 +2235,12 @@ export default function ContentOSApp() {
   const NAV_TABS = [
     { id: 'dashboard', icon: '🏠', label: '工作台' },
     { id: 'materials', icon: '📦', label: '素材' },
-    { id: 'content', icon: '✍️', label: '内容' },
-    { id: 'video', icon: '🎬', label: '视频' },
+    { id: 'create', icon: '✍️', label: '创作' },
     { id: 'operations', icon: '📊', label: '运营' },
     { id: 'profile', icon: '👤', label: '我的' },
   ]
+  // 创作子tab：内容/视频
+  const createSubTab = (tab === 'content' || tab === 'create') ? 'content' : tab === 'video' ? 'video' : 'content'
 
   return (
     <div className="w-[390px] h-[844px] rounded-[50px] overflow-hidden bg-[#F2F2F7] flex flex-col shadow-[0_0_0_10px_#111,0_40px_100px_rgba(0,0,0,.7)] relative">
@@ -2381,6 +2382,26 @@ export default function ContentOSApp() {
                     schedule={schedule} setSchedule={setSchedule}
                   />
             )}
+        {(tab === 'content' || tab === 'video') && (
+          <div className="flex flex-col h-full overflow-hidden">
+            {/* 创作模式切换器 */}
+            <div className="flex-shrink-0 bg-white/90 backdrop-blur-xl border-b border-gray-100 px-4 pt-12 pb-2">
+              <div className="flex bg-gray-100 rounded-2xl p-1 gap-1">
+                <button
+                  onClick={() => setTab('content')}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${tab === 'content' ? 'bg-white text-blue-500 shadow-sm' : 'text-gray-400'}`}
+                >
+                  <span>✍️</span> 文案创作
+                </button>
+                <button
+                  onClick={() => setTab('video')}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${tab === 'video' ? 'bg-white text-blue-500 shadow-sm' : 'text-gray-400'}`}
+                >
+                  <span>🎬</span> 视频制作
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-hidden">
         {tab === 'content' && (
           <ContentCenter
             acc={acc} step={contentStep} setStep={setContentStep}
@@ -2427,6 +2448,9 @@ export default function ContentOSApp() {
             subtitleLines={subtitleLines} setSubtitleLines={setSubtitleLines}
             currentSubLine={currentSubLine} setCurrentSubLine={setCurrentSubLine}
           />
+        )}
+            </div>
+          </div>
         )}
         {tab === 'operations' && (
           <Operations
@@ -2503,13 +2527,19 @@ export default function ContentOSApp() {
         )}
       </div>
       <div className="bg-white/95 backdrop-blur-xl border-t border-gray-100 flex items-start pt-2 flex-shrink-0 z-50" style={{paddingBottom:'max(20px, env(safe-area-inset-bottom, 20px))'}}>
-        {NAV_TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id as Tab)} className="flex-1 flex flex-col items-center gap-0.5 py-1 tab-transition">
-            <span className={`text-[22px] transition-transform duration-200 ${tab === t.id ? 'scale-110' : 'scale-100'}`}>{t.icon}</span>
-            <span className={`text-[10px] font-medium transition-colors ${tab === t.id ? 'text-blue-500 font-bold' : 'text-gray-400'}`}>{t.label}</span>
-            {tab === t.id && <div className="w-4 h-0.5 rounded-full bg-blue-500 mt-0.5" />}
-          </button>
-        ))}
+        {NAV_TABS.map(t => {
+          const isActive = t.id === 'create' ? (tab === 'content' || tab === 'video') : tab === t.id
+          return (
+            <button key={t.id} onClick={() => {
+              if (t.id === 'create') { setTab(tab === 'video' ? 'video' : 'content') }
+              else { setTab(t.id as Tab) }
+            }} className="flex-1 flex flex-col items-center gap-0.5 py-1 tab-transition">
+              <span className={`text-[22px] transition-transform duration-200 ${isActive ? 'scale-110' : 'scale-100'}`}>{t.icon}</span>
+              <span className={`text-[10px] font-medium transition-colors ${isActive ? 'text-blue-500 font-bold' : 'text-gray-400'}`}>{t.label}</span>
+              {isActive && <div className="w-4 h-0.5 rounded-full bg-blue-500 mt-0.5" />}
+            </button>
+          )
+        })}
       </div>
     </div>
   )
@@ -2723,32 +2753,27 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
               </div>
             </div>
 
-            {/* 超级生成横幅 */}
-            <div
-              onClick={() => { setTab('materials'); setMatTab('mine'); setTimeout(()=>setShowSuperGen(true),300) }}
-              className="mx-4 mb-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl px-4 py-3 flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer shadow-lg shadow-purple-200/50"
-            >
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl flex-shrink-0">⚡</div>
-              <div className="flex-1">
-                <div className="font-black text-white text-sm">超级文案生成</div>
-                <div className="text-white/80 text-[10px]">热点 × 知识库({(knowledgeItems||[]).length}条) × 风格 三合一</div>
+            {/* 创作快捷入口 */}
+            <div className="grid grid-cols-2 gap-2">
+              <div
+                onClick={() => { setTab('materials'); setMatTab('mine'); setTimeout(()=>setShowSuperGen(true),300) }}
+                className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl px-3.5 py-3 flex items-center gap-2.5 active:scale-[0.98] transition-all cursor-pointer shadow-md"
+              >
+                <span className="text-2xl flex-shrink-0">⚡</span>
+                <div className="min-w-0">
+                  <div className="font-black text-white text-xs">超级文案</div>
+                  <div className="text-white/70 text-[10px]">热点×知识库×风格</div>
+                </div>
               </div>
-              <div className="text-white/80 text-sm font-bold">立即 →</div>
-            </div>
-
-            {/* 智能选题推荐入口 */}
-            <div
-              onClick={() => { setTab('materials'); setTimeout(() => { setShowRecommendPanel(true); if (recommendTopicsFn) recommendTopicsFn() }, 300) }}
-              className="mx-4 mb-3 bg-white rounded-2xl px-4 py-3 flex items-center gap-3 active:scale-[0.98] transition-all cursor-pointer shadow-sm border border-gray-100"
-            >
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center text-xl flex-shrink-0">🧠</div>
-              <div className="flex-1">
-                <div className="font-bold text-gray-900 text-sm">AI 智能选题推荐</div>
-                <div className="text-gray-400 text-[10px]">基于历史数据 · 热点匹配 · 个性化推荐</div>
-              </div>
-              <div className="flex items-center gap-1">
-                {recommendLoading && <div className="w-3 h-3 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />}
-                <div className="text-violet-500 text-sm font-bold">→</div>
+              <div
+                onClick={() => { setTab('materials'); setTimeout(() => { setShowRecommendPanel(true); if (recommendTopicsFn) recommendTopicsFn() }, 300) }}
+                className="bg-gradient-to-br from-violet-500 to-blue-500 rounded-2xl px-3.5 py-3 flex items-center gap-2.5 active:scale-[0.98] transition-all cursor-pointer shadow-md"
+              >
+                <span className="text-2xl flex-shrink-0">🧠</span>
+                <div className="min-w-0">
+                  <div className="font-black text-white text-xs">AI选题推荐</div>
+                  <div className="text-white/70 text-[10px]">数据驱动·个性化</div>
+                </div>
               </div>
             </div>
 
@@ -2935,29 +2960,28 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
 
             {/* 快捷入口 */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-3">⚡ 快捷入口</div>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-bold text-gray-900 text-sm">⚡ 快速开始</div>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
                 {[
-                  { icon: '📡', label: '情报雷达', action: () => { setTab('materials'); setMatTab('discover') }, color: 'bg-blue-50' },
-                  { icon: '💡', label: '生成选题', action: () => { setTab('materials'); setMatTab('topics') }, color: 'bg-purple-50' },
-                  { icon: '✍️', label: '写文案', action: () => setTab('content'), color: 'bg-green-50' },
-                  { icon: '🎬', label: '做视频', action: () => setTab('video'), color: 'bg-orange-50' },
-                  { icon: '📊', label: '运营中心', action: () => setTab('operations'), color: 'bg-red-50' },
-                  { icon: '🎨', label: '风格模板', action: () => { setTab('materials'); setMatTab('mine') }, color: 'bg-pink-50' },
-                  { icon: '👥', label: '博主追踪', action: () => { setTab('materials'); setMatTab('trending') }, color: 'bg-cyan-50' },
-                  { icon: '⚡', label: '超级生成', action: () => { setTab('materials'); setMatTab('mine'); setTimeout(()=>setShowSuperGen(true),300) }, color: 'bg-gradient-to-br from-purple-50 to-pink-50' },
-                  { icon: '🎙️', label: '口播提取', action: () => { setTab('materials'); setMatTab('mine') }, color: 'bg-violet-50' },
-                  { icon: '🧠', label: '知识库', action: () => { setTab('materials'); setMatTab('mine') }, color: 'bg-indigo-50' },
-                  { icon: '📥', label: '导出数据', action: () => { setTab('profile') }, color: 'bg-teal-50' },
-                  { icon: '🎯', label: '账号定位', action: onPositioning, color: 'bg-amber-50' },
+                  { icon: '📡', label: '今日情报', desc: '热点·趋势', action: () => { setTab('materials'); setMatTab('discover') }, color: 'bg-blue-50 text-blue-600' },
+                  { icon: '💡', label: '生成选题', desc: 'AI推荐', action: () => { setTab('materials'); setMatTab('topics') }, color: 'bg-purple-50 text-purple-600' },
+                  { icon: '✍️', label: '写文案', desc: '一键生成', action: () => setTab('content'), color: 'bg-green-50 text-green-600' },
+                  { icon: '🎬', label: '做视频', desc: 'TTS合成', action: () => setTab('video'), color: 'bg-orange-50 text-orange-600' },
+                  { icon: '👥', label: '博主追踪', desc: '爆款分析', action: () => { setTab('materials'); setMatTab('trending') }, color: 'bg-cyan-50 text-cyan-600' },
+                  { icon: '📊', label: '运营数据', desc: '排期·复盘', action: () => setTab('operations'), color: 'bg-red-50 text-red-600' },
                 ].map((item: any, i: number) => (
                   <button
                     key={i}
                     onClick={item.action}
-                    className={`${item.color} rounded-2xl p-3 flex flex-col items-center gap-1.5 active:scale-95 transition-transform`}
+                    className={`${item.color.split(' ')[0]} rounded-2xl p-3 flex items-center gap-2.5 active:scale-95 transition-transform text-left`}
                   >
-                    <span className="text-xl">{item.icon}</span>
-                    <span className="text-[10px] font-semibold text-gray-600 text-center leading-tight">{item.label}</span>
+                    <span className="text-2xl flex-shrink-0">{item.icon}</span>
+                    <div className="min-w-0">
+                      <div className={`text-xs font-bold ${item.color.split(' ')[1]} leading-tight`}>{item.label}</div>
+                      <div className="text-[10px] text-gray-400 mt-0.5">{item.desc}</div>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -3302,12 +3326,12 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
             <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white" />
           </button>
         </div>
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-3">
+        <div className="flex gap-1.5">
           {TABS.map(t => (
             <button
               key={t.id}
               onClick={() => setMatTab(t.id)}
-              className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${matTab === t.id ? 'bg-blue-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}
+              className={`flex-1 py-2 rounded-2xl text-[11px] font-bold transition-all ${matTab === t.id ? 'bg-blue-500 text-white shadow-sm' : 'bg-white/60 text-gray-400'}`}
             >{t.label}</button>
           ))}
         </div>
@@ -3318,9 +3342,9 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
         {/* 🔥 发现 Tab */}
         {matTab === 'discover' && (
           <div>
-            <div className="flex gap-2 mb-3 mt-1">
-              <button onClick={() => setDiscoverSubTab('hotspot')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${discoverSubTab === 'hotspot' ? 'bg-orange-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>🔥 今日热点</button>
-              <button onClick={() => setDiscoverSubTab('radar')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${discoverSubTab === 'radar' ? 'bg-blue-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>📡 情报雷达</button>
+            <div className="flex gap-1.5 mb-3 mt-1">
+              <button onClick={() => setDiscoverSubTab('hotspot')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${discoverSubTab === 'hotspot' ? 'bg-orange-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>🔥 热点</button>
+              <button onClick={() => setDiscoverSubTab('radar')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${discoverSubTab === 'radar' ? 'bg-blue-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>📡 雷达</button>
             </div>
             {discoverSubTab === 'hotspot' && (
           <div className="space-y-2">
@@ -3927,9 +3951,9 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
         {/* 💎 爆款库 Tab */}
         {matTab === 'trending' && (
           <div>
-            <div className="flex gap-2 mb-3 mt-1">
-              <button onClick={() => setTrendingSubTab('trending')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${trendingSubTab === 'trending' ? 'bg-orange-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>💎 爆款素材</button>
-              <button onClick={() => setTrendingSubTab('creator')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${trendingSubTab === 'creator' ? 'bg-cyan-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>🎯 博主追踪</button>
+            <div className="flex gap-1.5 mb-3 mt-1">
+              <button onClick={() => setTrendingSubTab('trending')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${trendingSubTab === 'trending' ? 'bg-orange-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>💎 爆款</button>
+              <button onClick={() => setTrendingSubTab('creator')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${trendingSubTab === 'creator' ? 'bg-cyan-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>👥 博主</button>
             </div>
             {trendingSubTab === 'trending' && (
               <div>
@@ -4509,9 +4533,9 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
         {/* 💡 选题库 Tab */}
         {matTab === 'topics' && (
           <div>
-            <div className="flex gap-2 mb-3 mt-1">
+            <div className="flex gap-1.5 mb-3 mt-1">
               <button onClick={() => setTopicsSubTab('topics')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${topicsSubTab === 'topics' ? 'bg-purple-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>💡 选题库</button>
-              <button onClick={() => setTopicsSubTab('plan')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${topicsSubTab === 'plan' ? 'bg-indigo-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>📋 内容方案</button>
+              <button onClick={() => setTopicsSubTab('plan')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${topicsSubTab === 'plan' ? 'bg-indigo-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>📋 方案</button>
             </div>
             {topicsSubTab === 'topics' && (
           <div className="space-y-3 mt-1">
@@ -4718,10 +4742,10 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
         {/* 🧠 我的素材 Tab */}
         {matTab === 'mine' && (
           <div>
-            <div className="flex gap-2 mb-3 mt-1">
+            <div className="flex gap-1.5 mb-3 mt-1">
               <button onClick={() => setMineSubTab('knowledge')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${mineSubTab === 'knowledge' ? 'bg-indigo-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>🧠 知识库</button>
               <button onClick={() => setMineSubTab('style')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${mineSubTab === 'style' ? 'bg-pink-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>🎨 风格</button>
-              <button onClick={() => setMineSubTab('extract')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${mineSubTab === 'extract' ? 'bg-violet-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>🎙️ 口播</button>
+              <button onClick={() => setMineSubTab('extract')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${mineSubTab === 'extract' ? 'bg-violet-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>🎙️ 提取</button>
             </div>
             {mineSubTab === 'knowledge' && (
           <div className="space-y-3 pb-4">
@@ -10114,12 +10138,12 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
             <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white" />
           </button>
         </div>
-        <div className="flex gap-2 pb-3">
+        <div className="flex gap-1.5 pb-3">
           {TABS.map(t => (
             <button
               key={t.id}
               onClick={() => setOpsTab(t.id)}
-              className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${opsTab === t.id ? 'bg-blue-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}
+              className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${opsTab === t.id ? 'bg-blue-500 text-white shadow-sm' : 'bg-white/70 text-gray-400'}`}
             >{t.label}</button>
           ))}
         </div>
