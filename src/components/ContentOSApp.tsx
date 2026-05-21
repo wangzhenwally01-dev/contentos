@@ -738,6 +738,14 @@ export default function ContentOSApp() {
   const [posCompLoading, setPosCompLoading] = useState(false)
   const [posOptimizing, setPosOptimizing] = useState(false)
   const [posOptResult, setPosOptResult] = useState<any>(null)
+  // v18.0: 新账号策划流程
+  const [posPlans, setPosPlans] = useState<any[]>([])
+  const [posPlansLoading, setPosPlansLoading] = useState(false)
+  const [posSelectedPlan, setPosSelectedPlan] = useState<any>(null)
+  const [posShowPlanDetail, setPosShowPlanDetail] = useState(false)
+  const [posIndustryReport, setPosIndustryReport] = useState<any>(null)
+  const [posReportLoading, setPosReportLoading] = useState(false)
+  const [posReportStep, setPosReportStep] = useState<'chat'|'report'|'plans'|'confirm'>('chat')
 
   const acc = accounts[accountIdx] || accounts[0]
 
@@ -1547,6 +1555,68 @@ export default function ContentOSApp() {
     }
   }
 
+  // v18.0: 生成行业报告
+  async function generateIndustryReport(chatData: any) {
+    setPosReportLoading(true)
+    try {
+      const res = await fetch('/api/generate-positioning', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'industry_report',
+          industry: chatData.industry || posIndustry,
+          product: chatData.product || posProduct,
+          targetCustomer: chatData.targetCustomer || posCustomer,
+          city: chatData.city || posCity,
+          advantage: chatData.advantage || posAdvantage,
+          accountGoal: chatData.accountGoal || '',
+        })
+      })
+      const data = await res.json()
+      if (data.industryReport) {
+        setPosIndustryReport(data.industryReport)
+        setPosReportStep('report')
+      } else {
+        showToast('生成失败，请重试')
+      }
+    } catch {
+      showToast('网络错误，请重试')
+    } finally {
+      setPosReportLoading(false)
+    }
+  }
+
+  // v18.0: 生成账号方案
+  async function generateAccountPlans() {
+    setPosPlansLoading(true)
+    try {
+      const res = await fetch('/api/generate-positioning', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'account_plans',
+          industry: posIndustry,
+          product: posProduct,
+          targetCustomer: posCustomer,
+          city: posCity,
+          advantage: posAdvantage,
+          industryReport: posIndustryReport,
+        })
+      })
+      const data = await res.json()
+      if (data.plans) {
+        setPosPlans(data.plans)
+        setPosReportStep('plans')
+      } else {
+        showToast('生成方案失败，请重试')
+      }
+    } catch {
+      showToast('网络错误，请重试')
+    } finally {
+      setPosPlansLoading(false)
+    }
+  }
+
   // v16.3: 竞品分析
   async function analyzeCompetitors() {
     if (!posCompetitors.trim()) { showToast('请输入竞品账号信息'); return }
@@ -1897,12 +1967,17 @@ export default function ContentOSApp() {
       <div className="w-[390px] h-[844px] rounded-[50px] overflow-hidden bg-[#F2F2F7] flex flex-col shadow-[0_0_0_10px_#111,0_40px_100px_rgba(0,0,0,.7)] relative">
         {/* Header */}
         <div className="px-5 pt-12 pb-3 flex-shrink-0 flex items-center gap-3 bg-white/80 backdrop-blur-xl border-b border-gray-100">
-          <button onClick={() => { setShowPositioning(false); setPosStep(1); setPosResult(null); setPosChatMessages([]); setPosChatStep(0); setPosCompAnalysis(null); setPosOptResult(null) }} className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-lg">←</button>
+          <button onClick={() => {
+            if (posReportStep === 'report') { setPosReportStep('chat') }
+            else if (posReportStep === 'plans') { setPosReportStep('report') }
+            else if (posReportStep === 'confirm') { setPosReportStep('plans') }
+            else { setShowPositioning(false); setPosStep(1); setPosResult(null); setPosChatMessages([]); setPosChatStep(0); setPosCompAnalysis(null); setPosOptResult(null); setPosReportStep('chat'); setPosIndustryReport(null); setPosPlans([]) }
+          }} className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-lg">←</button>
           <div className="flex-1">
             <h1 className="text-base font-black text-gray-900">🎯 账号定位向导</h1>
             <p className="text-[10px] text-gray-400">AI 顾问帮你找准账号方向</p>
           </div>
-          {posStep <= 2 && !posResult && (
+          {posReportStep === 'chat' && !posResult && (
             <div className="flex bg-gray-100 rounded-xl p-0.5 gap-0.5">
               <button onClick={() => { setPosMode('chat'); if(posChatMessages.length === 0) startPosChat() }} className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${posMode==='chat' ? 'bg-white text-blue-500 shadow-sm' : 'text-gray-400'}`}>💬 对话</button>
               <button onClick={() => setPosMode('form')} className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${posMode==='form' ? 'bg-white text-blue-500 shadow-sm' : 'text-gray-400'}`}>📝 表单</button>
@@ -1910,18 +1985,22 @@ export default function ContentOSApp() {
           )}
         </div>
 
-        {(posMode === 'form' || posStep >= 3) && (
+        {(posReportStep !== 'chat' || posMode === 'form' || posStep >= 3) && (
           <div className="px-5 py-3 flex-shrink-0 bg-white/60">
-            <div className="flex items-center gap-1.5">
-              {(posStep <= 3 ? ['填写信息', '确认', '定位报告'] : ['填写信息', '确认', '定位报告', '优化建议']).map((s, i) => (
-                <div key={i} className="flex items-center gap-1 flex-1">
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${posStep > i + 1 ? 'bg-green-400 text-white' : posStep === i + 1 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
-                    {posStep > i + 1 ? '✓' : i + 1}
+            <div className="flex items-center gap-1">
+              {['AI对话', '行业报告', '选方案', '确认'].map((s, i) => {
+                const stepMap: any = { 'chat': 0, 'report': 1, 'plans': 2, 'confirm': 3 }
+                const curIdx = stepMap[posReportStep] ?? 0
+                return (
+                  <div key={i} className="flex items-center gap-0.5 flex-1">
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${curIdx > i ? 'bg-green-400 text-white' : curIdx === i ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                      {curIdx > i ? '✓' : i + 1}
+                    </div>
+                    <span className={`text-[10px] whitespace-nowrap ${curIdx === i ? 'text-blue-500 font-semibold' : 'text-gray-400'}`}>{s}</span>
+                    {i < 3 && <div className={`flex-1 h-px ${curIdx > i ? 'bg-green-400' : 'bg-gray-200'}`} />}
                   </div>
-                  <span className={`text-[10px] ${posStep === i + 1 ? 'text-blue-500 font-semibold' : 'text-gray-400'}`}>{s}</span>
-                  {i < (posStep <= 3 ? 2 : 3) && <div className={`flex-1 h-px ${posStep > i + 1 ? 'bg-green-400' : 'bg-gray-200'}`} />}
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}
@@ -1929,7 +2008,7 @@ export default function ContentOSApp() {
         <div className="flex-1 overflow-y-auto scrollbar-hide pb-6">
 
           {/* 对话模式 */}
-          {posMode === 'chat' && posStep <= 2 && (
+          {posMode === 'chat' && posReportStep === 'chat' && (
             <div className="flex flex-col h-full">
               <div className="flex-1 overflow-y-auto scrollbar-hide px-4 py-4 space-y-3">
                 {posChatMessages.length === 0 && (
@@ -1961,9 +2040,14 @@ export default function ContentOSApp() {
                   </div>
                 )}
                 {posChatStep === 6 && (
-                  <div className="px-2">
-                    <button onClick={() => { setPosMode('form'); setPosStep(2) }} className="w-full py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-all">
-                      ✨ 生成我的定位报告
+                  <div className="px-2 space-y-2">
+                    <div className="text-xs text-gray-400 text-center">信息收集完成！接下来将为你生成行业全面报告</div>
+                    <button
+                      onClick={() => generateIndustryReport({ industry: posIndustry, product: posProduct, targetCustomer: posCustomer, city: posCity, advantage: posAdvantage })}
+                      disabled={posReportLoading}
+                      className="w-full py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                    >
+                      {posReportLoading ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/><span>生成行业报告中...</span></> : '📊 生成行业全面报告'}
                     </button>
                   </div>
                 )}
@@ -1987,6 +2071,175 @@ export default function ContentOSApp() {
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* v18.0: 行业报告步骤 */}
+          {posReportStep === 'report' && posIndustryReport && (
+            <div className="space-y-3 px-5 pt-4">
+              <div className="bg-gradient-to-r from-blue-500 to-cyan-400 rounded-2xl p-4 text-white">
+                <div className="font-black text-base mb-1">{posIndustryReport.title || `${posIndustry}行业内容全面报告`}</div>
+                <div className="text-white/80 text-xs leading-relaxed">{posIndustryReport.summary}</div>
+              </div>
+              {posIndustryReport.opportunities?.length > 0 && (
+                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                  <div className="font-bold text-gray-900 text-sm mb-2">🚀 市场机会</div>
+                  <div className="space-y-2">
+                    {posIndustryReport.opportunities.map((o: string, i: number) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">{i+1}</div>
+                        <div className="text-xs text-gray-700 leading-relaxed">{o}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {posIndustryReport.contentTrends?.length > 0 && (
+                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                  <div className="font-bold text-gray-900 text-sm mb-2">📈 内容趋势</div>
+                  <div className="space-y-2">
+                    {posIndustryReport.contentTrends.map((t: string, i: number) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <span className="text-sm flex-shrink-0">✦</span>
+                        <div className="text-xs text-gray-700 leading-relaxed">{t}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {posIndustryReport.competition && (
+                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                  <div className="font-bold text-gray-900 text-sm mb-2">⚔️ 竞争格局</div>
+                  <div className="text-xs text-gray-700 leading-relaxed">{posIndustryReport.competition}</div>
+                </div>
+              )}
+              {posIndustryReport.monetization && (
+                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                  <div className="font-bold text-gray-900 text-sm mb-2">💰 商业化路径</div>
+                  <div className="text-xs text-gray-700 leading-relaxed">{posIndustryReport.monetization}</div>
+                </div>
+              )}
+              <button
+                onClick={generateAccountPlans}
+                disabled={posPlansLoading}
+                className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white font-bold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {posPlansLoading ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/><span>生成个性化方案中...</span></> : '✨ 生成个性化内容方案'}
+              </button>
+            </div>
+          )}
+
+          {/* v18.0: 方案选择步骤 */}
+          {posReportStep === 'plans' && posPlans.length > 0 && (
+            <div className="space-y-3 px-5 pt-4">
+              <div className="text-center">
+                <div className="font-black text-gray-900 text-base">选择你的内容方案</div>
+                <div className="text-xs text-gray-400 mt-1">为你生成了 {posPlans.length} 个差异化方案，左右滑动查看</div>
+              </div>
+              <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
+                {posPlans.map((plan: any) => (
+                  <div
+                    key={plan.id}
+                    onClick={() => { setPosSelectedPlan(plan); setPosShowPlanDetail(true) }}
+                    className={`flex-shrink-0 w-[200px] rounded-2xl p-4 cursor-pointer active:scale-[0.98] transition-all shadow-sm border-2 ${posSelectedPlan?.id === plan.id ? 'border-blue-400' : 'border-transparent'}`}
+                    style={{ background: plan.color || '#f0f4ff' }}
+                  >
+                    <div className="text-2xl mb-2">{plan.emoji || '🎯'}</div>
+                    <div className="font-black text-gray-900 text-sm mb-1">{plan.name}</div>
+                    <div className="text-xs text-gray-600 leading-relaxed line-clamp-3">{plan.positioning}</div>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {plan.tags?.slice(0,2).map((tag: string, i: number) => (
+                        <span key={i} className="text-[10px] bg-white/60 text-gray-600 px-2 py-0.5 rounded-full">{tag}</span>
+                      ))}
+                    </div>
+                    <div className="mt-3 text-[11px] text-blue-600 font-semibold">点击查看详情 →</div>
+                  </div>
+                ))}
+              </div>
+              {posSelectedPlan && (
+                <button
+                  onClick={() => setPosReportStep('confirm')}
+                  className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-all"
+                >
+                  ✅ 选择「{posSelectedPlan.name}」方案
+                </button>
+              )}
+              <button onClick={generateAccountPlans} disabled={posPlansLoading} className="w-full py-2 text-xs text-gray-400 text-center">
+                {posPlansLoading ? '重新生成中...' : '🔄 不满意？重新生成'}
+              </button>
+            </div>
+          )}
+
+          {/* v18.0: 方案详情弹窗 */}
+          {posShowPlanDetail && posSelectedPlan && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setPosShowPlanDetail(false)}>
+              <div className="w-full bg-white rounded-t-3xl p-5 pb-8 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="text-3xl">{posSelectedPlan.emoji}</span>
+                  <div>
+                    <div className="font-black text-gray-900 text-base">{posSelectedPlan.name}</div>
+                    <div className="text-xs text-gray-400">{posSelectedPlan.style}</div>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {posSelectedPlan.persona && <div className="bg-blue-50 rounded-xl p-3"><div className="text-xs font-bold text-blue-700 mb-1">👤 人设定位</div><div className="text-xs text-gray-700">{posSelectedPlan.persona}</div></div>}
+                  {posSelectedPlan.homepage && <div className="bg-purple-50 rounded-xl p-3"><div className="text-xs font-bold text-purple-700 mb-1">🏠 主页设置</div><div className="text-xs text-gray-700">{posSelectedPlan.homepage}</div></div>}
+                  {posSelectedPlan.monetization && <div className="bg-green-50 rounded-xl p-3"><div className="text-xs font-bold text-green-700 mb-1">💰 商业化路径</div><div className="text-xs text-gray-700">{posSelectedPlan.monetization}</div></div>}
+                  {posSelectedPlan.contentModules?.length > 0 && (
+                    <div className="bg-orange-50 rounded-xl p-3">
+                      <div className="text-xs font-bold text-orange-700 mb-2">📦 内容模块</div>
+                      <div className="space-y-1">
+                        {posSelectedPlan.contentModules.map((m: string, i: number) => (
+                          <div key={i} className="flex items-start gap-1.5"><span className="text-orange-400 text-xs">•</span><span className="text-xs text-gray-700">{m}</span></div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {posSelectedPlan.operationStrategy && <div className="bg-gray-50 rounded-xl p-3"><div className="text-xs font-bold text-gray-700 mb-1">📋 运营策略</div><div className="text-xs text-gray-600">{posSelectedPlan.operationStrategy}</div></div>}
+                </div>
+                <button
+                  onClick={() => { setPosShowPlanDetail(false); setPosReportStep('confirm') }}
+                  className="w-full mt-4 py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all"
+                >
+                  ✅ 选择此方案
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* v18.0: 确认方案步骤 */}
+          {posReportStep === 'confirm' && posSelectedPlan && (
+            <div className="space-y-3 px-5 pt-4">
+              <div className="bg-gradient-to-r from-green-400 to-emerald-500 rounded-2xl p-4 text-white">
+                <div className="text-white/80 text-xs mb-1">即将创建账号方案</div>
+                <div className="font-black text-base">{posSelectedPlan.emoji} {posSelectedPlan.name}</div>
+                <div className="text-white/80 text-xs mt-1 leading-relaxed">{posSelectedPlan.positioning}</div>
+              </div>
+              <div className="bg-white rounded-2xl p-4 shadow-sm space-y-2">
+                <div className="font-bold text-gray-900 text-sm mb-2">方案摘要</div>
+                {posSelectedPlan.persona && <div className="text-xs text-gray-600"><span className="font-semibold text-gray-800">人设：</span>{posSelectedPlan.persona}</div>}
+                {posSelectedPlan.monetization && <div className="text-xs text-gray-600"><span className="font-semibold text-gray-800">变现：</span>{posSelectedPlan.monetization}</div>}
+                {posSelectedPlan.contentModules?.length > 0 && <div className="text-xs text-gray-600"><span className="font-semibold text-gray-800">内容模块：</span>{posSelectedPlan.contentModules.slice(0,3).join('、')}</div>}
+              </div>
+              <button
+                onClick={() => {
+                  const updatedAcc = { ...acc, accountPlan: posSelectedPlan, industryReport: posIndustryReport, positioning: posSelectedPlan.positioning || acc.positioning }
+                  setAccounts((prev: any[]) => prev.map((a: any, i: number) => i === accountIdx ? updatedAcc : a))
+                  try { localStorage.setItem(`contentos_${acc.id}_account_plan`, JSON.stringify(posSelectedPlan)) } catch {}
+                  try { localStorage.setItem(`contentos_${acc.id}_industry_report`, JSON.stringify(posIndustryReport)) } catch {}
+                  setShowPositioning(false)
+                  setPosReportStep('chat')
+                  setPosIndustryReport(null)
+                  setPosPlans([])
+                  setPosSelectedPlan(null)
+                  showToast('✅ 账号方案已确认并保存！')
+                }}
+                className="w-full py-3.5 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-all"
+              >
+                🚀 确认方案，开始创作！
+              </button>
+              <button onClick={() => setPosReportStep('plans')} className="w-full py-2 text-xs text-gray-400 text-center">← 返回重新选择</button>
             </div>
           )}
 
@@ -2684,9 +2937,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => setShowGlobalSearch(true)} className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-base">🔍</button>
-                <button onClick={() => setShowAiPanel(true)} className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-base">🤖</button>
-                <button onClick={() => setShowAddAcc(!showAddAcc)} className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-base">⚙️</button>
+                <button onClick={() => setShowAddAcc(!showAddAcc)} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 rounded-xl text-xs font-bold text-gray-600 active:scale-95 transition-all">⚙️ 账号设置</button>
               </div>
             </div>
 
@@ -2721,6 +2972,20 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                 <span className="text-[9px]">新账号</span>
               </button>
             </div>
+          </div>
+
+          {/* v18.0: 全账号数据汇总 */}
+          <div className="grid grid-cols-3 gap-2 px-4 py-2 border-t border-gray-100">
+            {[
+              { label: '总粉丝', value: (() => { try { return accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.fans) || 0) } return sum }, 0).toLocaleString() } catch { return '0' } })(), icon: '👥', color: 'text-blue-500' },
+              { label: '粉丝增量', value: (() => { try { return accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.fansGrowth) || 0) } return sum }, 0).toLocaleString() } catch { return '+0' } })(), icon: '📈', color: 'text-green-500' },
+              { label: '总曝光', value: (() => { try { const total = accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.plays) || 0) } return sum }, 0); return total >= 10000 ? (total/10000).toFixed(1)+'万' : total.toLocaleString() } catch { return '0' } })(), icon: '👁️', color: 'text-purple-500' },
+            ].map((item, i) => (
+              <div key={i} className="bg-white rounded-xl px-2 py-2 text-center shadow-sm">
+                <div className={`text-sm font-black ${item.color}`}>{item.value}</div>
+                <div className="text-[10px] text-gray-400 mt-0.5">{item.icon} {item.label}</div>
+              </div>
+            ))}
           </div>
 
           {/* 主内容区 */}
@@ -3094,6 +3359,72 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
       )
     }
     
+
+function SingleVideoExtract({ showToast }: any) {
+  const [videoUrl, setVideoUrl] = React.useState('')
+  const [extracting, setExtracting] = React.useState(false)
+  const [result, setResult] = React.useState<any>(null)
+  const [showResult, setShowResult] = React.useState(false)
+
+  async function extractScript() {
+    if (!videoUrl.trim()) { showToast('请输入视频链接'); return }
+    setExtracting(true)
+    setResult(null)
+    try {
+      const res = await fetch('/api/extract-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: videoUrl.trim() })
+      })
+      const data = await res.json()
+      if (data.transcript || data.script) {
+        setResult(data)
+        setShowResult(true)
+        showToast('✅ 文案提取成功')
+      } else {
+        showToast(data.error || '提取失败，请检查链接')
+      }
+    } catch {
+      showToast('网络错误，请重试')
+    } finally {
+      setExtracting(false)
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl p-4 shadow-sm">
+      <div className="font-bold text-gray-900 text-sm mb-3">🎙️ 单视频文案提取</div>
+      <div className="flex gap-2">
+        <input
+          value={videoUrl}
+          onChange={e => setVideoUrl(e.target.value)}
+          placeholder="粘贴抖音/小红书视频链接..."
+          className="flex-1 px-3 py-2 rounded-xl bg-gray-100 text-sm outline-none"
+        />
+        <button
+          onClick={extractScript}
+          disabled={extracting || !videoUrl.trim()}
+          className="px-4 py-2 bg-gradient-to-r from-violet-500 to-purple-400 text-white text-xs font-bold rounded-xl disabled:opacity-60 active:scale-95 transition-all flex-shrink-0"
+        >
+          {extracting ? '提取中...' : '提取'}
+        </button>
+      </div>
+      {showResult && result && (
+        <div className="mt-3 bg-gray-50 rounded-xl p-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-bold text-gray-700">口播文案</div>
+            <div className="flex gap-2">
+              <button onClick={() => { try { navigator.clipboard.writeText(result.transcript || result.script || '') } catch {} showToast('✅ 已复制') }} className="text-[10px] text-blue-500 font-semibold">复制</button>
+              <button onClick={() => setShowResult(false)} className="text-[10px] text-gray-400">关闭</button>
+            </div>
+          </div>
+          <div className="text-xs text-gray-700 leading-relaxed max-h-32 overflow-y-auto">{result.transcript || result.script}</div>
+          {result.title && <div className="mt-2 text-[10px] text-gray-400">标题：{result.title}</div>}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, generateTopics, topicFilter, setTopicFilter, topicSearch, setTopicSearch, batchCount, setBatchCount, topicCategories, selectedCategory, setSelectedCategory, useTopic, savedContents, savedTopics, saveTopic, creatorUrl, setCreatorUrl, creatorLoading, creatorData, setCreatorData, trackedCreators, setTrackedCreators, scrapeCreator, showToast, radarData, radarLoading, fetchRadar, styleTemplates, styleLoading, styleUrl, setStyleUrl, styleName, setStyleName, styleText, setStyleText, analyzeStyle, applyTemplate, deleteTemplate, saveToLocal, setTab, setVideoCopy, setShowAiPanel, creatorAnalysisTab, setCreatorAnalysisTab, selectedScript, setSelectedScript, showScriptDetail, setShowScriptDetail, knowledgeItems, knowledgeInput, setKnowledgeInput, knowledgeTitle, setKnowledgeTitle, knowledgeCategory, setKnowledgeCategory, showAddKnowledge, setShowAddKnowledge, knowledgeSearch, setKnowledgeSearch, addKnowledgeItem, deleteKnowledgeItem, showSuperGen, setShowSuperGen, superGenLoading, superGenResult, setSuperGenResult, superGenTopic, setSuperGenTopic, superGenHotspot, setSuperGenHotspot, superGenStyle, setSuperGenStyle, superGenKnowledge, setSuperGenKnowledge, superGenerate, acc: accProp, trendingItems, trendingLoading, trendingCategory, setTrendingCategory, trendingSort, setTrendingSort, fetchTrendingMaterials, recommendTopics, recommendLoading, recommendInsight, recommendAnalysis, showRecommendPanel, setShowRecommendPanel, recommendTopicsFn, hotspots: hotspotsProp, videoRecords: videoRecordsProp, fetchTrendAnalysis, trendData, trendLoading, showTrendPanel, setShowTrendPanel, generateBorrowScript, borrowLoading, showBorrowPanel, setShowBorrowPanel, borrowResult, borrowHotspot, schedule, setSchedule }: any) {
   const TABS = [
@@ -4014,6 +4345,8 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
 
             {trendingSubTab === 'creator' && (
           <div className="mt-1 space-y-3">
+            {/* v18.0: 单视频文案提取 */}
+            <SingleVideoExtract showToast={showToast} />
             {/* 搜索框 */}
             <div className="bg-white rounded-2xl p-4 shadow-sm">
               <div className="font-bold text-gray-900 text-sm mb-3">🔍 追踪新博主</div>
@@ -4953,12 +5286,29 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 font-medium mb-1.5 block">知识内容</label>
-                      <textarea
-                        value={knowledgeInput}
-                        onChange={e => setKnowledgeInput(e.target.value)}
-                        placeholder="详细描述你的专业知识、行业经验或成功案例...&#10;&#10;例如：我在餐饮行业10年，发现选址最重要的是：1.人流量要看早中晚三个时段...&#10;&#10;AI 会在生成文案时自动调用这些内容，让文案更专业、更有说服力。"
-                        className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-36 leading-relaxed"
-                      />
+                      <div className="relative">
+                        <textarea
+                          value={knowledgeInput}
+                          onChange={e => setKnowledgeInput(e.target.value)}
+                          placeholder="详细描述你的专业知识、行业经验或成功案例...&#10;&#10;例如：我在餐饮行业10年，发现选址最重要的是：1.人流量要看早中晚三个时段...&#10;&#10;AI 会在生成文案时自动调用这些内容，让文案更专业、更有说服力。"
+                          className="w-full px-3 py-2.5 pr-10 rounded-xl bg-gray-100 text-sm outline-none resize-none h-36 leading-relaxed"
+                        />
+                        <button
+                          onClick={() => {
+                            if (typeof window === 'undefined') return
+                            const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+                            if (!SR) { showToast('当前浏览器不支持语音输入'); return }
+                            const recognition = new SR()
+                            recognition.lang = 'zh-CN'
+                            recognition.onresult = (e: any) => { setKnowledgeInput((prev: string) => prev + e.results[0][0].transcript) }
+                            recognition.onerror = () => showToast('语音识别失败，请重试')
+                            recognition.start()
+                            showToast('🎙️ 开始说话...')
+                          }}
+                          className="absolute right-2 top-2 w-7 h-7 rounded-lg bg-blue-100 text-blue-500 flex items-center justify-center text-sm active:scale-95 transition-all"
+                          title="语音输入"
+                        >🎙️</button>
+                      </div>
                       <div className="text-right text-[10px] text-gray-400 mt-1">{knowledgeInput.length} 字</div>
                     </div>
                     <button
@@ -5941,7 +6291,24 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
                       {batchMode ? '✅ 批量模式' : '📦 批量模式'}
                     </button>
                   </div>
-                  <textarea value={selectedTopic} onChange={e => setSelectedTopic(e.target.value)} placeholder="输入选题，例如：普通人如何用 AI 副业月入过万..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20 leading-relaxed" />
+                  <div className="relative">
+                    <textarea value={selectedTopic} onChange={e => setSelectedTopic(e.target.value)} placeholder="输入选题，例如：普通人如何用 AI 副业月入过万..." className="w-full px-3 py-2.5 pr-10 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20 leading-relaxed" />
+                    <button
+                      onClick={() => {
+                        if (typeof window === 'undefined') return
+                        const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+                        if (!SR) { showToast('当前浏览器不支持语音输入'); return }
+                        const recognition = new SR()
+                        recognition.lang = 'zh-CN'
+                        recognition.onresult = (e: any) => { setSelectedTopic(prev => prev + e.results[0][0].transcript) }
+                        recognition.onerror = () => showToast('语音识别失败，请重试')
+                        recognition.start()
+                        showToast('🎙️ 开始说话...')
+                      }}
+                      className="absolute right-2 bottom-2 w-7 h-7 rounded-lg bg-blue-100 text-blue-500 flex items-center justify-center text-sm active:scale-95 transition-all"
+                      title="语音输入"
+                    >🎙️</button>
+                  </div>
                   {savedTopics?.length > 0 && (
                     <div className="mt-2">
                       <div className="text-[10px] text-gray-400 mb-1.5">📌 已保存选题</div>
