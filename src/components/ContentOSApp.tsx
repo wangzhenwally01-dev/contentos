@@ -1906,7 +1906,7 @@ export default function ContentOSApp() {
           <div className="w-20 h-20 rounded-[28px] bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center mb-6 shadow-xl">
             <span className="text-4xl">🎬</span>
           </div>
-          <h1 className="text-2xl font-black text-gray-900 mb-1">ContentOS</h1>
+          <h1 className="text-2xl font-black text-gray-900 mb-1 tracking-tight">ContentOS</h1>
           <p className="text-sm text-gray-400 mb-8">AI 内容增长工作台</p>
           <div className="w-full space-y-3">
             <input
@@ -2779,17 +2779,25 @@ export default function ContentOSApp() {
           />
         )}
       </div>
-      <div className="bg-white/95 backdrop-blur-xl border-t border-gray-100 flex items-start pt-2 flex-shrink-0 z-50" style={{paddingBottom:'max(20px, env(safe-area-inset-bottom, 20px))'}}>
-        {NAV_TABS.map(t => {
+      <div className="bg-white/98 backdrop-blur-2xl border-t border-gray-100/80 flex items-end flex-shrink-0 z-50 shadow-[0_-1px_20px_rgba(0,0,0,0.06)]" style={{paddingBottom:'max(16px, env(safe-area-inset-bottom, 16px))'}}>
+        {NAV_TABS.map((t, idx) => {
           const isActive = t.id === 'create' ? (tab === 'content' || tab === 'video') : tab === t.id
+          const isCreate = t.id === 'create'
           return (
             <button key={t.id} onClick={() => {
               if (t.id === 'create') { setTab(tab === 'video' ? 'video' : 'content') }
               else { setTab(t.id as Tab) }
-            }} className="flex-1 flex flex-col items-center gap-0.5 py-1 tab-transition">
-              <span className={`text-[22px] transition-transform duration-200 ${isActive ? 'scale-110' : 'scale-100'}`}>{t.icon}</span>
-              <span className={`text-[10px] font-medium transition-colors ${isActive ? 'text-blue-500 font-bold' : 'text-gray-400'}`}>{t.label}</span>
-              {isActive && <div className="w-4 h-0.5 rounded-full bg-blue-500 mt-0.5" />}
+            }} className={`flex-1 flex flex-col items-center tab-transition ${isCreate ? 'relative -mt-5' : 'pt-2'}`}>
+              {isCreate ? (
+                <div className={`w-14 h-14 rounded-[22px] flex items-center justify-center shadow-lg transition-all duration-200 ${isActive ? 'bg-gradient-to-br from-blue-500 to-cyan-400 scale-105 shadow-blue-300/60' : 'bg-gradient-to-br from-blue-500 to-cyan-400 shadow-blue-200/50'}`}>
+                  <span className="text-[26px]">{t.icon}</span>
+                </div>
+              ) : (
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-200 ${isActive ? 'bg-blue-50 scale-105' : ''}`}>
+                  <span className={`text-[22px] transition-transform duration-200 ${isActive ? 'scale-110' : 'scale-100'}`}>{t.icon}</span>
+                </div>
+              )}
+              <span className={`text-[10px] font-medium transition-colors mt-0.5 ${isCreate ? 'mt-1' : ''} ${isActive ? (isCreate ? 'text-blue-500 font-bold' : 'text-blue-500 font-bold') : 'text-gray-400'}`}>{t.label}</span>
             </button>
           )
         })}
@@ -2923,21 +2931,22 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
       const dateStr = today.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })
 
       return (
-        <div className="flex flex-col h-full bg-gray-50">
+        <div className="flex flex-col h-full bg-[#F5F6FA]">
           {/* 顶部账号栏 */}
-          <div className="bg-white px-4 pt-12 pb-3 shadow-sm">
+          <div className="bg-white px-4 pt-12 pb-3 shadow-[0_1px_12px_rgba(0,0,0,0.06)]">
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center text-lg shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <div className={`w-10 h-10 rounded-[14px] bg-gradient-to-br ${acc.color || 'from-blue-400 to-cyan-400'} flex items-center justify-center text-xl shadow-md`}>
                   {acc.emoji || '🏪'}
                 </div>
                 <div>
-                  <div className="font-bold text-gray-900 text-sm leading-tight">{acc.name}</div>
-                  <div className="text-[10px] text-gray-400">{acc.industry} · {acc.positioning === '待完善' ? <span className="text-orange-400">定位待完善</span> : acc.positioning?.slice(0, 10)}</div>
+                  <div className="font-black text-gray-900 text-sm leading-tight">{acc.name}</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">{acc.industry} · {acc.positioning === '待完善' ? <span className="text-orange-400 font-medium">定位待完善 ⚡</span> : acc.positioning?.slice(0, 12)}</div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => setShowAddAcc(!showAddAcc)} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 rounded-xl text-xs font-bold text-gray-600 active:scale-95 transition-all">⚙️ 账号设置</button>
+                <button onClick={() => setShowGlobalSearch(true)} className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-sm active:scale-95 transition-all">🔍</button>
+                <button onClick={() => setShowAddAcc(!showAddAcc)} className="flex items-center gap-1 px-2.5 py-1.5 bg-gray-100 rounded-xl text-xs font-bold text-gray-600 active:scale-95 transition-all">⚙️ 设置</button>
               </div>
             </div>
 
@@ -2951,7 +2960,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                   <button
                     key={a.id}
                     onClick={() => { setAccountIdx(i); if (typeof navigator !== 'undefined') navigator.vibrate?.(10) }}
-                    className={`flex-shrink-0 flex flex-col items-start gap-0.5 px-3 py-2 rounded-2xl text-xs font-semibold transition-all active:scale-95 ${i === accountIdx ? 'bg-blue-500 text-white shadow-sm' : 'bg-white text-gray-600 shadow-sm border border-gray-100'}`}
+                    className={`flex-shrink-0 flex flex-col items-start gap-0.5 px-3 py-2 rounded-2xl text-xs font-semibold transition-all active:scale-95 ${i === accountIdx ? 'bg-gradient-to-br from-blue-500 to-cyan-400 text-white shadow-md shadow-blue-200/60' : 'bg-gray-50 text-gray-600 border border-gray-100'}`}
                   >
                     <div className="flex items-center gap-1.5">
                       <span>{a.emoji || '🏪'}</span>
@@ -2966,7 +2975,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
               })}
               <button
                 onClick={() => setShowAddAccount(true)}
-                className="flex-shrink-0 flex flex-col items-center justify-center gap-0.5 px-3 py-2 rounded-2xl text-xs font-semibold border-2 border-dashed border-gray-200 text-gray-400 hover:border-blue-300 hover:text-blue-400 transition-all"
+                className="flex-shrink-0 flex flex-col items-center justify-center gap-0.5 px-3 py-2 rounded-2xl text-xs font-semibold border-2 border-dashed border-gray-200 text-gray-400 active:scale-95 transition-all"
               >
                 <span className="text-base">＋</span>
                 <span className="text-[9px]">新账号</span>
@@ -2975,28 +2984,31 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
           </div>
 
           {/* v18.0: 全账号数据汇总 */}
-          <div className="grid grid-cols-3 gap-2 px-4 py-2 border-t border-gray-100">
+          <div className="flex gap-2 px-4 py-2.5 border-t border-gray-100/80 bg-white">
             {[
-              { label: '总粉丝', value: (() => { try { return accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.fans) || 0) } return sum }, 0).toLocaleString() } catch { return '0' } })(), icon: '👥', color: 'text-blue-500' },
-              { label: '粉丝增量', value: (() => { try { return accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.fansGrowth) || 0) } return sum }, 0).toLocaleString() } catch { return '+0' } })(), icon: '📈', color: 'text-green-500' },
-              { label: '总曝光', value: (() => { try { const total = accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.plays) || 0) } return sum }, 0); return total >= 10000 ? (total/10000).toFixed(1)+'万' : total.toLocaleString() } catch { return '0' } })(), icon: '👁️', color: 'text-purple-500' },
+              { label: '总粉丝', value: (() => { try { return accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.fans) || 0) } return sum }, 0).toLocaleString() } catch { return '0' } })(), icon: '👥', color: 'text-blue-500', bg: 'bg-blue-50' },
+              { label: '粉丝增量', value: (() => { try { return '+' + accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.fansGrowth) || 0) } return sum }, 0).toLocaleString() } catch { return '+0' } })(), icon: '📈', color: 'text-green-500', bg: 'bg-green-50' },
+              { label: '总曝光', value: (() => { try { const total = accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.plays) || 0) } return sum }, 0); return total >= 10000 ? (total/10000).toFixed(1)+'万' : total.toLocaleString() } catch { return '0' } })(), icon: '👁️', color: 'text-purple-500', bg: 'bg-purple-50' },
             ].map((item, i) => (
-              <div key={i} className="bg-white rounded-xl px-2 py-2 text-center shadow-sm">
-                <div className={`text-sm font-black ${item.color}`}>{item.value}</div>
-                <div className="text-[10px] text-gray-400 mt-0.5">{item.icon} {item.label}</div>
+              <div key={i} className="flex-1 flex items-center gap-2 bg-gray-50 rounded-2xl px-3 py-2">
+                <div className={`w-7 h-7 rounded-xl ${item.bg} flex items-center justify-center text-sm flex-shrink-0`}>{item.icon}</div>
+                <div>
+                  <div className={`text-sm font-black ${item.color} leading-tight`}>{item.value}</div>
+                  <div className="text-[9px] text-gray-400">{item.label}</div>
+                </div>
               </div>
             ))}
           </div>
 
           {/* 主内容区 */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 pb-24">
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 pb-24">
 
             {/* 日期 + 进度概览 */}
-            <div className="bg-gradient-to-r from-blue-500 to-cyan-400 rounded-2xl p-4 text-white shadow-md">
+            <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-500 rounded-3xl p-4 text-white shadow-lg shadow-blue-200/60">
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <div className="text-white/70 text-xs mb-0.5">今天</div>
-                  <div className="font-bold text-base">{dateStr}</div>
+                  <div className="text-white/60 text-[10px] font-medium uppercase tracking-wider mb-0.5">TODAY</div>
+                  <div className="font-black text-base">{dateStr}</div>
                 </div>
                 <button
                   onClick={generateDailyPlan}
@@ -3006,38 +3018,42 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                 </button>
               </div>
               {/* 进度条 */}
-              <div className="bg-white/20 rounded-full h-2 mb-2">
+              <div className="bg-white/20 rounded-full h-1.5 mb-2">
                 <div
-                  className="bg-white rounded-full h-2 transition-all duration-500"
+                  className="bg-white rounded-full h-1.5 transition-all duration-700"
                   style={{ width: `${progressPct}%` }}
                 />
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-white/80">今日任务完成度</span>
-                <span className="font-bold">{completedCount}/{totalCount} · {progressPct}%</span>
+                <span className="text-white/70 text-[11px]">今日任务完成度</span>
+                <span className="font-black text-[11px]">{completedCount}/{totalCount} · {progressPct}%</span>
               </div>
             </div>
 
             {/* 创作快捷入口 */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2.5">
               <div
                 onClick={() => { setTab('materials'); setMatTab('mine'); setTimeout(()=>setShowSuperGen(true),300) }}
-                className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl px-3.5 py-3 flex items-center gap-2.5 active:scale-[0.98] transition-all cursor-pointer shadow-md"
+                className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-3xl px-4 py-3.5 flex items-center gap-3 active:scale-[0.97] transition-all cursor-pointer shadow-lg shadow-purple-200/60"
               >
-                <span className="text-2xl flex-shrink-0">⚡</span>
+                <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <span className="text-xl">⚡</span>
+                </div>
                 <div className="min-w-0">
                   <div className="font-black text-white text-xs">超级文案</div>
-                  <div className="text-white/70 text-[10px]">热点×知识库×风格</div>
+                  <div className="text-white/70 text-[10px] mt-0.5">热点×知识库×风格</div>
                 </div>
               </div>
               <div
                 onClick={() => { setTab('materials'); setTimeout(() => { setShowRecommendPanel(true); if (recommendTopicsFn) recommendTopicsFn() }, 300) }}
-                className="bg-gradient-to-br from-violet-500 to-blue-500 rounded-2xl px-3.5 py-3 flex items-center gap-2.5 active:scale-[0.98] transition-all cursor-pointer shadow-md"
+                className="bg-gradient-to-br from-violet-500 to-indigo-500 rounded-3xl px-4 py-3.5 flex items-center gap-3 active:scale-[0.97] transition-all cursor-pointer shadow-lg shadow-violet-200/60"
               >
-                <span className="text-2xl flex-shrink-0">🧠</span>
+                <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <span className="text-xl">🧠</span>
+                </div>
                 <div className="min-w-0">
                   <div className="font-black text-white text-xs">AI选题推荐</div>
-                  <div className="text-white/70 text-[10px]">数据驱动·个性化</div>
+                  <div className="text-white/70 text-[10px] mt-0.5">数据驱动·个性化</div>
                 </div>
               </div>
             </div>
@@ -3095,17 +3111,20 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
 
             {/* 数据概览 */}
             <div className="grid grid-cols-4 gap-2">
-              {statsCards.map((card: any) => (
-                <button
-                  key={card.label}
-                  onClick={() => { if (card.action === 'topics') { setTab('materials'); setMatTab('topics') } else if (card.action === 'knowledge') { setTab('materials'); setMatTab('mine') } else setTab(card.action) }}
-                  className="bg-white rounded-2xl p-3 shadow-sm text-center active:scale-95 transition-transform"
-                >
-                  <div className="text-lg mb-1">{card.icon}</div>
-                  <div className="text-base font-black text-gray-900">{card.value}</div>
-                  <div className="text-[9px] text-gray-400 mt-0.5 leading-tight">{card.label}</div>
-                </button>
-              ))}
+              {statsCards.map((card: any) => {
+                const colorMap: any = { blue: 'bg-blue-50 text-blue-500', purple: 'bg-purple-50 text-purple-500', indigo: 'bg-indigo-50 text-indigo-500', green: 'bg-green-50 text-green-500' }
+                return (
+                  <button
+                    key={card.label}
+                    onClick={() => { if (card.action === 'topics') { setTab('materials'); setMatTab('topics') } else if (card.action === 'knowledge') { setTab('materials'); setMatTab('mine') } else setTab(card.action) }}
+                    className="bg-white rounded-2xl p-2.5 shadow-sm text-center active:scale-95 transition-transform"
+                  >
+                    <div className={`w-8 h-8 rounded-xl ${colorMap[card.color] || 'bg-gray-50 text-gray-500'} flex items-center justify-center text-base mx-auto mb-1.5`}>{card.icon}</div>
+                    <div className="text-sm font-black text-gray-900">{card.value}</div>
+                    <div className="text-[9px] text-gray-400 mt-0.5 leading-tight">{card.label}</div>
+                  </button>
+                )
+              })}
             </div>
 
             {/* 智能任务清单 */}
@@ -3161,9 +3180,9 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
             </div>
 
             {/* 今日 & 明日发布计划 */}
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
-                <div className="font-bold text-gray-900 text-sm">📅 发布计划</div>
+            <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50/80">
+                <div className="font-black text-gray-900 text-sm">📅 发布计划</div>
                 <button onClick={() => setTab('operations')} className="text-xs text-blue-500 font-medium">管理 →</button>
               </div>
               {/* 今日 */}
@@ -3224,9 +3243,9 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
             </div>
 
             {/* 快捷入口 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
-                <div className="font-bold text-gray-900 text-sm">⚡ 快速开始</div>
+                <div className="font-black text-gray-900 text-sm">⚡ 快速开始</div>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {[
@@ -3240,13 +3259,10 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                   <button
                     key={i}
                     onClick={item.action}
-                    className={`${item.color.split(' ')[0]} rounded-2xl p-3 flex items-center gap-2.5 active:scale-95 transition-transform text-left`}
+                    className={`${item.color.split(' ')[0]} rounded-2xl p-2.5 flex flex-col items-center gap-1.5 active:scale-95 transition-transform text-center`}
                   >
-                    <span className="text-2xl flex-shrink-0">{item.icon}</span>
-                    <div className="min-w-0">
-                      <div className={`text-xs font-bold ${item.color.split(' ')[1]} leading-tight`}>{item.label}</div>
-                      <div className="text-[10px] text-gray-400 mt-0.5">{item.desc}</div>
-                    </div>
+                    <span className="text-xl">{item.icon}</span>
+                    <div className={`text-[10px] font-bold ${item.color.split(' ')[1]} leading-tight`}>{item.label}</div>
                   </button>
                 ))}
               </div>
@@ -3254,9 +3270,9 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
 
             {/* 今日热点预览 */}
             {hotspots && hotspots.length > 0 && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="font-bold text-gray-900 text-sm">🔥 今日热点</div>
+                  <div className="font-black text-gray-900 text-sm">🔥 今日热点</div>
                   <button
                     onClick={() => { setTab('materials'); setMatTab('discover') }}
                     className="text-xs text-blue-500 font-medium"
@@ -3279,9 +3295,9 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
 
             {/* 最近文案 */}
             {savedContents.length > 0 && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="font-bold text-gray-900 text-sm">💾 最近文案</div>
+                  <div className="font-black text-gray-900 text-sm">💾 最近文案</div>
                   <button onClick={() => setTab('content')} className="text-xs text-blue-500 font-medium">查看全部 →</button>
                 </div>
                 {savedContents.slice(0, 2).map((c: any) => (
@@ -3516,7 +3532,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
             >🔄 刷新</button>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4">
+        <div className="flex-1 overflow-y-auto scrollbar-hide px-4 pb-4 pt-3">
           {recommendLoading ? (
             <div className="flex flex-col items-center justify-center py-20">
               <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-violet-500 to-purple-400 flex items-center justify-center mb-4 shadow-lg animate-pulse">
@@ -3646,30 +3662,30 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#F2F2F7]">
-      <div className="px-5 pt-12 pb-0 flex-shrink-0">
+    <div className="flex flex-col h-full bg-[#F5F6FA]">
+      <div className="px-4 pt-12 pb-0 flex-shrink-0 bg-white shadow-[0_1px_12px_rgba(0,0,0,0.06)]">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-black text-gray-900">素材中心</h1>
           <button
             onClick={() => setShowAiPanel(true)}
-            className="w-9 h-9 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 shadow-sm flex items-center justify-center text-base active:scale-95 transition-transform relative"
+            className="w-9 h-9 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 shadow-md shadow-blue-200/60 flex items-center justify-center text-base active:scale-95 transition-transform relative"
           >
             🤖
             <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white" />
           </button>
         </div>
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5 pb-3">
           {TABS.map(t => (
             <button
               key={t.id}
               onClick={() => setMatTab(t.id)}
-              className={`flex-1 py-2 rounded-2xl text-[11px] font-bold transition-all ${matTab === t.id ? 'bg-blue-500 text-white shadow-sm' : 'bg-white/60 text-gray-400'}`}
+              className={`flex-1 py-2 rounded-2xl text-[11px] font-bold transition-all ${matTab === t.id ? 'bg-blue-500 text-white shadow-sm shadow-blue-200/60' : 'bg-gray-100 text-gray-400'}`}
             >{t.label}</button>
           ))}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4">
+      <div className="flex-1 overflow-y-auto scrollbar-hide px-4 pb-4 pt-3">
 
         {/* 🔥 发现 Tab */}
         {matTab === 'discover' && (
@@ -3684,7 +3700,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
             {hotspots.map((h: any, i: number) => (
               <div
                 key={i}
-                className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3 active:scale-[0.98] transition-transform cursor-pointer"
+                className="bg-white rounded-2xl p-3.5 shadow-sm flex items-center gap-3 active:scale-[0.98] transition-transform cursor-pointer border border-gray-50"
                 onClick={() => {}}
               >
                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-sm flex-shrink-0 ${i === 0 ? 'bg-red-400' : i === 1 ? 'bg-orange-400' : i === 2 ? 'bg-amber-400' : 'bg-gray-300'}`}>
@@ -6262,7 +6278,7 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
         <div className="flex flex-col h-full bg-[#F2F2F7]">
           <div className="px-5 pt-12 pb-3 flex-shrink-0">
             <div className="flex items-center justify-between mb-1">
-              <h1 className="text-xl font-black text-gray-900">内容中心</h1>
+              <h1 className="text-xl font-black text-gray-900">✍️ 内容中心</h1>
               <button onClick={() => setShowTemplates(true)} className="flex items-center gap-1 px-3 py-1.5 bg-purple-50 text-purple-600 text-xs font-bold rounded-xl active:scale-95">📋 模板</button>
             </div>
             <div className="flex items-center gap-2 text-xs text-gray-400">
@@ -10578,7 +10594,7 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
 
           <div className="px-5 pt-12 pb-0 flex-shrink-0">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-black text-gray-900">运营中心</h1>
+          <h1 className="text-xl font-black text-gray-900">📊 运营中心</h1>
           <button
             onClick={() => setShowAiPanel(true)}
             className="w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-400 shadow-sm flex items-center justify-center text-base active:scale-95 transition-transform relative"
