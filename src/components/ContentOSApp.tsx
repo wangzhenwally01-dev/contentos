@@ -1964,7 +1964,7 @@ export default function ContentOSApp() {
   if (showPositioning) {
     const chatStepLabels = ['', '行业', '产品/服务', '目标客户', '城市', '优势', '准备生成']
     return (
-      <div className="w-[390px] h-[844px] rounded-[50px] overflow-hidden bg-[#F2F2F7] flex flex-col shadow-[0_0_0_10px_#111,0_40px_100px_rgba(0,0,0,.7)] relative">
+      <div className="w-[390px] h-[844px] rounded-[50px] overflow-hidden bg-[#F5F6FA] flex flex-col shadow-[0_0_0_10px_#111,0_40px_100px_rgba(0,0,0,.7)] relative">
         {/* Header */}
         <div className="px-5 pt-12 pb-3 flex-shrink-0 flex items-center gap-3 bg-white/80 backdrop-blur-xl border-b border-gray-100">
           <button onClick={() => {
@@ -2496,7 +2496,7 @@ export default function ContentOSApp() {
   const createSubTab = (tab === 'content' || tab === 'create') ? 'content' : tab === 'video' ? 'video' : 'content'
 
   return (
-    <div className="w-[390px] h-[844px] rounded-[50px] overflow-hidden bg-[#F2F2F7] flex flex-col shadow-[0_0_0_10px_#111,0_40px_100px_rgba(0,0,0,.7)] relative">
+    <div className="w-[390px] h-[844px] rounded-[50px] overflow-hidden bg-[#F5F6FA] flex flex-col shadow-[0_0_0_10px_#111,0_40px_100px_rgba(0,0,0,.7)] relative">
       <Toast msg={toast} />
       <GlobalSearch
         show={showGlobalSearch}
@@ -3517,7 +3517,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
     const _strategyStr = (recommendTopics as any)?.strategy || ''
     const strategyLines = _strategyStr ? _strategyStr.split('\n').filter((s: string) => s.trim()) : []
     return (
-      <div className="flex flex-col h-full bg-[#F2F2F7]">
+      <div className="flex flex-col h-full bg-[#F5F6FA]">
         <div className="px-5 pt-12 pb-0 flex-shrink-0">
           <div className="flex items-center gap-3 mb-3">
             <button onClick={() => setShowRecommendPanel(false)} className="w-9 h-9 rounded-2xl bg-white shadow-sm flex items-center justify-center text-gray-500 active:scale-95 transition-transform">←</button>
@@ -3679,7 +3679,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
             <button
               key={t.id}
               onClick={() => setMatTab(t.id)}
-              className={`flex-1 py-2 rounded-2xl text-[11px] font-bold transition-all ${matTab === t.id ? 'bg-blue-500 text-white shadow-sm shadow-blue-200/60' : 'bg-gray-100 text-gray-400'}`}
+              className={`flex-1 py-2.5 rounded-2xl text-[11px] font-bold transition-all ${matTab === t.id ? 'bg-blue-500 text-white shadow-md shadow-blue-200/50' : 'bg-gray-100/80 text-gray-400 hover:bg-gray-200/60'}`}
             >{t.label}</button>
           ))}
         </div>
@@ -3690,9 +3690,9 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
         {/* 🔥 发现 Tab */}
         {matTab === 'discover' && (
           <div>
-            <div className="flex gap-1.5 mb-3 mt-1">
-              <button onClick={() => setDiscoverSubTab('hotspot')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${discoverSubTab === 'hotspot' ? 'bg-orange-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>🔥 热点</button>
-              <button onClick={() => setDiscoverSubTab('radar')} className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${discoverSubTab === 'radar' ? 'bg-blue-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>📡 雷达</button>
+            <div className="flex gap-2 mb-3 mt-1 bg-gray-100/80 p-1 rounded-2xl">
+              <button onClick={() => setDiscoverSubTab('hotspot')} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${discoverSubTab === 'hotspot' ? 'bg-white text-orange-500 shadow-sm' : 'text-gray-400'}`}>🔥 热点</button>
+              <button onClick={() => setDiscoverSubTab('radar')} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${discoverSubTab === 'radar' ? 'bg-white text-blue-500 shadow-sm' : 'text-gray-400'}`}>📡 雷达</button>
             </div>
             {discoverSubTab === 'hotspot' && (
           <div className="space-y-2">
@@ -3711,10 +3711,10 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                   {h.desc && <div className="text-xs text-gray-400 mt-0.5 truncate">{h.desc}</div>}
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                  {h.heat && <span className="text-xs text-red-400 font-bold">{h.heat}</span>}
+                  {h.heat && <span className="text-[10px] text-red-400 font-black bg-red-50 px-1.5 py-0.5 rounded-lg">{h.heat}</span>}
                   <button
                     onClick={e => { e.stopPropagation(); useTopic(h.title); setMatTab('topics'); setTopicsSubTab('topics'); }}
-                    className="px-2.5 py-1 bg-orange-500 text-white rounded-xl text-xs font-bold active:scale-95 transition-all"
+                    className="px-3 py-1.5 bg-gradient-to-r from-orange-400 to-amber-400 text-white rounded-xl text-xs font-bold active:scale-95 transition-all shadow-sm shadow-orange-200/60"
                   >用这个</button>
                 </div>
               </div>
@@ -6275,31 +6275,40 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
       const allTemplates = [...BUILTIN_TEMPLATES, ...customTemplates]
 
       return (
-        <div className="flex flex-col h-full bg-[#F2F2F7]">
-          <div className="px-5 pt-12 pb-3 flex-shrink-0">
+        <div className="flex flex-col h-full bg-[#F5F6FA]">
+          <div className="px-4 pt-12 pb-3 flex-shrink-0 bg-white shadow-[0_1px_12px_rgba(0,0,0,0.06)]">
             <div className="flex items-center justify-between mb-1">
               <h1 className="text-xl font-black text-gray-900">✍️ 内容中心</h1>
               <button onClick={() => setShowTemplates(true)} className="flex items-center gap-1 px-3 py-1.5 bg-purple-50 text-purple-600 text-xs font-bold rounded-xl active:scale-95">📋 模板</button>
             </div>
-            <div className="flex items-center gap-2 text-xs text-gray-400">
-              <span className={step >= 1 ? 'text-purple-500 font-semibold' : ''}>① 选题</span>
-              <span>→</span>
-              <span className={step >= 2 ? 'text-purple-500 font-semibold' : ''}>② 文案</span>
+            <div className="flex items-center gap-2 mt-2">
+              {[{n:1,label:'选题'},{n:2,label:'文案'}].map((s,i) => (
+                <React.Fragment key={s.n}>
+                  <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${step >= s.n ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-400'}`}>
+                    <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-black ${step >= s.n ? 'bg-white/30' : 'bg-gray-200'}`}>{s.n}</span>
+                    {s.label}
+                  </div>
+                  {i < 1 && <div className={`flex-1 h-0.5 rounded-full ${step >= 2 ? 'bg-purple-300' : 'bg-gray-200'}`} />}
+                </React.Fragment>
+              ))}
             </div>
           </div>
           <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-3">
             {step === 1 && (
               <>
-                <div onClick={() => setShowStyleAnalysis(true)} className="bg-gradient-to-r from-violet-500 to-purple-400 rounded-2xl p-4 text-white cursor-pointer active:scale-[0.98] transition-all">
+                <div onClick={() => setShowStyleAnalysis(true)} className="bg-gradient-to-br from-violet-500 via-purple-500 to-pink-400 rounded-3xl p-4 text-white cursor-pointer active:scale-[0.98] transition-all shadow-lg shadow-purple-200/50">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl flex-shrink-0">🔍</div>
-                    <div className="flex-1"><div className="font-bold text-sm">AI 风格分析</div><div className="text-white/80 text-xs mt-0.5">粘贴任意文案，AI 分析风格特征并生成模板</div></div>
-                    <span className="text-white/60 text-lg">›</span>
+                    <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center text-2xl flex-shrink-0">🔍</div>
+                    <div className="flex-1">
+                      <div className="font-black text-sm">AI 风格分析</div>
+                      <div className="text-white/75 text-[11px] mt-0.5">粘贴任意文案，AI 分析风格特征并生成模板</div>
+                    </div>
+                    <div className="w-7 h-7 rounded-xl bg-white/20 flex items-center justify-center text-white/80">›</div>
                   </div>
                 </div>
-                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="bg-white rounded-3xl p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-2">
-                    <div className="font-bold text-gray-900 text-sm">💡 选题</div>
+                    <div className="font-black text-gray-900 text-sm">💡 选题</div>
                     <button
                       onClick={() => { setBatchMode(!batchMode); setBatchSelected([]); setBatchResults([]) }}
                       className={`text-[11px] px-3 py-1 rounded-full font-bold transition-all ${batchMode ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'}`}
@@ -6429,8 +6438,8 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
                     </button>
                   </div>
                 )}
-                <button onClick={generateCopy} disabled={loading || !selectedTopic.trim()} className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm disabled:opacity-50 active:scale-[0.98] transition-all shadow-md">
-                  {loading ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>AI 生成中...</span> : '✨ 生成3个版本文案'}
+                <button onClick={generateCopy} disabled={loading || !selectedTopic.trim()} className="w-full py-4 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-black rounded-3xl text-sm disabled:opacity-50 active:scale-[0.98] transition-all shadow-lg shadow-blue-200/60">
+                  {loading ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>AI 生成中...</span> : '✨ 生成 3 个版本文案'}
                 </button>
               </>
             )}
@@ -6443,13 +6452,13 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
                     <button onClick={() => { const text = versions.map((v: any, i: number) => `【版本${i+1} · ${v.style}】\n钩子：${v.hook}\n\n${v.content}`).join('\n\n---\n\n'); try { navigator.clipboard.writeText(text); showToast('✅ 已复制全部版本') } catch {} }} className="text-xs font-bold px-3 py-1.5 rounded-xl bg-gray-100 text-gray-500">复制全部</button>
                   </div>
                 </div>
-                <div className="bg-blue-50 rounded-2xl px-4 py-2.5 flex items-center gap-2">
-                  <span className="text-sm">💡</span><span className="text-xs text-blue-700 font-medium truncate">{selectedTopic}</span>
+                <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl px-4 py-3 flex items-center gap-2 border border-blue-100/60">
+                  <span className="text-base">💡</span><span className="text-xs text-blue-700 font-semibold truncate">{selectedTopic}</span>
                 </div>
                 <div className="space-y-3">
                   {versions.map((v: any, i: number) => (
-                    <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-sm">
-                      <div className="bg-gradient-to-r from-purple-500 to-pink-400 px-4 py-2.5 flex items-center justify-between">
+                    <div key={i} className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-50">
+                      <div className="bg-gradient-to-r from-purple-500 to-pink-400 px-4 py-3 flex items-center justify-between">
                         <div className="flex items-center gap-2"><span className="text-white font-black text-sm">版本 {i + 1}</span><span className="text-white/80 text-xs">{v.style}</span></div>
                         <div className="flex gap-2">
                           <button onClick={() => saveContent(v)} className="text-[10px] font-bold text-white bg-white/20 px-2.5 py-1 rounded-lg active:scale-95">保存</button>
@@ -7028,7 +7037,7 @@ ${line}
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#F2F2F7]">
+    <div className="flex flex-col h-full bg-[#F5F6FA]">
       <div className="px-5 pt-12 pb-3 flex-shrink-0">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-black text-gray-900">视频生成</h1>
@@ -10418,7 +10427,7 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
   const PLATFORMS = ['抖音', '小红书', 'B站', '视频号', '快手']
 
   return (
-    <div className="flex flex-col h-full bg-[#F2F2F7]">
+    <div className="flex flex-col h-full bg-[#F5F6FA]">
       {/* Add Schedule Modal */}
       {showAddSchedule && (
         <div className="absolute inset-0 bg-black/40 z-40 flex items-end rounded-[50px] overflow-hidden">
@@ -10592,12 +10601,12 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
             </div>
           )}
 
-          <div className="px-5 pt-12 pb-0 flex-shrink-0">
+          <div className="px-4 pt-12 pb-0 flex-shrink-0 bg-white shadow-[0_1px_12px_rgba(0,0,0,0.06)]">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-black text-gray-900">📊 运营中心</h1>
           <button
             onClick={() => setShowAiPanel(true)}
-            className="w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-400 shadow-sm flex items-center justify-center text-base active:scale-95 transition-transform relative"
+            className="w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-400 shadow-md shadow-purple-200/60 flex items-center justify-center text-base active:scale-95 transition-transform relative"
           >
             🤖
             <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white" />
@@ -10608,13 +10617,13 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
             <button
               key={t.id}
               onClick={() => setOpsTab(t.id)}
-              className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${opsTab === t.id ? 'bg-blue-500 text-white shadow-sm' : 'bg-white/70 text-gray-400'}`}
+              className={`flex-1 py-2.5 rounded-2xl text-xs font-bold transition-all ${opsTab === t.id ? 'bg-blue-500 text-white shadow-md shadow-blue-200/50' : 'bg-gray-100/80 text-gray-400'}`}
             >{t.label}</button>
           ))}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4 space-y-3">
+      <div className="flex-1 overflow-y-auto scrollbar-hide px-4 pb-4 space-y-3 pt-3">
         {/* Schedule Tab */}
         {opsTab === 'schedule' && (
           <>
@@ -10634,13 +10643,13 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
             <BestTimePanel acc={acc} />
 
             {/* AI 运营建议 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm animate-fade-in-up delay-200">
+            <div className="bg-white rounded-3xl p-4 shadow-sm animate-fade-in-up delay-200">
               <div className="flex items-center justify-between mb-3">
-                <div className="font-bold text-gray-900 text-sm">🤖 AI 运营建议</div>
+                <div className="font-black text-gray-900 text-sm">🤖 AI 运营建议</div>
                 <button
                   onClick={fetchInsights}
                   disabled={insightsLoading}
-                  className="text-xs text-blue-500 font-semibold bg-blue-50 px-2.5 py-1 rounded-xl active:scale-95 transition-transform disabled:opacity-50"
+                  className="text-xs text-blue-500 font-bold bg-blue-50 px-3 py-1.5 rounded-xl active:scale-95 transition-transform disabled:opacity-50"
                 >
                   {insightsLoading ? '分析中...' : '✨ 刷新'}
                 </button>
@@ -10939,7 +10948,7 @@ function Profile({
   const isGuest = user?.id === 'guest'
 
   return (
-    <div className="flex flex-col h-full bg-[#F2F2F7]">
+    <div className="flex flex-col h-full bg-[#F5F6FA]">
       {/* Delete Confirm Modal */}
       {showDeleteConfirm && (
         <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center rounded-[50px] overflow-hidden px-8">
@@ -11002,22 +11011,25 @@ function Profile({
       {/* Header */}
       <div className="px-5 pt-12 pb-3 flex-shrink-0">
         {/* User Card */}
-        <div className="bg-gradient-to-br from-blue-500 to-cyan-400 rounded-3xl p-4 text-white mb-4 shadow-lg">
+        <div className="bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 rounded-3xl p-4 text-white mb-4 shadow-xl shadow-blue-200/50">
           <div className="flex items-center gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-2xl font-black flex-shrink-0">
+            <div className="w-14 h-14 rounded-2xl bg-white/25 flex items-center justify-center text-2xl font-black flex-shrink-0 shadow-inner">
               {isGuest ? '👤' : (user?.email?.[0]?.toUpperCase() || '?')}
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-black text-base truncate">{isGuest ? '游客模式' : (user?.email || '未知用户')}</div>
-              <div className="text-white/70 text-xs mt-0.5">{isGuest ? '登录后数据云端同步' : '已登录 · 数据云端同步'}</div>
+              <div className="text-white/65 text-[11px] mt-0.5 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-300 inline-block" />
+                {isGuest ? '登录后数据云端同步' : '已登录 · 数据云端同步'}
+              </div>
             </div>
-            <div className="flex flex-col items-end gap-1.5">
-              <div className="bg-white/20 rounded-xl px-2.5 py-1 text-xs font-bold">💎 {credits}</div>
-              {!isGuest && <button onClick={onLogout} className="text-white/60 text-[10px] font-medium">退出登录</button>}
+            <div className="flex flex-col items-end gap-2">
+              <div className="bg-white/25 rounded-2xl px-3 py-1.5 text-xs font-black flex items-center gap-1">💎 {credits}</div>
+              {!isGuest && <button onClick={onLogout} className="text-white/55 text-[10px] font-medium">退出登录</button>}
             </div>
           </div>
           {isGuest && (
-            <button onClick={onLogout} className="w-full mt-3 py-2 bg-white/20 rounded-xl text-xs font-bold text-white active:scale-[0.98] transition-transform">
+            <button onClick={onLogout} className="w-full mt-3 py-2.5 bg-white/20 rounded-2xl text-xs font-bold text-white active:scale-[0.98] transition-transform">
               🔑 立即登录 / 注册
             </button>
           )}
@@ -11025,29 +11037,29 @@ function Profile({
         {/* Tab Switcher */}
         <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
           {TABS.map(t => (
-            <button key={t.id} onClick={() => setProfileTab(t.id as any)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${profileTab === t.id ? 'bg-blue-500 text-white shadow-sm' : 'bg-white text-gray-500 shadow-sm'}`}>{t.label}</button>
+            <button key={t.id} onClick={() => setProfileTab(t.id as any)} className={`flex-shrink-0 px-3.5 py-2 rounded-2xl text-xs font-bold transition-all ${profileTab === t.id ? 'bg-blue-500 text-white shadow-md shadow-blue-200/50' : 'bg-white text-gray-500 shadow-sm'}`}>{t.label}</button>
           ))}
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4 space-y-3">
+      <div className="flex-1 overflow-y-auto scrollbar-hide px-4 pb-4 space-y-3">
 
         {/* ── AI 设置 ── */}
         {profileTab === 'ai' && (
           <>
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-3">🤖 AI 模型选择</div>
+            <div className="bg-white rounded-3xl p-4 shadow-sm">
+              <div className="font-black text-gray-900 text-sm mb-3">🤖 AI 模型选择</div>
               <div className="space-y-2">
                 {AI_MODELS.map(m => (
-                  <button key={m.id} onClick={() => setAiModel(m.id)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all active:scale-[0.98] ${aiModel === m.id ? 'bg-blue-50 border-2 border-blue-400' : 'bg-gray-50 border-2 border-transparent'}`}>
+                  <button key={m.id} onClick={() => setAiModel(m.id)} className={`w-full flex items-center gap-3 px-3 py-3 rounded-2xl transition-all active:scale-[0.98] ${aiModel === m.id ? 'bg-blue-50 border-2 border-blue-400' : 'bg-gray-50 border-2 border-transparent'}`}>
                     <div className="flex-1 text-left">
-                      <div className={`text-sm font-semibold ${aiModel === m.id ? 'text-blue-700' : 'text-gray-800'}`}>{m.label}</div>
+                      <div className={`text-sm font-bold ${aiModel === m.id ? 'text-blue-700' : 'text-gray-800'}`}>{m.label}</div>
                       <div className="text-xs text-gray-400 mt-0.5">{m.desc}</div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${m.badgeColor}`}>{m.badge}</span>
-                      {aiModel === m.id && <span className="text-blue-500 font-bold">✓</span>}
+                      {aiModel === m.id && <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center"><span className="text-white text-[10px] font-black">✓</span></div>}
                     </div>
                   </button>
                 ))}
@@ -11373,16 +11385,16 @@ function Profile({
         {/* ── 关于 ── */}
         {profileTab === 'about' && (
           <>
-            <div className="bg-white rounded-2xl p-5 shadow-sm text-center">
-              <div className="w-16 h-16 rounded-[22px] bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-3xl mx-auto mb-3 shadow-lg">🎬</div>
-              <div className="font-black text-gray-900 text-lg">ContentOS</div>
-              <div className="text-xs text-gray-400 mt-1">AI 内容增长工作台</div>
-              <div className="text-xs text-gray-300 mt-0.5">v10.0.0</div>
+            <div className="bg-gradient-to-br from-blue-500 to-cyan-400 rounded-3xl p-5 shadow-xl shadow-blue-200/50 text-center text-white">
+              <div className="w-16 h-16 rounded-[22px] bg-white/20 flex items-center justify-center text-3xl mx-auto mb-3 shadow-lg">🎬</div>
+              <div className="font-black text-white text-lg">ContentOS</div>
+              <div className="text-white/70 text-xs mt-1">AI 内容增长工作台</div>
+              <div className="text-white/40 text-xs mt-0.5">v18.1</div>
             </div>
 
             {/* 外观设置 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="font-bold text-gray-900 text-sm mb-3">🎨 外观设置</div>
+            <div className="bg-white rounded-3xl p-4 shadow-sm">
+              <div className="font-black text-gray-900 text-sm mb-3">🎨 外观设置</div>
               <div className="mb-4">
                 <div className="text-xs text-gray-500 mb-2 font-medium">界面模式</div>
                 <div className="grid grid-cols-4 gap-2">
