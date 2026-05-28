@@ -2559,6 +2559,7 @@ export default function ContentOSApp() {
                 setShowAiPanel={setShowAiPanel}
                 videoRecords={videoRecords}
                 savedTopicsCount={savedTopics.length}
+                setShowGlobalSearch={setShowGlobalSearch}
                 setShowSuperGen={setShowSuperGen}
                 knowledgeItems={knowledgeItems}
                 setShowRecommendPanel={setShowRecommendPanel}
@@ -2815,6 +2816,8 @@ export default function ContentOSApp() {
 // ═══════════════════════════════════════════════════════════
 function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab, showToast, user, onLogout, savedContents, schedule, onPositioning, showAddAccount, setShowAddAccount, newAccName, setNewAccName, newAccIndustry, setNewAccIndustry, newAccEmoji, setNewAccEmoji, addAccount, hotspots, radarData, fetchRadar, radarLoading, savedTopics, setShowAiPanel, videoRecords, savedTopicsCount, setShowGlobalSearch, setShowSuperGen, knowledgeItems, setShowRecommendPanel, recommendTopicsFn, recommendLoading, accSwitching }: any) {
   const [showAccSwitcher, setShowAccSwitcher] = React.useState(false)
+  const [showAccSettings, setShowAccSettings] = React.useState(false)
+  const [editAccData, setEditAccData] = React.useState<any>(null)
       const EMOJIS = ['🏪', '🍜', '💪', '💄', '📚', '🏠', '🚗', '🎵', '🌿', '☕']
 
       // 任务完成状态
@@ -2930,8 +2933,125 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
 
       const dateStr = today.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })
 
+      // 初始化编辑数据
+      React.useEffect(() => {
+        if (showAccSettings) setEditAccData({ ...acc })
+      }, [showAccSettings])
+
       return (
         <div className="flex flex-col h-full bg-[#F5F6FA]">
+
+          {/* 账号设置弹窗 */}
+          {showAccSettings && editAccData && (
+            <div className="absolute inset-0 bg-black/50 z-50 flex items-end rounded-[50px] overflow-hidden">
+              <div className="w-full bg-white rounded-t-3xl pb-8 max-h-[85%] flex flex-col">
+                <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100 flex-shrink-0">
+                  <div>
+                    <h3 className="font-black text-gray-900 text-base">⚙️ 账号设置</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">编辑当前账号信息</p>
+                  </div>
+                  <button onClick={() => setShowAccSettings(false)} className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-gray-500 text-lg">✕</button>
+                </div>
+                <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+                  {/* 账号头像 */}
+                  <div className="flex items-center gap-4">
+                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${editAccData.color || 'from-blue-400 to-cyan-400'} flex items-center justify-center text-3xl shadow-md`}>
+                      {editAccData.emoji || '🏪'}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-400 mb-2 font-medium">选择图标</p>
+                      <div className="flex gap-2 flex-wrap">
+                        {EMOJIS.map((e: string) => (
+                          <button key={e} onClick={() => setEditAccData({...editAccData, emoji: e})}
+                            className={`w-9 h-9 rounded-xl text-lg flex items-center justify-center transition-all ${editAccData.emoji === e ? 'bg-blue-100 ring-2 ring-blue-400' : 'bg-gray-100'}`}
+                          >{e}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  {/* 账号名称 */}
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium mb-1.5 block">账号名称</label>
+                    <input value={editAccData.name || ''} onChange={e => setEditAccData({...editAccData, name: e.target.value})}
+                      className="w-full px-3 py-2.5 rounded-2xl bg-gray-100 text-sm outline-none focus:bg-gray-50 focus:ring-2 focus:ring-blue-100 transition-all" />
+                  </div>
+                  {/* 行业 */}
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium mb-1.5 block">行业方向</label>
+                    <input value={editAccData.industry || ''} onChange={e => setEditAccData({...editAccData, industry: e.target.value})}
+                      placeholder="如：餐饮、健身、教育..."
+                      className="w-full px-3 py-2.5 rounded-2xl bg-gray-100 text-sm outline-none focus:bg-gray-50 focus:ring-2 focus:ring-blue-100 transition-all" />
+                  </div>
+                  {/* 账号定位 */}
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium mb-1.5 block">账号定位</label>
+                    <input value={editAccData.positioning || ''} onChange={e => setEditAccData({...editAccData, positioning: e.target.value})}
+                      placeholder="如：本地餐饮·老板IP流"
+                      className="w-full px-3 py-2.5 rounded-2xl bg-gray-100 text-sm outline-none focus:bg-gray-50 focus:ring-2 focus:ring-blue-100 transition-all" />
+                  </div>
+                  {/* 目标受众 */}
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium mb-1.5 block">目标受众</label>
+                    <input value={editAccData.targetAudience || ''} onChange={e => setEditAccData({...editAccData, targetAudience: e.target.value})}
+                      placeholder="如：周边3km上班族"
+                      className="w-full px-3 py-2.5 rounded-2xl bg-gray-100 text-sm outline-none focus:bg-gray-50 focus:ring-2 focus:ring-blue-100 transition-all" />
+                  </div>
+                  {/* 颜色主题 */}
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium mb-2 block">账号主题色</label>
+                    <div className="flex gap-2 flex-wrap">
+                      {[
+                        'from-orange-400 to-amber-500',
+                        'from-blue-500 to-cyan-400',
+                        'from-purple-500 to-pink-400',
+                        'from-green-400 to-emerald-500',
+                        'from-rose-400 to-red-500',
+                        'from-indigo-500 to-blue-400',
+                        'from-teal-400 to-cyan-500',
+                        'from-violet-500 to-purple-400',
+                      ].map((c: string) => (
+                        <button key={c} onClick={() => setEditAccData({...editAccData, color: c})}
+                          className={`w-9 h-9 rounded-xl bg-gradient-to-br ${c} transition-all ${editAccData.color === c ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  {/* 重新AI定位 */}
+                  <button
+                    onClick={() => { setShowAccSettings(false); onPositioning() }}
+                    className="w-full py-3 bg-gradient-to-r from-indigo-500 to-blue-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  >
+                    🎯 重新 AI 定位
+                  </button>
+                  {/* 添加新账号 */}
+                  <button
+                    onClick={() => { setShowAccSettings(false); setShowAddAccount(true) }}
+                    className="w-full py-3 bg-gray-100 text-gray-600 font-bold rounded-2xl text-sm active:scale-[0.98] transition-all"
+                  >
+                    ＋ 添加新账号
+                  </button>
+                </div>
+                {/* 保存按钮 */}
+                <div className="px-5 pt-3 flex-shrink-0 border-t border-gray-100">
+                  <button
+                    onClick={() => {
+                      if (!editAccData.name?.trim()) return
+                      const updated = accounts.map((a: any) => a.id === acc.id ? { ...a, ...editAccData } : a)
+                      // 通过 setAccountIdx 触发重新渲染（父组件需要更新 accounts）
+                      // 这里先存到 localStorage
+                      try { localStorage.setItem('contentos_accounts', JSON.stringify(updated)) } catch {}
+                      setShowAccSettings(false)
+                      showToast('✅ 账号信息已更新，刷新后生效')
+                    }}
+                    className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-black rounded-2xl text-sm active:scale-[0.98] transition-all shadow-lg shadow-blue-200/50"
+                  >
+                    保存修改
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* 顶部账号栏 */}
           <div className="bg-white px-4 pt-12 pb-3 shadow-[0_1px_12px_rgba(0,0,0,0.06)]">
             <div className="flex items-center justify-between mb-3">
@@ -2946,7 +3066,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => setShowGlobalSearch(true)} className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-sm active:scale-95 transition-all">🔍</button>
-                <button onClick={() => setShowAddAcc(!showAddAcc)} className="flex items-center gap-1 px-2.5 py-1.5 bg-gray-100 rounded-xl text-xs font-bold text-gray-600 active:scale-95 transition-all">⚙️ 设置</button>
+                <button onClick={() => setShowAccSettings(true)} className="flex items-center gap-1 px-2.5 py-1.5 bg-gray-100 rounded-xl text-xs font-bold text-gray-600 active:scale-95 transition-all">⚙️ 设置</button>
               </div>
             </div>
 
