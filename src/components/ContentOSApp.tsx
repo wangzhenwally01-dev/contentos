@@ -2566,6 +2566,8 @@ export default function ContentOSApp() {
                 recommendTopicsFn={recommendTopicsFn}
                 recommendLoading={recommendLoading}
                 accSwitching={accSwitching}
+                setAccounts={setAccounts}
+                saveToLocal={saveToLocal}
               />
             )}
         {tab === 'materials' && (
@@ -2666,10 +2668,12 @@ export default function ContentOSApp() {
             copiedIdx={copiedIdx} expandedCopy={expandedCopy} setExpandedCopy={setExpandedCopy}
             generate={generateCopy} copy={copyText} save={saveCopy}
             showToast={showToast} setTab={setTab} hotspots={HOTSPOTS}
-            savedContents={savedContents} setVideoCopy={setVideoCopy}
+            savedContents={savedContents} setSavedContents={setSavedContents}
+            savedTopics={savedTopics} setVideoCopy={setVideoCopy}
             copyHistory={copyHistory} compareMode={compareMode} setCompareMode={setCompareMode}
             showHistory={showHistory} setShowHistory={setShowHistory}
             setShowAiPanel={setShowAiPanel}
+            schedule={schedule} setSchedule={setSchedule}
           />
         )}
         {tab === 'video' && (
@@ -2777,6 +2781,8 @@ export default function ContentOSApp() {
             theme={theme} setTheme={setTheme}
             accentColor={accentColor} setAccentColor={setAccentColor}
             videoRecords={videoRecords} schedule={schedule}
+            syncToCloud={syncToCloud} loadFromCloud={loadFromCloud}
+            syncLoading={syncLoading} lastSyncTime={lastSyncTime}
           />
         )}
       </div>
@@ -2814,7 +2820,7 @@ export default function ContentOSApp() {
 // ═══════════════════════════════════════════════════════════
 // DASHBOARD v2 — 工作台首页（每日任务+快捷入口+数据概览）
 // ═══════════════════════════════════════════════════════════
-function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab, showToast, user, onLogout, savedContents, schedule, onPositioning, showAddAccount, setShowAddAccount, newAccName, setNewAccName, newAccIndustry, setNewAccIndustry, newAccEmoji, setNewAccEmoji, addAccount, hotspots, radarData, fetchRadar, radarLoading, savedTopics, setShowAiPanel, videoRecords, savedTopicsCount, setShowGlobalSearch, setShowSuperGen, knowledgeItems, setShowRecommendPanel, recommendTopicsFn, recommendLoading, accSwitching }: any) {
+function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab, showToast, user, onLogout, savedContents, schedule, onPositioning, showAddAccount, setShowAddAccount, newAccName, setNewAccName, newAccIndustry, setNewAccIndustry, newAccEmoji, setNewAccEmoji, addAccount, hotspots, radarData, fetchRadar, radarLoading, savedTopics, setShowAiPanel, videoRecords, savedTopicsCount, setShowGlobalSearch, setShowSuperGen, knowledgeItems, setShowRecommendPanel, recommendTopicsFn, recommendLoading, accSwitching, setAccounts, saveToLocal }: any) {
   const [showAccSwitcher, setShowAccSwitcher] = React.useState(false)
   const [showAccSettings, setShowAccSettings] = React.useState(false)
   const [editAccData, setEditAccData] = React.useState<any>(null)
@@ -2933,10 +2939,10 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
 
       const dateStr = today.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })
 
-      // 初始化编辑数据
+      // 初始化编辑数据（每次打开都同步最新 acc）
       React.useEffect(() => {
         if (showAccSettings) setEditAccData({ ...acc })
-      }, [showAccSettings])
+      }, [showAccSettings, acc.id])
 
       return (
         <div className="flex flex-col h-full bg-[#F5F6FA]">
@@ -3035,13 +3041,12 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                 <div className="px-5 pt-3 flex-shrink-0 border-t border-gray-100">
                   <button
                     onClick={() => {
-                      if (!editAccData.name?.trim()) return
+                      if (!editAccData.name?.trim()) { showToast('账号名称不能为空'); return }
                       const updated = accounts.map((a: any) => a.id === acc.id ? { ...a, ...editAccData } : a)
-                      // 通过 setAccountIdx 触发重新渲染（父组件需要更新 accounts）
-                      // 这里先存到 localStorage
-                      try { localStorage.setItem('contentos_accounts', JSON.stringify(updated)) } catch {}
+                      setAccounts(updated)
+                      saveToLocal('contentos_accounts', updated)
                       setShowAccSettings(false)
-                      showToast('✅ 账号信息已更新，刷新后生效')
+                      showToast('✅ 账号信息已更新')
                     }}
                     className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-black rounded-2xl text-sm active:scale-[0.98] transition-all shadow-lg shadow-blue-200/50"
                   >
@@ -3821,7 +3826,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
               <div
                 key={i}
                 className="bg-white rounded-2xl p-3.5 shadow-sm flex items-center gap-3 active:scale-[0.98] transition-transform cursor-pointer border border-gray-50"
-                onClick={() => {}}
+                onClick={() => { useTopic(h.title); setMatTab('topics'); setTopicsSubTab('topics'); }}
               >
                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-sm flex-shrink-0 ${i === 0 ? 'bg-red-400' : i === 1 ? 'bg-orange-400' : i === 2 ? 'bg-amber-400' : 'bg-gray-300'}`}>
                   {i + 1}
