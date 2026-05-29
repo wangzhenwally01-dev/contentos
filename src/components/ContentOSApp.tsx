@@ -6430,7 +6430,6 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
                           <button onClick={() => setShowTemplates(true)} className="text-[11px] text-purple-500 font-semibold">更多模板 ›</button>
                         </div>
                       </div>
-                  </div>
                   <div className="grid grid-cols-3 gap-2">
                     {allTemplates.slice(0, 6).map((t: any) => (
                       <button key={t.id || t.name} onClick={() => setStyle(t.name)} className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-medium transition-all active:scale-95 ${style === t.name ? 'bg-purple-50 border-2 border-purple-400 text-purple-700' : 'bg-gray-50 border-2 border-transparent text-gray-600'}`}>
@@ -6438,7 +6437,7 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
                       </button>
                     ))}
                   </div>
-                </div>
+                    </div>
                 {history.length > 0 && (
                   <div className="bg-white rounded-2xl p-4 shadow-sm">
                     <div className="font-bold text-gray-900 text-sm mb-2">🕐 最近生成</div>
