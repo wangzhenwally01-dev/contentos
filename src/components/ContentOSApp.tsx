@@ -1142,6 +1142,8 @@ export default function ContentOSApp() {
 
   // 防抖同步 timer
   const syncTimerRef = React.useRef<any>(null)
+  // 创作菜单弹出（必须在提前返回之前定义）
+  const [showCreateMenu, setShowCreateMenu] = React.useState(false)
 
   async function syncToCloud() {
     if (!user || user.id === 'guest') { showToast('请先登录以使用云端同步'); return }
@@ -2498,7 +2500,6 @@ export default function ContentOSApp() {
   ]
   // 创作子tab：内容/视频
   const createSubTab = (tab === 'content' || tab === 'create') ? 'content' : tab === 'video' ? 'video' : 'content'
-  const [showCreateMenu, setShowCreateMenu] = React.useState(false)
 
   return (
     <div className="w-[390px] h-[844px] rounded-[50px] overflow-hidden bg-[#F5F6FA] flex flex-col shadow-[0_0_0_10px_#111,0_40px_100px_rgba(0,0,0,.7)] relative">
