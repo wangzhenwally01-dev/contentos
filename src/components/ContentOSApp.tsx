@@ -2498,6 +2498,7 @@ export default function ContentOSApp() {
   ]
   // 创作子tab：内容/视频
   const createSubTab = (tab === 'content' || tab === 'create') ? 'content' : tab === 'video' ? 'video' : 'content'
+  const [showCreateMenu, setShowCreateMenu] = React.useState(false)
 
   return (
     <div className="w-[390px] h-[844px] rounded-[50px] overflow-hidden bg-[#F5F6FA] flex flex-col shadow-[0_0_0_10px_#111,0_40px_100px_rgba(0,0,0,.7)] relative">
@@ -2671,7 +2672,7 @@ export default function ContentOSApp() {
             versions={copyVersions} loading={copyLoading} error={copyError}
             copiedIdx={copiedIdx} expandedCopy={expandedCopy} setExpandedCopy={setExpandedCopy}
             generate={generateCopy} copy={copyText} save={saveCopy}
-            showToast={showToast} setTab={setTab} hotspots={HOTSPOTS}
+            showToast={showToast} setTab={setTab} setMatTab={setMatTab} hotspots={HOTSPOTS}
             savedContents={savedContents} setSavedContents={setSavedContents}
             savedTopics={savedTopics} setVideoCopy={setVideoCopy}
             copyHistory={copyHistory} compareMode={compareMode} setCompareMode={setCompareMode}
@@ -2791,13 +2792,31 @@ export default function ContentOSApp() {
           />
         )}
       </div>
-      <div className="bg-white/98 backdrop-blur-2xl border-t border-gray-100/80 flex items-end flex-shrink-0 z-50 shadow-[0_-1px_20px_rgba(0,0,0,0.06)]" style={{paddingBottom:'max(16px, env(safe-area-inset-bottom, 16px))'}}>
+      {showCreateMenu && (
+            <div className="absolute bottom-[72px] left-0 right-0 z-50 px-4 pb-2" onClick={() => setShowCreateMenu(false)}>
+              <div className="bg-white rounded-3xl shadow-2xl shadow-black/20 p-3 border border-gray-100">
+                <div className="text-[10px] text-gray-400 text-center mb-2 font-medium">选择创作模式</div>
+                <div className="grid grid-cols-3 gap-2">
+                  <button onClick={e => { e.stopPropagation(); setTab('materials'); setMatTab('topics'); setShowCreateMenu(false) }} className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-purple-50 active:scale-95 transition-all">
+                    <span className="text-2xl">💡</span><span className="text-[11px] font-bold text-purple-600">选题</span>
+                  </button>
+                  <button onClick={e => { e.stopPropagation(); setTab('content'); setShowCreateMenu(false) }} className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-blue-50 active:scale-95 transition-all">
+                    <span className="text-2xl">✍️</span><span className="text-[11px] font-bold text-blue-600">文案</span>
+                  </button>
+                  <button onClick={e => { e.stopPropagation(); setTab('video'); setShowCreateMenu(false) }} className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-green-50 active:scale-95 transition-all">
+                    <span className="text-2xl">🎬</span><span className="text-[11px] font-bold text-green-600">视频</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+                <div className="bg-white/98 backdrop-blur-2xl border-t border-gray-100/80 flex items-end flex-shrink-0 z-50 shadow-[0_-1px_20px_rgba(0,0,0,0.06)]" style={{paddingBottom:'max(16px, env(safe-area-inset-bottom, 16px))'}}>
         {NAV_TABS.map((t, idx) => {
           const isActive = t.id === 'create' ? (tab === 'content' || tab === 'video') : tab === t.id
           const isCreate = t.id === 'create'
           return (
             <button key={t.id} onClick={() => {
-              if (t.id === 'create') { setTab(tab === 'video' ? 'video' : 'content') }
+              if (t.id === 'create') { setShowCreateMenu(prev => !prev) }
               else { setTab(t.id as Tab) }
             }} className={`flex-1 flex flex-col items-center tab-transition ${isCreate ? 'relative -mt-5' : 'pt-2'}`}>
               {isCreate ? (
@@ -3870,7 +3889,12 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                             <div className="flex gap-1 flex-wrap">
                               {(item.tags || []).map((tag: string) => <span key={tag} className="text-xs px-2 py-0.5 bg-gray-50 text-gray-400 rounded-full">{tag}</span>)}
                             </div>
-                            <button onClick={() => useTopic(item.title)} className="flex-shrink-0 px-3 py-1.5 bg-blue-500 text-white rounded-xl text-xs font-bold active:scale-95 transition-all">用于选题</button>
+                            <button onClick={() => {
+                                  const mat = { id: item.id || Date.now(), title: item.title, type: 'trending', source: item.platform || '全网', likes: item.likes };
+                                  setSelectedMaterials((prev: any[]) => prev.find((m: any) => m.title === mat.title) ? prev : [...prev, mat]);
+                                  setMatTab('topics');
+                                  showToast('✅ 已加入选题库');
+                                }} className="flex-shrink-0 px-3 py-1.5 bg-orange-500 text-white rounded-xl text-xs font-bold active:scale-95 transition-all">+ 加入选题</button>
                           </div>
                         </div>
                       ))}
@@ -5154,7 +5178,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                         {/* 快速操作 */}
                         <div className="flex gap-2 mt-2.5 pt-2.5 border-t border-gray-50">
                           <button
-                            onClick={() => { useTopic(title); setTab('content'); showToast('✅ 已带入内容中心'); }}
+                            onClick={() => { useTopic(title); setTab('content'); showToast('✅ 已带入内容中心，开始写文案'); }}
                             className="flex-1 py-1.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white text-xs font-bold rounded-xl active:scale-[0.97] transition-transform"
                           >✍️ 一键写文案</button>
                           <button
@@ -6172,7 +6196,7 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
   )
 }
 
-    function ContentCenter({ acc, showToast, savedContents, setSavedContents, savedTopics, setTab, setVideoCopy,
+    function ContentCenter({ acc, showToast, savedContents, setSavedContents, savedTopics, setTab, setMatTab, setVideoCopy,
       step: initStep, setStep: setStepExternal, topic: initTopic }: any) {
       const [step, setStepInternal] = React.useState(initStep || 1)
       const setStep = (s: any) => { setStepInternal(s); setStepExternal?.(s) }
@@ -6206,6 +6230,7 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
       const [batchResults, setBatchResults] = React.useState<any[]>([])
       const [batchLoading, setBatchLoading] = React.useState(false)
       const [batchProgress, setBatchProgress] = React.useState(0)
+      const [userOpinion, setUserOpinion] = React.useState('')
 
       const BUILTIN_TEMPLATES = [
         { id: 'hook', name: '问题钩子', icon: '🎣', desc: '用问题开头，引发好奇', prompt: '用一个尖锐的问题开头，引发读者强烈好奇心，然后给出意想不到的答案' },
@@ -6269,6 +6294,7 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
               topicTitle: selectedTopic, style: stylePrompt,
               accountName: acc?.name || '', industry: acc?.industry || '',
               positioning: acc?.positioning || '', targetAudience: acc?.targetAudience || '',
+              userOpinion: userOpinion.trim() || undefined,
             })
           })
           const data = await res.json()
@@ -6320,7 +6346,10 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
           <div className="px-4 pt-12 pb-3 flex-shrink-0 bg-white shadow-[0_1px_12px_rgba(0,0,0,0.06)]">
             <div className="flex items-center justify-between mb-1">
               <h1 className="text-xl font-black text-gray-900">✍️ 内容中心</h1>
-              <button onClick={() => setShowTemplates(true)} className="flex items-center gap-1 px-3 py-1.5 bg-purple-50 text-purple-600 text-xs font-bold rounded-xl active:scale-95">📋 模板</button>
+              <div className="flex items-center gap-2">
+                  <button onClick={() => { setTab('materials'); setMatTab('mine') }} className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-xl active:scale-95">🧠 知识库</button>
+                  <button onClick={() => setShowTemplates(true)} className="flex items-center gap-1 px-3 py-1.5 bg-purple-50 text-purple-600 text-xs font-bold rounded-xl active:scale-95">📋 模板</button>
+                </div>
             </div>
             <div className="flex items-center gap-2 mt-2">
               {[{n:1,label:'选题'},{n:2,label:'文案'}].map((s,i) => (
@@ -6386,10 +6415,21 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
                     </div>
                   )}
                 </div>
-                <div className="bg-white rounded-2xl p-4 shadow-sm">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="font-bold text-gray-900 text-sm">🎨 文案风格</div>
-                    <button onClick={() => setShowTemplates(true)} className="text-[11px] text-purple-500 font-semibold">更多模板 ›</button>
+                    <div className="bg-white rounded-2xl p-4 shadow-sm">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="font-bold text-gray-900 text-sm">💬 我的观点</div>
+                        <span className="text-[10px] text-gray-400">选填，AI 会融入你的观点</span>
+                      </div>
+                      <textarea value={userOpinion} onChange={e => setUserOpinion(e.target.value)} placeholder="输入你对这个选题的独特看法、亲身经历或想表达的核心观点..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-16 leading-relaxed" />
+                    </div>
+                    <div className="bg-white rounded-2xl p-4 shadow-sm">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="font-bold text-gray-900 text-sm">🎨 文案风格</div>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => setShowStyleAnalysis(true)} className="text-[11px] text-blue-500 font-semibold bg-blue-50 px-2 py-0.5 rounded-lg active:scale-95">+ 新增风格</button>
+                          <button onClick={() => setShowTemplates(true)} className="text-[11px] text-purple-500 font-semibold">更多模板 ›</button>
+                        </div>
+                      </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     {allTemplates.slice(0, 6).map((t: any) => (
@@ -6494,7 +6534,14 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
                   </div>
                 </div>
                 <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl px-4 py-3 flex items-center gap-2 border border-blue-100/60">
-                  <span className="text-base">💡</span><span className="text-xs text-blue-700 font-semibold truncate">{selectedTopic}</span>
+                  <span className="text-base">💡</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-blue-700 font-semibold truncate">{selectedTopic}</div>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">{style}</span>
+                      {userOpinion && <span className="text-[10px] text-gray-500 truncate max-w-[150px]">💬 {userOpinion}</span>}
+                    </div>
+                  </div>
                 </div>
                 <div className="space-y-3">
                   {versions.map((v: any, i: number) => (
