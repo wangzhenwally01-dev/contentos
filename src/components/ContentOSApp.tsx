@@ -659,6 +659,10 @@ export default function ContentOSApp() {
   const [cloneProgress, setCloneProgress] = React.useState('')
   const [showClonePanel, setShowClonePanel] = React.useState(false)
   const [cloneVoiceName, setCloneVoiceName] = React.useState('我的声音')
+  // 形象克隆状态
+  const [clonedAvatars, setClonedAvatars] = React.useState<Array<{id:string,name:string,imageUrl:string,createdAt:string}>>(() => {
+    try { return JSON.parse(localStorage.getItem('contentos_cloned_avatars') || '[]') } catch { return [] }
+  })
   const [videoSpeed, setVideoSpeed] = useState(1.0)
   const [videoAvatarType, setVideoAvatarType] = useState<'preset' | 'upload'>('preset')
   const [videoAvatarPreset, setVideoAvatarPreset] = useState('business-female')
@@ -2705,6 +2709,7 @@ export default function ContentOSApp() {
             subtitlePreview={subtitlePreview} setSubtitlePreview={setSubtitlePreview}
             subtitleLines={subtitleLines} setSubtitleLines={setSubtitleLines}
             currentSubLine={currentSubLine} setCurrentSubLine={setCurrentSubLine}
+            clonedAvatars={clonedAvatars} setClonedAvatars={setClonedAvatars}
           />
         )}
             </div>
@@ -6710,7 +6715,7 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
       )
     }
     
-function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCopy, voiceId, setVoiceId, speed, setSpeed, avatarType, setAvatarType, avatarPreset, setAvatarPreset, bgType, setBgType, bgColor, setBgColor, loading, audioB64, error, generateTTS, showToast, savedContents, setTab, setShowAiPanel, setQuickRecordData, setShowVideoRecord, videoSegments, setVideoSegments, segmentMode, setSegmentMode, activeSegment, setActiveSegment, segmentAudios, setSegmentAudios, segmentLoading, setSegmentLoading, subtitlePreview, setSubtitlePreview, subtitleLines, setSubtitleLines, currentSubLine, setCurrentSubLine, clonedVoices, setClonedVoices, isCloning, setIsCloning, cloneProgress, setCloneProgress, showClonePanel, setShowClonePanel, cloneVoiceName, setCloneVoiceName }: any) {
+function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCopy, voiceId, setVoiceId, speed, setSpeed, avatarType, setAvatarType, avatarPreset, setAvatarPreset, bgType, setBgType, bgColor, setBgColor, loading, audioB64, error, generateTTS, showToast, savedContents, setTab, setShowAiPanel, setQuickRecordData, setShowVideoRecord, videoSegments, setVideoSegments, segmentMode, setSegmentMode, activeSegment, setActiveSegment, segmentAudios, setSegmentAudios, segmentLoading, setSegmentLoading, subtitlePreview, setSubtitlePreview, subtitleLines, setSubtitleLines, currentSubLine, setCurrentSubLine, clonedVoices, setClonedVoices, isCloning, setIsCloning, cloneProgress, setCloneProgress, showClonePanel, setShowClonePanel, cloneVoiceName, setCloneVoiceName, clonedAvatars, setClonedAvatars }: any) {
   // 封面生成状态
   const [coverLoading, setCoverLoading] = React.useState(false)
   const [coverImageUrl, setCoverImageUrl] = React.useState('')
@@ -6794,7 +6799,7 @@ function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCop
       localStorage.setItem('contentos_cloned_voices', JSON.stringify(updated))
       setVoiceId(data.voiceId)
       setShowClonePanel(false)
-      showToast('声音克隆成功！已自动选中', 'success')
+      showToast('✅ 声音克隆成功！已保存，下次直接选用')
     } catch (e: any) {
       showToast('克隆出错：' + e.message, 'error')
     } finally {
@@ -7085,6 +7090,24 @@ ${line}
             <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white" />
           </button>
         </div>
+
+        {/* 当前选题/文案展示 */}
+        {videoCopy && (
+          <div className="mb-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-3 border border-purple-100">
+            <div className="flex items-start gap-2">
+              <span className="text-base flex-shrink-0 mt-0.5">📝</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-[10px] text-purple-400 font-semibold mb-0.5">当前文案</div>
+                <div className="text-xs text-gray-700 leading-relaxed line-clamp-2">{videoCopy.slice(0, 80)}{videoCopy.length > 80 ? '...' : ''}</div>
+              </div>
+              <button
+                onClick={() => setStep('input')}
+                className="flex-shrink-0 text-[10px] text-purple-500 font-bold bg-white px-2 py-1 rounded-lg active:scale-95"
+              >修改</button>
+            </div>
+          </div>
+        )}
+
         {/* 步骤条 */}
         <div className="flex items-center gap-1">
           {STEPS.map((s, i) => (
@@ -7707,6 +7730,112 @@ ${line}
               </div>
             </div>
 
+
+            {/* 我的形象 */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-bold text-gray-900 text-sm">🧑‍🎤 我的形象</div>
+                <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">克隆后可复用</span>
+              </div>
+
+              {/* 已克隆形象列表 */}
+              {clonedAvatars && clonedAvatars.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 mb-3">
+                  {clonedAvatars.map((av: any) => (
+                    <div
+                      key={av.id}
+                      onClick={() => { setAvatarType('upload'); setAvatarPreset(av.id) }}
+                      className={`flex-shrink-0 flex flex-col items-center gap-1.5 p-2 rounded-2xl cursor-pointer transition-all active:scale-95 ${avatarPreset === av.id ? 'bg-purple-50 ring-2 ring-purple-400' : 'bg-gray-50'}`}
+                    >
+                      <div className="w-14 h-14 rounded-2xl overflow-hidden bg-gray-200 flex items-center justify-center">
+                        {av.imageUrl ? (
+                          <img src={av.imageUrl} alt={av.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-2xl">🧑‍🎤</span>
+                        )}
+                      </div>
+                      <div className="text-[10px] font-semibold text-gray-700 max-w-[56px] truncate text-center">{av.name}</div>
+                      {avatarPreset === av.id && <span className="text-[9px] text-purple-500 font-bold">✓ 已选</span>}
+                    </div>
+                  ))}
+                  <div
+                    onClick={() => {
+                      const updated = clonedAvatars.filter((a: any) => a.id !== avatarPreset)
+                      setClonedAvatars(updated)
+                      localStorage.setItem('contentos_cloned_avatars', JSON.stringify(updated))
+                    }}
+                    className="flex-shrink-0 flex flex-col items-center justify-center gap-1 w-14 h-14 rounded-2xl bg-red-50 cursor-pointer active:scale-95 mt-0.5"
+                  >
+                    <span className="text-base">🗑️</span>
+                    <span className="text-[9px] text-red-400">删除选中</span>
+                  </div>
+                </div>
+              )}
+
+              {/* 上传新形象 */}
+              <div className="space-y-2">
+                <div className="text-xs text-gray-500 font-medium">上传照片克隆形象</div>
+                <label className="block w-full py-3 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-dashed border-purple-200 text-purple-600 text-xs font-semibold rounded-2xl text-center cursor-pointer active:scale-[0.98] hover:border-purple-400 transition-all">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      const reader = new FileReader()
+                      reader.onload = () => {
+                        const imageUrl = reader.result as string
+                        const newAvatar = {
+                          id: `avatar_${Date.now()}`,
+                          name: file.name.replace(/\.[^.]+$/, '').slice(0, 8) || '我的形象',
+                          imageUrl,
+                          createdAt: new Date().toLocaleDateString('zh-CN')
+                        }
+                        const updated = [newAvatar, ...(clonedAvatars || [])]
+                        setClonedAvatars(updated)
+                        localStorage.setItem('contentos_cloned_avatars', JSON.stringify(updated))
+                        setAvatarType('upload')
+                        setAvatarPreset(newAvatar.id)
+                        showToast('✅ 形象已保存，可在下次直接选用')
+                      }
+                      reader.readAsDataURL(file)
+                    }}
+                  />
+                  📸 上传正面照片（支持 JPG/PNG）
+                </label>
+                <div className="text-[10px] text-gray-400 text-center leading-relaxed">
+                  上传清晰正面照，AI 将基于此生成数字形象<br/>克隆后自动保存，下次直接选用
+                </div>
+              </div>
+
+              {/* 预设形象快选 */}
+              <div className="mt-3">
+                <div className="text-xs text-gray-500 font-medium mb-2">或选择预设形象</div>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { id: 'business-female', label: '职场女', emoji: '👩‍💼' },
+                    { id: 'business-male', label: '职场男', emoji: '👨‍💼' },
+                    { id: 'casual-female', label: '休闲女', emoji: '👩' },
+                    { id: 'casual-male', label: '休闲男', emoji: '👨' },
+                    { id: 'anchor-female', label: '主播女', emoji: '👩‍🎤' },
+                    { id: 'anchor-male', label: '主播男', emoji: '👨‍🎤' },
+                    { id: 'teacher', label: '知识博主', emoji: '🧑‍🏫' },
+                    { id: 'chef', label: '美食博主', emoji: '👨‍🍳' },
+                  ].map(av => (
+                    <button
+                      key={av.id}
+                      onClick={() => { setAvatarType('preset'); setAvatarPreset(av.id) }}
+                      className={`flex flex-col items-center gap-1 p-2 rounded-2xl transition-all active:scale-95 ${avatarPreset === av.id && avatarType === 'preset' ? 'bg-purple-50 ring-2 ring-purple-400' : 'bg-gray-50'}`}
+                    >
+                      <span className="text-2xl">{av.emoji}</span>
+                      <span className="text-[9px] text-gray-600 font-medium">{av.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
                 <button onClick={() => setStep('input')} className="w-full py-2 text-sm text-gray-400">← 返回</button>
               </>
         )}
@@ -8032,6 +8161,22 @@ ${line}
                 </button>
               )}
             </div>
+            {/* 进入剪辑 */}
+            <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl p-4 shadow-md">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-2xl">✂️</span>
+                <div>
+                  <div className="font-black text-white text-sm">进入剪辑</div>
+                  <div className="text-white/80 text-[10px]">调整字幕、音效、封面</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <button className="py-2 bg-white/20 text-white text-[11px] font-bold rounded-xl active:scale-95 transition-all">✂️ 剪辑</button>
+                <button className="py-2 bg-white/20 text-white text-[11px] font-bold rounded-xl active:scale-95 transition-all">🎵 音效</button>
+                <button className="py-2 bg-white/20 text-white text-[11px] font-bold rounded-xl active:scale-95 transition-all">🖼️ 封面</button>
+              </div>
+            </div>
+
             {/* 操作按钮组 */}
             <div className="grid grid-cols-2 gap-2">
               {/* 录入发布数据 */}
