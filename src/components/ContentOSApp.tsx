@@ -2797,7 +2797,7 @@ export default function ContentOSApp() {
             <div className="absolute bottom-[72px] left-0 right-0 z-50 px-4 pb-2" onClick={() => setShowCreateMenu(false)}>
               <div className="bg-white rounded-3xl shadow-2xl shadow-black/20 p-3 border border-gray-100">
                 <div className="text-[10px] text-gray-400 text-center mb-2 font-medium">选择创作模式</div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-5 gap-2">
                   <button onClick={e => { e.stopPropagation(); setTab('materials'); setMatTab('topics'); setShowCreateMenu(false) }} className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-purple-50 active:scale-95 transition-all">
                     <span className="text-2xl">💡</span><span className="text-[11px] font-bold text-purple-600">选题</span>
                   </button>
