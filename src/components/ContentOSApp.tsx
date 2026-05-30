@@ -3180,33 +3180,6 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
               </div>
             </div>
 
-            {/* 创作快捷入口 */}
-            <div className="grid grid-cols-2 gap-2.5">
-              <div
-                onClick={() => { setTab('materials'); setMatTab('mine'); setTimeout(()=>setShowSuperGen(true),300) }}
-                className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-3xl px-4 py-3.5 flex items-center gap-3 active:scale-[0.97] transition-all cursor-pointer shadow-lg shadow-purple-200/60"
-              >
-                <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xl">⚡</span>
-                </div>
-                <div className="min-w-0">
-                  <div className="font-black text-white text-xs">超级文案</div>
-                  <div className="text-white/70 text-[10px] mt-0.5">热点×知识库×风格</div>
-                </div>
-              </div>
-              <div
-                onClick={() => { setTab('materials'); setTimeout(() => { setShowRecommendPanel(true); if (recommendTopicsFn) recommendTopicsFn() }, 300) }}
-                className="bg-gradient-to-br from-violet-500 to-indigo-500 rounded-3xl px-4 py-3.5 flex items-center gap-3 active:scale-[0.97] transition-all cursor-pointer shadow-lg shadow-violet-200/60"
-              >
-                <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xl">🧠</span>
-                </div>
-                <div className="min-w-0">
-                  <div className="font-black text-white text-xs">AI选题推荐</div>
-                  <div className="text-white/70 text-[10px] mt-0.5">数据驱动·个性化</div>
-                </div>
-              </div>
-            </div>
 
             {/* 每日内容计划弹层 */}
             {showDailyPlan && (
@@ -3399,8 +3372,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { icon: '📡', label: '今日情报', desc: '热点·趋势', action: () => { setTab('materials'); setMatTab('trending') }, color: 'bg-blue-50 text-blue-600' },
-                  { icon: '💡', label: '生成选题', desc: 'AI推荐', action: () => { setTab('materials'); setMatTab('topics') }, color: 'bg-purple-50 text-purple-600' },
+                  { icon: '💡', label: '生成选题', desc: '选题库', action: () => { setTab('materials'); setMatTab('topics') }, color: 'bg-purple-50 text-purple-600' },
                   { icon: '✍️', label: '写文案', desc: '一键生成', action: () => setTab('content'), color: 'bg-green-50 text-green-600' },
                   { icon: '🎬', label: '做视频', desc: 'TTS合成', action: () => setTab('video'), color: 'bg-orange-50 text-orange-600' },
                   { icon: '👥', label: '博主追踪', desc: '爆款分析', action: () => { setTab('materials'); setMatTab('creator') }, color: 'bg-cyan-50 text-cyan-600' },
