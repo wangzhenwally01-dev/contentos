@@ -6737,7 +6737,11 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
   const [showCloneStylePanel, setShowCloneStylePanel] = React.useState(false)
   const [showExtractPanel, setShowExtractPanel] = React.useState(false)
   const [topicGenLoading, setTopicGenLoading] = React.useState(false)
-  const [aiTopics, setAiTopics] = React.useState<string[]>([])
+      const [aiTopics, setAiTopics] = React.useState<string[]>([])
+      const [topicLibTab, setTopicLibTab] = React.useState<'recommend' | 'saved'>('recommend')
+      const [topicCategory, setTopicCategory] = React.useState<string>('module')
+      const [topicModule, setTopicModule] = React.useState<string>('全部')
+      const [expandedTopic, setExpandedTopic] = React.useState<number | null>(null)
   const [genMode, setGenMode] = React.useState<'tts' | 'avatar' | 'full'>('tts')
   const [bgGradient, setBgGradient] = React.useState('linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)')
   const [subtitleStyle, setSubtitleStyle] = React.useState<'none' | 'bottom' | 'karaoke'>('bottom')
@@ -7045,47 +7049,182 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
 
                   {/* ── 选题 ── */}
                   {panel.id === 'topic' && (
-                    <div className="space-y-3">
-                      <textarea value={topic} onChange={(e: any) => setTopic(e.target.value)}
-                        placeholder="输入选题，例如：开店3年踩过的5个坑..."
-                        className="w-full bg-gray-50 rounded-xl px-3 py-2.5 text-sm text-gray-800 outline-none resize-none border border-gray-100 focus:border-purple-300" rows={2} />
-
-                      <button onClick={handleGenTopics} disabled={topicGenLoading}
-                        className="w-full py-2.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white text-sm font-bold rounded-xl disabled:opacity-60 active:scale-[0.98] flex items-center justify-center gap-2">
-                        {topicGenLoading ? <><Spinner /><span>AI 生成中...</span></> : <><span>🧠</span><span>AI 推荐选题</span></>}
-                      </button>
-
-                      {aiTopics.length > 0 && (
-                        <div>
-                          <div className="text-xs text-gray-400 mb-1.5 font-medium">✨ AI 推荐（点击选用）</div>
-                          <div className="space-y-1.5">
-                            {aiTopics.map((t: string, i: number) => (
-                              <button key={i} onClick={() => { setTopic(t); togglePanel('topic') }}
-                                className="w-full text-left px-3 py-2 bg-purple-50 rounded-xl text-xs text-purple-700 hover:bg-purple-100 transition-colors border border-purple-100">{t}</button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {(savedTopics || []).length > 0 && (
-                        <div>
-                          <div className="text-xs text-gray-400 mb-1.5 font-medium">📌 已保存选题</div>
-                          <div className="space-y-1.5 max-h-36 overflow-y-auto">
-                            {(savedTopics || []).slice(0, 6).map((t: any, i: number) => (
-                              <button key={i} onClick={() => { setTopic(typeof t === 'string' ? t : t.title || String(t)); togglePanel('topic') }}
-                                className="w-full text-left px-3 py-2 bg-gray-50 rounded-xl text-xs text-gray-700 hover:bg-purple-50 transition-colors">
-                                {typeof t === 'string' ? t : t.title || String(t)}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                                            {topic.trim() && (
-                            <button onClick={() => togglePanel('copy')}
-                              className="w-full py-2.5 bg-green-500 text-white text-sm font-bold rounded-xl active:scale-[0.98] flex items-center justify-center gap-2">
-                              <span>✅</span><span>确认选题，去写文案</span><span>→</span>
+                        <div className="space-y-0">
+                          {/* ── Tab 切换：推荐选题 / 收藏选题 ── */}
+                          <div className="flex gap-1 mb-3 bg-gray-100 p-1 rounded-2xl">
+                            <button onClick={() => setTopicLibTab('recommend')}
+                              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${topicLibTab === 'recommend' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-400'}`}>
+                              ✨ 推荐选题
                             </button>
+                            <button onClick={() => setTopicLibTab('saved')}
+                              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${topicLibTab === 'saved' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-400'}`}>
+                              🔖 收藏选题 {(savedTopics||[]).length > 0 && <span className="ml-1 text-[9px] bg-purple-100 text-purple-500 px-1.5 py-0.5 rounded-full">{(savedTopics||[]).length}</span>}
+                            </button>
+                          </div>
+
+                          {/* ── 推荐选题 Tab ── */}
+                          {topicLibTab === 'recommend' && (
+                            <div className="space-y-3">
+                              {/* 内容模块 / 内容系列 分类栏 */}
+                              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+                                {[
+                                  { id: 'module', label: '📦 内容模块', desc: '按内容类型分类' },
+                                  { id: 'series', label: '🎯 内容系列', desc: '系列化选题' },
+                                ].map((cat: any) => (
+                                  <button key={cat.id} onClick={() => setTopicCategory(cat.id)}
+                                    className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${topicCategory === cat.id ? 'bg-purple-500 text-white border-purple-500' : 'bg-white text-gray-500 border-gray-200'}`}>
+                                    {cat.label}
+                                  </button>
+                                ))}
+                              </div>
+
+                              {/* 内容模块子分类 */}
+                              {topicCategory === 'module' && (
+                                <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
+                                  {['全部', '干货教程', '故事共鸣', '热点借势', '产品种草', '日常vlog', '行业观点'].map((m: string) => (
+                                    <button key={m} onClick={() => setTopicModule(m)}
+                                      className={`flex-shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all ${topicModule === m ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                      {m}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* 内容系列子分类 */}
+                              {topicCategory === 'series' && (
+                                <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
+                                  {['全部', '7天挑战', '每周分享', '行业揭秘', '对比测评', '成长记录'].map((s: string) => (
+                                    <button key={s} onClick={() => setTopicModule(s)}
+                                      className={`flex-shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all ${topicModule === s ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                      {s}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* AI 生成按钮 */}
+                              <button onClick={handleGenTopics} disabled={topicGenLoading}
+                                className="w-full py-2.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white text-sm font-bold rounded-xl disabled:opacity-60 active:scale-[0.98] flex items-center justify-center gap-2">
+                                {topicGenLoading ? <><Spinner /><span>AI 生成中...</span></> : <><span>🧠</span><span>AI 生成推荐选题</span></>}
+                              </button>
+
+                              {/* 选题列表 */}
+                              {aiTopics.length > 0 ? (
+                                <div className="space-y-2">
+                                  {aiTopics.map((t: string, i: number) => (
+                                    <div key={i} className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                                      {/* 选题标题行 */}
+                                      <button onClick={() => setExpandedTopic(expandedTopic === i ? null : i)}
+                                        className="w-full flex items-center gap-3 px-3 py-3 text-left active:bg-gray-50">
+                                        <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-white text-[10px] font-black flex-shrink-0 ${i < 3 ? 'bg-purple-400' : 'bg-gray-300'}`}>{i + 1}</span>
+                                        <span className="flex-1 text-xs font-medium text-gray-800 leading-snug">{t}</span>
+                                        <span className={`text-gray-400 text-xs transition-transform duration-200 flex-shrink-0 ${expandedTopic === i ? 'rotate-180' : ''}`}>⌄</span>
+                                      </button>
+                                      {/* 展开操作项 */}
+                                      {expandedTopic === i && (
+                                        <div className="border-t border-gray-50 px-3 py-2.5 bg-gray-50/50">
+                                          <div className="grid grid-cols-2 gap-1.5 mb-2">
+                                            <button onClick={() => { setTopic(t); togglePanel('copy'); showToast('✅ 已选用，去写文案') }}
+                                              className="flex items-center justify-center gap-1.5 py-2 bg-purple-500 text-white rounded-xl text-xs font-bold active:scale-95">
+                                              <span>✍️</span><span>使用 · 写文案</span>
+                                            </button>
+                                            <button onClick={() => {
+                                              try { const cur = JSON.parse(localStorage.getItem('contentos_saved_topics_' + acc?.id) || '[]'); if (!cur.includes(t)) { cur.unshift(t); localStorage.setItem('contentos_saved_topics_' + acc?.id, JSON.stringify(cur)); } } catch {}
+                                              showToast('✅ 已收藏')
+                                            }} className="flex items-center justify-center gap-1.5 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold active:scale-95">
+                                              <span>🔖</span><span>收藏</span>
+                                            </button>
+                                          </div>
+                                          <button onClick={() => {
+                                            setTopic(t)
+                                            handleGenerateCopy()
+                                            togglePanel('copy')
+                                            showToast('✅ 已选用，AI 生成文案中...')
+                                          }} className="w-full flex items-center justify-center gap-1.5 py-2 bg-gradient-to-r from-purple-500 to-pink-400 text-white rounded-xl text-xs font-bold active:scale-95 mb-1.5">
+                                            <span>✨</span><span>直接生成文案</span>
+                                          </button>
+                                          <button onClick={() => {
+                                            setAiTopics([])
+                                            setTopicGenLoading(true)
+                                            fetch('/api/generate-topics', {
+                                              method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                              body: JSON.stringify({ accountName: acc?.name || '', industry: acc?.industry || '', positioning: acc?.positioning || '', count: 5, similar: t })
+                                            }).then(r => r.json()).then(d => {
+                                              if (d.topics) setAiTopics(d.topics.map((x: any) => typeof x === 'string' ? x : x.title || x))
+                                              showToast('✅ 已生成类似选题')
+                                            }).catch(() => showToast('生成失败')).finally(() => setTopicGenLoading(false))
+                                          }} className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-white border border-gray-200 text-gray-500 rounded-xl text-[10px] font-bold active:scale-95">
+                                            <span>🔄</span><span>AI 生成更多类似选题</span>
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-center py-8 text-gray-400">
+                                  <div className="text-3xl mb-2">💡</div>
+                                  <div className="text-xs">点击上方按钮，AI 为你生成推荐选题</div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* ── 收藏选题 Tab ── */}
+                          {topicLibTab === 'saved' && (
+                            <div className="space-y-2">
+                              {(savedTopics || []).length === 0 ? (
+                                <div className="text-center py-8 text-gray-400">
+                                  <div className="text-3xl mb-2">🔖</div>
+                                  <div className="text-xs">还没有收藏的选题<br/>在推荐选题里点收藏即可</div>
+                                </div>
+                              ) : (
+                                (savedTopics || []).map((t: any, i: number) => {
+                                  const title = typeof t === 'string' ? t : t.title || String(t)
+                                  return (
+                                    <div key={i} className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                                      <button onClick={() => setExpandedTopic(expandedTopic === (1000 + i) ? null : (1000 + i))}
+                                        className="w-full flex items-center gap-3 px-3 py-3 text-left active:bg-gray-50">
+                                        <span className="text-purple-400 text-sm flex-shrink-0">🔖</span>
+                                        <span className="flex-1 text-xs font-medium text-gray-800 leading-snug">{title}</span>
+                                        <span className={`text-gray-400 text-xs transition-transform duration-200 flex-shrink-0 ${expandedTopic === (1000 + i) ? 'rotate-180' : ''}`}>⌄</span>
+                                      </button>
+                                      {expandedTopic === (1000 + i) && (
+                                        <div className="border-t border-gray-50 px-3 py-2.5 bg-gray-50/50">
+                                          <div className="grid grid-cols-2 gap-1.5">
+                                            <button onClick={() => { setTopic(title); togglePanel('copy'); showToast('✅ 已选用，去写文案') }}
+                                              className="flex items-center justify-center gap-1.5 py-2 bg-purple-500 text-white rounded-xl text-xs font-bold active:scale-95">
+                                              <span>✍️</span><span>使用 · 写文案</span>
+                                            </button>
+                                            <button onClick={() => {
+                                              setTopic(title)
+                                              handleGenerateCopy()
+                                              togglePanel('copy')
+                                              showToast('✅ AI 生成文案中...')
+                                            }} className="flex items-center justify-center gap-1.5 py-2 bg-gradient-to-r from-purple-500 to-pink-400 text-white rounded-xl text-xs font-bold active:scale-95">
+                                              <span>✨</span><span>生成文案</span>
+                                            </button>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )
+                                })
+                              )}
+                            </div>
+                          )}
+
+                          {topic.trim() && (
+                            <div className="pt-2">
+                              <div className="bg-purple-50 rounded-xl px-3 py-2 mb-2 flex items-center gap-2">
+                                <span className="text-purple-500 text-xs">💡</span>
+                                <span className="text-xs text-purple-700 truncate flex-1">{topic}</span>
+                              </div>
+                              <button onClick={() => togglePanel('copy')}
+                                className="w-full py-2.5 bg-green-500 text-white text-sm font-bold rounded-xl active:scale-[0.98] flex items-center justify-center gap-2">
+                                <span>✅</span><span>确认选题，去写文案</span><span>→</span>
+                              </button>
+                            </div>
                           )}
                         </div>
                       )}
