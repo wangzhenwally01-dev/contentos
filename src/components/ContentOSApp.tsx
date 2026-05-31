@@ -2687,6 +2687,7 @@ export default function ContentOSApp() {
                 cloneVoiceName={cloneVoiceName}
                 setCloneVoiceName={setCloneVoiceName}
                 setTab={setTab}
+                setMatTab={setMatTab}
                 setShowAiPanel={setShowAiPanel}
               />
             )}
@@ -2766,39 +2767,14 @@ export default function ContentOSApp() {
           />
         )}
       </div>
-            {showCreateMenu && (
-                <div className="absolute bottom-[72px] left-0 right-0 z-50 px-4 pb-2" onClick={() => setShowCreateMenu(false)}>
-                  <div className="bg-white rounded-3xl shadow-2xl shadow-black/20 p-4 border border-gray-100">
-                    <div className="text-[10px] text-gray-400 text-center mb-3 font-medium">创作工作台</div>
-                    <button onClick={e => { e.stopPropagation(); setTab('content'); setShowCreateMenu(false) }}
-                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 active:scale-[0.98] transition-all mb-2">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-400 flex items-center justify-center text-xl shadow-sm">🎬</div>
-                      <div className="text-left">
-                        <div className="text-sm font-black text-gray-900">一体化创作工作台</div>
-                        <div className="text-xs text-gray-400 mt-0.5">选题 · 文案 · 声音 · 形象 · 视频生成</div>
-                      </div>
-                      <span className="ml-auto text-purple-400 text-lg">›</span>
-                    </button>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button onClick={e => { e.stopPropagation(); setTab('materials'); setMatTab('trending'); setShowCreateMenu(false) }}
-                        className="flex items-center gap-2 px-3 py-2.5 rounded-2xl bg-orange-50 active:scale-95 transition-all">
-                        <span className="text-xl">💎</span><span className="text-xs font-bold text-orange-600">爆款素材</span>
-                      </button>
-                      <button onClick={e => { e.stopPropagation(); setTab('materials'); setMatTab('creator'); setShowCreateMenu(false) }}
-                        className="flex items-center gap-2 px-3 py-2.5 rounded-2xl bg-cyan-50 active:scale-95 transition-all">
-                        <span className="text-xl">👥</span><span className="text-xs font-bold text-cyan-600">博主追踪</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+            
                 <div className="bg-white/98 backdrop-blur-2xl border-t border-gray-100/80 flex items-end flex-shrink-0 z-50 shadow-[0_-1px_20px_rgba(0,0,0,0.06)]" style={{paddingBottom:'max(16px, env(safe-area-inset-bottom, 16px))'}}>
         {NAV_TABS.map((t, idx) => {
           const isActive = t.id === 'create' ? (tab === 'content' || tab === 'video') : tab === t.id
           const isCreate = t.id === 'create'
           return (
             <button key={t.id} onClick={() => {
-              if (t.id === 'create') { setShowCreateMenu(prev => !prev) }
+              if (t.id === 'create') { setTab('content') }
               else { setTab(t.id as Tab) }
             }} className={`flex-1 flex flex-col items-center tab-transition ${isCreate ? 'relative -mt-5' : 'pt-2'}`}>
               {isCreate ? (
@@ -6745,7 +6721,7 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
   clonedVoices, setClonedVoices, clonedAvatars, setClonedAvatars,
   isCloning, setIsCloning, cloneProgress, setCloneProgress,
   showClonePanel, setShowClonePanel, cloneVoiceName, setCloneVoiceName,
-  setTab, setShowAiPanel, radarData
+  setTab, setMatTab, setShowAiPanel, radarData
 }: any) {
   const [expandedPanel, setExpandedPanel] = React.useState<string | null>('topic')
   const [topic, setTopic] = React.useState('')
@@ -7105,16 +7081,39 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
                         </div>
                       )}
 
-                      {topic.trim() && (
-                        <button onClick={() => togglePanel('copy')}
-                          className="w-full py-2.5 bg-green-500 text-white text-sm font-bold rounded-xl active:scale-[0.98] flex items-center justify-center gap-2">
-                          <span>✅</span><span>确认选题，去写文案</span><span>→</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
+                                            {/* 快捷素材入口 */}
+                          <div className="border-t border-gray-100 pt-3">
+                            <div className="text-xs text-gray-400 mb-2 font-medium">📦 从素材库选题</div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button onClick={() => { setTab('materials'); setMatTab('creator') }}
+                                className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-cyan-50 border border-cyan-100 active:scale-95 transition-all">
+                                <span className="text-lg">👥</span>
+                                <div className="text-left">
+                                  <div className="text-xs font-bold text-cyan-700">博主追踪</div>
+                                  <div className="text-[10px] text-cyan-500">爆款视频选题</div>
+                                </div>
+                              </button>
+                              <button onClick={() => { setTab('materials'); setMatTab('trending') }}
+                                className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-orange-50 border border-orange-100 active:scale-95 transition-all">
+                                <span className="text-lg">💎</span>
+                                <div className="text-left">
+                                  <div className="text-xs font-bold text-orange-700">爆款素材</div>
+                                  <div className="text-[10px] text-orange-500">全网热门内容</div>
+                                </div>
+                              </button>
+                            </div>
+                          </div>
 
-                  {/* ── 文案 ── */}
+                          {topic.trim() && (
+                            <button onClick={() => togglePanel('copy')}
+                              className="w-full py-2.5 bg-green-500 text-white text-sm font-bold rounded-xl active:scale-[0.98] flex items-center justify-center gap-2">
+                              <span>✅</span><span>确认选题，去写文案</span><span>→</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* ── 文案 ── */}{/* ── 文案 ── */}
                   {panel.id === 'copy' && (
                     <div className="space-y-3">
                       {/* 文案风格 */}
