@@ -3391,10 +3391,14 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                       </div>
                       <div className="flex gap-1 flex-shrink-0 items-center">
                             {h.heat && <span className="text-[10px] text-red-400 font-bold">{h.heat}</span>}
-                            <button onClick={() => { saveTopic(h.title); showToast('✅ 已收藏') }}
-                              className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full font-bold active:scale-95">🔖</button>
-                            <button onClick={() => { useTopic(h.title); setTab('content'); showToast('✅ 已带入创作工作台') }}
-                              className="text-[10px] text-white bg-purple-500 px-1.5 py-0.5 rounded-full font-bold active:scale-95">✍️</button>
+                            <button onClick={() => {
+                              try { const cur = JSON.parse(localStorage.getItem('contentos_saved_topics_' + acc?.id) || '[]'); if (!cur.includes(h.title)) { cur.unshift(h.title); localStorage.setItem('contentos_saved_topics_' + acc?.id, JSON.stringify(cur)); } } catch {}
+                              showToast('✅ 已收藏')
+                            }} className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full font-bold active:scale-95">🔖</button>
+                            <button onClick={() => {
+                              try { localStorage.setItem('contentos_pending_topic', h.title) } catch {}
+                              setTab('content'); showToast('✅ 已带入创作工作台')
+                            }} className="text-[10px] text-white bg-purple-500 px-1.5 py-0.5 rounded-full font-bold active:scale-95">✍️</button>
                           </div>
                         </div>
                       ))}
@@ -6767,6 +6771,18 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
   const scrollRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => { if (videoCopy) setCopy(videoCopy) }, [videoCopy])
+
+      // 读取从首页/素材库传入的待用选题
+      React.useEffect(() => {
+        try {
+          const pending = localStorage.getItem('contentos_pending_topic')
+          if (pending) {
+            setTopic(pending)
+            localStorage.removeItem('contentos_pending_topic')
+            setExpandedPanel('topic')
+          }
+        } catch {}
+      }, [])
 
   // 展开面板时自动滚动到该面板
   function togglePanel(id: string) {
