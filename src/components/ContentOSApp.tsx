@@ -7081,30 +7081,7 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
                         </div>
                       )}
 
-                                            {/* 快捷素材入口 */}
-                          <div className="border-t border-gray-100 pt-3">
-                            <div className="text-xs text-gray-400 mb-2 font-medium">📦 从素材库选题</div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <button onClick={() => { setTab('materials'); setMatTab('creator') }}
-                                className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-cyan-50 border border-cyan-100 active:scale-95 transition-all">
-                                <span className="text-lg">👥</span>
-                                <div className="text-left">
-                                  <div className="text-xs font-bold text-cyan-700">博主追踪</div>
-                                  <div className="text-[10px] text-cyan-500">爆款视频选题</div>
-                                </div>
-                              </button>
-                              <button onClick={() => { setTab('materials'); setMatTab('trending') }}
-                                className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-orange-50 border border-orange-100 active:scale-95 transition-all">
-                                <span className="text-lg">💎</span>
-                                <div className="text-left">
-                                  <div className="text-xs font-bold text-orange-700">爆款素材</div>
-                                  <div className="text-[10px] text-orange-500">全网热门内容</div>
-                                </div>
-                              </button>
-                            </div>
-                          </div>
-
-                          {topic.trim() && (
+                                            {topic.trim() && (
                             <button onClick={() => togglePanel('copy')}
                               className="w-full py-2.5 bg-green-500 text-white text-sm font-bold rounded-xl active:scale-[0.98] flex items-center justify-center gap-2">
                               <span>✅</span><span>确认选题，去写文案</span><span>→</span>
