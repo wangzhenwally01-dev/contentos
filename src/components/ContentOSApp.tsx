@@ -2875,9 +2875,9 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
           tasks.push({ id: 'copy2', icon: '✍️', label: '继续创作文案', desc: `已有 ${savedContents.length} 条，保持更新节奏`, priority: 'normal', action: 'content', tag: '建议' })
         }
         if ((savedTopicsCount || savedTopics?.length || 0) < 3) {
-          tasks.push({ id: 'topic', icon: '💡', label: '补充选题库', desc: '选题不足，AI 批量生成高完播率选题', priority: 'important', action: 'topics', tag: '推荐' })
+          tasks.push({ id: 'topic', icon: '💡', label: '去创作工作台', desc: '选题不足，在创作工作台 AI 批量生成选题', priority: 'important', action: 'topics', tag: '推荐' })
         } else {
-          tasks.push({ id: 'topic2', icon: '💡', label: '生成今日选题', desc: `已有 ${savedTopicsCount || savedTopics?.length || 0} 个选题，继续扩充`, priority: 'normal', action: 'topics', tag: '建议' })
+          tasks.push({ id: 'topic2', icon: '💡', label: '生成今日选题', desc: `已有 ${savedTopicsCount || savedTopics?.length || 0} 个选题，去创作工作台继续扩充`, priority: 'normal', action: 'topics', tag: '建议' })
         }
         if (todaySchedule.length === 0) {
           tasks.push({ id: 'schedule', icon: '📅', label: '安排今日发布', desc: '还没有今日排期，去运营中心添加', priority: 'normal', action: 'operations', tag: '建议' })
@@ -2932,7 +2932,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
       // 数据概览
       const statsCards = [
         { label: '已存文案', value: savedContents.length, icon: '✍️', color: 'blue', action: 'content' },
-        { label: '选题库', value: savedTopicsCount || savedTopics?.length || 0, icon: '💡', color: 'purple', action: 'topics' },
+        { label: '已存选题', value: savedTopicsCount || savedTopics?.length || 0, icon: '💡', color: 'purple', action: 'topics' },
         { label: '知识库', value: (knowledgeItems||[]).length, icon: '🧠', color: 'indigo', action: 'knowledge' },
         { label: '排期数', value: schedule.length, icon: '📅', color: 'green', action: 'operations' },
       ]
@@ -3353,7 +3353,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { icon: '💡', label: '生成选题', desc: '选题库', action: () => { setTab('content') }, color: 'bg-purple-50 text-purple-600' },
+                  { icon: '💡', label: '生成选题', desc: '创作工作台', action: () => { setTab('content') }, color: 'bg-purple-50 text-purple-600' },
                   { icon: '✍️', label: '写文案', desc: '一键生成', action: () => setTab('content'), color: 'bg-green-50 text-green-600' },
                   { icon: '🎬', label: '做视频', desc: 'TTS合成', action: () => setTab('video'), color: 'bg-orange-50 text-orange-600' },
                   { icon: '👥', label: '博主追踪', desc: '爆款分析', action: () => { setTab('materials'); setMatTab('creator') }, color: 'bg-cyan-50 text-cyan-600' },
@@ -3389,9 +3389,15 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                         <div className="text-xs font-medium text-gray-800 truncate">{h.title}</div>
                         {h.desc && <div className="text-[10px] text-gray-400 truncate mt-0.5">{h.desc}</div>}
                       </div>
-                      {h.heat && <span className="text-[10px] text-red-400 font-bold flex-shrink-0">{h.heat}</span>}
-                    </div>
-                  ))}
+                      <div className="flex gap-1 flex-shrink-0 items-center">
+                            {h.heat && <span className="text-[10px] text-red-400 font-bold">{h.heat}</span>}
+                            <button onClick={() => { saveTopic(h.title); showToast('✅ 已收藏') }}
+                              className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full font-bold active:scale-95">🔖</button>
+                            <button onClick={() => { useTopic(h.title); setTab('content'); showToast('✅ 已带入创作工作台') }}
+                              className="text-[10px] text-white bg-purple-500 px-1.5 py-0.5 rounded-full font-bold active:scale-95">✍️</button>
+                          </div>
+                        </div>
+                      ))}
                 </div>
               </div>
             )}
