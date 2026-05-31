@@ -457,7 +457,7 @@ function GlobalSearch({ show, onClose, savedTopics, savedContents, trackedCreato
             <button
               key={i}
               onClick={() => {
-                if (r.action === 'topics') { setTab('materials'); setMatTab('topics') }
+                if (r.action === 'topics') { setTab('content') }
                 else if (r.action === 'content') { setTab('content') }
                 else if (r.action === 'creator') { setTab('materials'); setMatTab('creator') }
                 onClose()
@@ -2906,7 +2906,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
       function handleTaskAction(action: string) {
         if (action === 'positioning') { onPositioning() }
         else if (action === 'content') { setTab('content') }
-        else if (action === 'topics') { setTab('materials'); setMatTab('topics') }
+        else if (action === 'topics') { setTab('content') }
         else if (action === 'operations') { setTab('operations') }
         else if (action === 'radar') { setTab('materials'); setMatTab('trending') }
         else if (action === 'knowledge') { setTab('materials'); setMatTab('mine') }
@@ -3220,7 +3220,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                 return (
                   <button
                     key={card.label}
-                    onClick={() => { if (card.action === 'topics') { setTab('materials'); setMatTab('topics') } else if (card.action === 'knowledge') { setTab('materials'); setMatTab('mine') } else setTab(card.action) }}
+                    onClick={() => { if (card.action === 'topics') { setTab('content') } else if (card.action === 'knowledge') { setTab('materials'); setMatTab('mine') } else setTab(card.action) }}
                     className="bg-white rounded-2xl p-2.5 shadow-sm text-center active:scale-95 transition-transform"
                   >
                     <div className={`w-8 h-8 rounded-xl ${colorMap[card.color] || 'bg-gray-50 text-gray-500'} flex items-center justify-center text-base mx-auto mb-1.5`}>{card.icon}</div>
@@ -3353,7 +3353,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { icon: '💡', label: '生成选题', desc: '选题库', action: () => { setTab('materials'); setMatTab('topics') }, color: 'bg-purple-50 text-purple-600' },
+                  { icon: '💡', label: '生成选题', desc: '选题库', action: () => { setTab('content') }, color: 'bg-purple-50 text-purple-600' },
                   { icon: '✍️', label: '写文案', desc: '一键生成', action: () => setTab('content'), color: 'bg-green-50 text-green-600' },
                   { icon: '🎬', label: '做视频', desc: 'TTS合成', action: () => setTab('video'), color: 'bg-orange-50 text-orange-600' },
                   { icon: '👥', label: '博主追踪', desc: '爆款分析', action: () => { setTab('materials'); setMatTab('creator') }, color: 'bg-cyan-50 text-cyan-600' },
@@ -3549,7 +3549,6 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
   const TABS = [
     { id: 'trending', label: '💎 爆款库' },
     { id: 'creator', label: '👥 博主' },
-    { id: 'topics', label: '💡 选题库' },
   ]
   const [trendingSubTab, setTrendingSubTab] = React.useState<'trending' | 'radar'>('trending')
   const [mineSubTab, setMineSubTab] = React.useState<'knowledge' | 'style' | 'extract'>('knowledge')
@@ -3843,12 +3842,12 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                             <div className="flex gap-1 flex-wrap">
                               {(item.tags || []).map((tag: string) => <span key={tag} className="text-xs px-2 py-0.5 bg-gray-50 text-gray-400 rounded-full">{tag}</span>)}
                             </div>
-                            <button onClick={() => {
-                                  const mat = { id: item.id || Date.now(), title: item.title, type: 'trending', source: item.platform || '全网', likes: item.likes };
-                                  setSelectedMaterials((prev: any[]) => prev.find((m: any) => m.title === mat.title) ? prev : [...prev, mat]);
-                                  setMatTab('topics');
-                                  showToast('✅ 已加入选题库');
-                                }} className="flex-shrink-0 px-3 py-1.5 bg-orange-500 text-white rounded-xl text-xs font-bold active:scale-95 transition-all">+ 加入选题</button>
+                            <div className="flex gap-1.5">
+                                  <button onClick={() => { saveTopic(item.title); showToast('✅ 已收藏') }}
+                                    className="flex-shrink-0 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold active:scale-95 transition-all">🔖 收藏</button>
+                                  <button onClick={() => { useTopic(item.title); setTab('content'); showToast('✅ 已带入创作工作台') }}
+                                    className="flex-shrink-0 px-3 py-1.5 bg-purple-500 text-white rounded-xl text-xs font-bold active:scale-95 transition-all">✍️ 使用</button>
+                                </div>
                           </div>
                         </div>
                       ))}
@@ -4194,22 +4193,34 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                                     {h.borrowTip && <p className="text-xs text-orange-600 font-medium mb-0.5">💡 {h.borrowTip}</p>}
                                     {h.contentAngle && <p className="text-xs text-orange-500">{h.contentAngle}</p>}
                                   </div>
-                                  <button
-                                    onClick={() => generateBorrowScript(h)}
-                                    disabled={borrowLoading}
-                                    className="flex-shrink-0 text-[10px] text-white bg-orange-400 px-2.5 py-1 rounded-full font-bold disabled:opacity-60"
-                                  >借势</button>
+                                  <div className="flex gap-1.5 flex-shrink-0">
+                                        <button onClick={() => { saveTopic(h.title); showToast('✅ 已收藏') }}
+                                          className="text-[10px] text-gray-500 bg-gray-100 px-2 py-1 rounded-full font-bold active:scale-95">🔖</button>
+                                        <button onClick={() => { useTopic(h.title); setTab('content'); showToast('✅ 已带入创作工作台') }}
+                                          className="text-[10px] text-white bg-purple-500 px-2 py-1 rounded-full font-bold active:scale-95">✍️</button>
+                                        <button
+                                          onClick={() => generateBorrowScript(h)}
+                                          disabled={borrowLoading}
+                                          className="text-[10px] text-white bg-orange-400 px-2.5 py-1 rounded-full font-bold disabled:opacity-60"
+                                        >借势</button>
+                                      </div>
                                 </div>
                               </div>
                             )}
                             {!h.canBorrow && !h.borrowTip && (
-                              <div className="mt-2 flex justify-end">
-                                <button
-                                  onClick={() => generateBorrowScript(h)}
-                                  disabled={borrowLoading}
-                                  className="text-[10px] text-orange-500 bg-orange-50 px-2.5 py-1 rounded-full font-bold disabled:opacity-60"
-                                >🎯 一键借势</button>
-                              </div>
+                              <div className="mt-2 flex items-center justify-between gap-2">
+                                    <div className="flex gap-1.5">
+                                      <button onClick={() => { saveTopic(h.title); showToast('✅ 已收藏') }}
+                                        className="text-[10px] text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full font-bold active:scale-95">🔖 收藏</button>
+                                      <button onClick={() => { useTopic(h.title); setTab('content'); showToast('✅ 已带入创作工作台') }}
+                                        className="text-[10px] text-white bg-purple-500 px-2.5 py-1 rounded-full font-bold active:scale-95">✍️ 使用</button>
+                                    </div>
+                                    <button
+                                      onClick={() => generateBorrowScript(h)}
+                                      disabled={borrowLoading}
+                                      className="text-[10px] text-orange-500 bg-orange-50 px-2.5 py-1 rounded-full font-bold disabled:opacity-60"
+                                    >🎯 一键借势</button>
+                                  </div>
                             )}
                           </div>
                         ))}
@@ -6879,8 +6890,8 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
 
   // 完成状态
   const doneMap = {
-    hotspot: !!linkedHotspot,
     topic: !!topic.trim(),
+    hotspot: !!linkedHotspot,
     copy: !!copy.trim(),
     voice: true,
     avatar: true,
@@ -6890,8 +6901,8 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
   const doneCount = Object.values(doneMap).filter(Boolean).length
 
   const PANELS = [
-    { id: 'hotspot', icon: '🔥', label: '关联热点', desc: linkedHotspot ? linkedHotspot.title : '选择热点借势（可选）', optional: true },
     { id: 'topic', icon: '💡', label: '选题', desc: topic || '填写或选择选题', optional: false },
+    { id: 'hotspot', icon: '🔥', label: '关联热点', desc: linkedHotspot ? linkedHotspot.title : '选择热点借势（可选）', optional: true },
     { id: 'copy', icon: '✍️', label: '文案', desc: copy ? copy.slice(0, 24) + '...' : 'AI生成或提取文案', optional: false },
     { id: 'voice', icon: '🎙️', label: '声音', desc: [...VOICES, ...(clonedVoices || [])].find((v: any) => v.id === videoVoiceId)?.label || '少女音', optional: false },
     { id: 'avatar', icon: '🧑', label: '形象', desc: videoAvatarType === 'preset' ? (AVATAR_PRESETS.find(a => a.id === videoAvatarPreset)?.label || '预设形象') : '自定义形象', optional: false },
