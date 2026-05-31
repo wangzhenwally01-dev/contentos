@@ -3536,7 +3536,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
     { id: 'trending', label: '💎 爆款库' },
     { id: 'creator', label: '👥 博主' },
   ]
-  const [trendingSubTab, setTrendingSubTab] = React.useState<'trending' | 'radar'>('trending')
+  const [trendingSubTab, setTrendingSubTab] = React.useState<'trending' | 'radar'>('radar')
   const [mineSubTab, setMineSubTab] = React.useState<'knowledge' | 'style' | 'extract'>('knowledge')
   const [topicsSubTab, setTopicsSubTab] = React.useState<'topics' | 'saved'>('topics')
   // 已选素材（从爆款库选入选题库的内容）
@@ -3778,8 +3778,8 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
         {matTab === 'trending' && (
           <div>
             <div className="flex gap-1.5 mb-3 mt-1 bg-gray-100/80 p-1 rounded-2xl">
+              <button onClick={() => setTrendingSubTab('radar')} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${trendingSubTab === 'radar' ? 'bg-white text-blue-500 shadow-sm' : 'text-gray-400'}`}>📡 热点雷达</button>
               <button onClick={() => setTrendingSubTab('trending')} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${trendingSubTab === 'trending' ? 'bg-white text-orange-500 shadow-sm' : 'text-gray-400'}`}>💎 全网爆款</button>
-              <button onClick={() => setTrendingSubTab('radar')} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${trendingSubTab === 'radar' ? 'bg-white text-blue-500 shadow-sm' : 'text-gray-400'}`}>📡 雷达</button>
             </div>
             {trendingSubTab === 'trending' && (
               <div>
@@ -4044,30 +4044,53 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                 )}
 
                 {!radarData ? (
-                  <div className="bg-white rounded-3xl p-8 text-center shadow-sm">
-                    <div className="text-5xl mb-4">📡</div>
-                    <div className="font-black text-gray-800 text-base mb-1">内容情报雷达 v13</div>
-                    <div className="text-xs text-gray-400 mb-3 leading-relaxed">
-                      多平台实时热点 · AI趋势分析 · 一键借势<br />
-                      <span className="text-blue-400 font-medium">基于 {acc.industry} 行业定制分析</span>
-                    </div>
-                    <div className="flex justify-center gap-3 mb-5 text-xs text-gray-400">
-                      <span>🔥 微博/百度</span>
-                      <span>🎵 抖音</span>
-                      <span>📺 B站</span>
-                      <span>💬 知乎</span>
-                    </div>
-                    <button
-                      onClick={fetchRadar}
-                      disabled={radarLoading}
-                      className="px-8 py-3 bg-gradient-to-r from-orange-400 to-amber-400 text-white text-sm font-bold rounded-2xl disabled:opacity-60 active:scale-[0.97] transition-transform shadow-md"
-                    >
-                      {radarLoading ? (
-                        <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />获取中...</span>
-                      ) : '📡 获取今日情报'}
-                    </button>
-                  </div>
-                ) : (
+                      <div className="space-y-3">
+                        {/* 账号定制推荐卡片 */}
+                        <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl p-5 text-white shadow-lg">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center text-xl">📡</div>
+                            <div>
+                              <div className="font-black text-base">为你定制的热点推荐</div>
+                              <div className="text-xs text-blue-100 mt-0.5">{acc?.name || '你的账号'} · {acc?.industry || '行业'}</div>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 mb-4">
+                            {[
+                              { icon: '🎯', label: '与账号相关热点', desc: '基于你的行业和定位' },
+                              { icon: '🔥', label: '爆款内容形式', desc: '当前最高完播率形式' },
+                              { icon: '📈', label: '关键词热度', desc: '行业高搜索词推荐' },
+                              { icon: '⚡', label: '一键借势文案', desc: '热点+你的风格融合' },
+                            ].map((item: any, i: number) => (
+                              <div key={i} className="bg-white/15 rounded-2xl px-3 py-2.5">
+                                <div className="text-base mb-1">{item.icon}</div>
+                                <div className="text-xs font-bold leading-tight">{item.label}</div>
+                                <div className="text-[10px] text-blue-100 mt-0.5">{item.desc}</div>
+                              </div>
+                            ))}
+                          </div>
+                          <button
+                            onClick={fetchRadar}
+                            disabled={radarLoading}
+                            className="w-full py-3 bg-white text-blue-600 text-sm font-black rounded-2xl disabled:opacity-60 active:scale-[0.97] transition-transform shadow-sm flex items-center justify-center gap-2"
+                          >
+                            {radarLoading ? (
+                              <><span className="w-4 h-4 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin" /><span>分析中...</span></>
+                            ) : <><span>📡</span><span>立即获取今日热点推荐</span></>}
+                          </button>
+                        </div>
+                        <div className="bg-white rounded-2xl px-4 py-3 shadow-sm">
+                          <div className="text-xs font-bold text-gray-700 mb-2">📊 数据来源</div>
+                          <div className="grid grid-cols-4 gap-2 text-center">
+                            {[{icon:'🔥',name:'微博'},{icon:'🎵',name:'抖音'},{icon:'📺',name:'B站'},{icon:'💬',name:'知乎'}].map((p: any) => (
+                              <div key={p.name} className="bg-gray-50 rounded-xl py-2">
+                                <div className="text-base">{p.icon}</div>
+                                <div className="text-[10px] text-gray-500 mt-0.5">{p.name}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
                   <div className="space-y-3">
                     {/* 顶部信息栏 */}
                     <div className="flex items-center justify-between">
