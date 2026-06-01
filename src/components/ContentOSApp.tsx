@@ -3783,25 +3783,53 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
             </div>
             {trendingSubTab === 'trending' && (
               <div>
-                <div className="flex items-center justify-between mb-3 mt-1">
-                  <div className="flex gap-2">
-                    <button onClick={() => setTrendingSort('heat')} className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${trendingSort === 'heat' ? 'bg-orange-500 text-white' : 'bg-white text-gray-500 shadow-sm'}`}>🔥 热度</button>
-                    <button onClick={() => setTrendingSort('relevance')} className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${trendingSort === 'relevance' ? 'bg-blue-500 text-white' : 'bg-white text-gray-500 shadow-sm'}`}>🎯 相关</button>
+                {/* 账号定位相关推荐 Banner */}
+                <div className="bg-gradient-to-br from-orange-500 to-pink-500 rounded-3xl p-4 mb-4 text-white shadow-md">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-base">🎯</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-black text-sm">为你推荐的爆款内容</div>
+                      <div className="text-[10px] text-orange-100 truncate">{acc?.name || '你的账号'} · {acc?.industry || '行业'} · {acc?.positioning ? acc.positioning.slice(0,12)+'...' : '账号定位'}</div>
+                    </div>
+                    <button onClick={fetchTrendingMaterials} disabled={trendingLoading}
+                      className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-white/20 text-white rounded-xl text-xs font-bold disabled:opacity-60 active:scale-95 transition-all border border-white/30">
+                      {trendingLoading ? <><span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin inline-block" /><span>抓取中</span></> : <><span>⚡</span><span>一键抓取</span></>}
+                    </button>
                   </div>
-                  <button onClick={fetchTrendingMaterials} disabled={trendingLoading} className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-xl text-xs font-bold disabled:opacity-60 active:scale-95 transition-all">
-                    {trendingLoading ? <><Spinner /><span>抓取中...</span></> : <><span>⚡</span><span>一键抓取</span></>}
-                  </button>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { icon: '🔥', label: '与账号强相关', desc: '基于你的定位筛选' },
+                      { icon: '📈', label: '高互动形式', desc: '当前最高完播率' },
+                      { icon: '💡', label: '可借势选题', desc: '热点+你的风格' },
+                    ].map((tip, i) => (
+                      <div key={i} className="bg-white/15 rounded-2xl px-2.5 py-2">
+                        <div className="text-sm mb-0.5">{tip.icon}</div>
+                        <div className="text-[11px] font-bold leading-tight">{tip.label}</div>
+                        <div className="text-[9px] text-orange-100 mt-0.5">{tip.desc}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 排序 + 分类筛选 */}
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex gap-2">
+                    <button onClick={() => setTrendingSort('relevance')} className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${trendingSort === 'relevance' ? 'bg-blue-500 text-white' : 'bg-white text-gray-500 shadow-sm'}`}>🎯 最相关</button>
+                    <button onClick={() => setTrendingSort('heat')} className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${trendingSort === 'heat' ? 'bg-orange-500 text-white' : 'bg-white text-gray-500 shadow-sm'}`}>🔥 最热门</button>
+                  </div>
+                  <span className="text-[10px] text-gray-400">{trendingItems.length > 0 ? `共 ${trendingItems.length} 条` : '暂无数据'}</span>
                 </div>
                 <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 mb-3">
                   {['全部', '娱乐', '教育', '生活', '美食', '科技', '情感', '搞笑', '励志', '行业'].map(cat => (
                     <button key={cat} onClick={() => setTrendingCategory(cat)} className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-all ${trendingCategory === cat ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 shadow-sm'}`}>{cat}</button>
                   ))}
                 </div>
+
                 {trendingItems.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="text-5xl mb-4">💎</div>
-                    <p className="text-gray-500 font-semibold mb-1">点击「一键抓取」获取爆款素材</p>
-                    <p className="text-xs text-gray-400">AI 自动分析全平台热门内容<br/>并评估与你账号的相关性</p>
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <div className="text-4xl mb-3">💎</div>
+                    <p className="text-gray-500 font-semibold mb-1 text-sm">点击「一键抓取」获取爆款素材</p>
+                    <p className="text-xs text-gray-400">AI 自动分析全平台热门内容<br/>并根据你的账号定位评估相关性</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -3812,9 +3840,10 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                         <div key={item.id} className="bg-white rounded-2xl p-4 shadow-sm">
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
                                 <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">{item.platform}</span>
                                 <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full">{item.category}</span>
+                                {item.relevance >= 80 && <span className="text-xs px-2 py-0.5 bg-orange-50 text-orange-500 rounded-full font-bold">🎯 高相关</span>}
                               </div>
                               <p className="text-sm font-bold text-gray-900 leading-snug">{item.title}</p>
                             </div>
@@ -3829,11 +3858,11 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                               {(item.tags || []).map((tag: string) => <span key={tag} className="text-xs px-2 py-0.5 bg-gray-50 text-gray-400 rounded-full">{tag}</span>)}
                             </div>
                             <div className="flex gap-1.5">
-                                  <button onClick={() => { saveTopic(item.title); showToast('✅ 已收藏') }}
-                                    className="flex-shrink-0 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold active:scale-95 transition-all">🔖 收藏</button>
-                                  <button onClick={() => { useTopic(item.title); setTab('content'); showToast('✅ 已带入创作工作台') }}
-                                    className="flex-shrink-0 px-3 py-1.5 bg-purple-500 text-white rounded-xl text-xs font-bold active:scale-95 transition-all">✍️ 使用</button>
-                                </div>
+                              <button onClick={() => { saveTopic(item.title); showToast('✅ 已收藏') }}
+                                className="flex-shrink-0 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold active:scale-95 transition-all">🔖 收藏</button>
+                              <button onClick={() => { useTopic(item.title); setTab('content'); showToast('✅ 已带入创作工作台') }}
+                                className="flex-shrink-0 px-3 py-1.5 bg-purple-500 text-white rounded-xl text-xs font-bold active:scale-95 transition-all">✍️ 使用</button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -6938,631 +6967,646 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
   const currentVoice = [...VOICES, ...(clonedVoices || [])].find((v: any) => v.id === videoVoiceId)
 
   return (
-    <div className="flex flex-col h-full bg-[#F5F6FA]">
-      {/* 顶部标题栏 */}
-      <div className="px-4 pt-12 pb-0 flex-shrink-0 bg-white shadow-[0_1px_8px_rgba(0,0,0,0.06)]">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h1 className="text-xl font-black text-gray-900">🎬 创作工作台</h1>
-            <div className="text-xs text-gray-400 mt-0.5">
-              {doneCount < 3 ? '先完成选题和文案' : doneCount < 5 ? '配置声音和形象' : '准备好了，可以生成！'}
-            </div>
-          </div>
-          <button onClick={() => setShowAiPanel(true)} className="w-9 h-9 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-400 shadow-md flex items-center justify-center text-base active:scale-95 transition-transform relative">
-            🤖<span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white" />
-          </button>
-        </div>
-
-        {/* 进度条 */}
-        <div className="flex gap-1 pb-3">
-          {PANELS.map(p => (
-            <div key={p.id} className={`flex-1 h-1 rounded-full transition-all ${(doneMap as any)[p.id] ? 'bg-green-400' : p.optional ? 'bg-gray-100' : 'bg-gray-200'}`} />
-          ))}
-        </div>
-      </div>
-
-      {/* 视频预览区 - 固定在顶部 */}
-      <div className="flex-shrink-0 bg-white px-4 py-3 border-b border-gray-100">
-        <div className="flex gap-3 items-center">
-          {/* 小预览 */}
-          <div className="relative rounded-2xl overflow-hidden flex-shrink-0 shadow-md"
-            style={{ background: bgGradient, width: '72px', height: '128px' }}>
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-1">
-              <div className="text-2xl mb-1">{AVATAR_PRESETS.find(a => a.id === videoAvatarPreset)?.emoji || '🧑'}</div>
-              {copy && <div className="text-white text-[7px] text-center leading-tight line-clamp-3 opacity-80">{copy.slice(0, 30)}</div>}
-              {!copy && <div className="text-white/30 text-[7px] text-center">预览</div>}
-            </div>
-            {subtitleStyle !== 'none' && copy && (
-              <div className="absolute bottom-1 left-1 right-1 bg-black/60 rounded px-1 py-0.5 text-center">
-                <span className="text-white text-[6px]">{copy.slice(0, 8)}</span>
-              </div>
-            )}
-            {/* 比例标签 */}
-            <div className="absolute top-1 left-1 bg-black/40 rounded px-1 text-[6px] text-white">{videoRatio}</div>
-          </div>
-
-          {/* 当前状态摘要 */}
-          <div className="flex-1 min-w-0 space-y-1.5">
-            {topic ? (
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-green-500 font-bold">💡</span>
-                <span className="text-xs text-gray-700 truncate">{topic}</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-gray-300">💡</span>
-                <span className="text-xs text-gray-300">未填写选题</span>
-              </div>
-            )}
-            {copy ? (
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-green-500 font-bold">✍️</span>
-                <span className="text-xs text-gray-600 truncate">{copy.slice(0, 28)}...</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-gray-300">✍️</span>
-                <span className="text-xs text-gray-300">未填写文案</span>
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-gray-500">{currentVoice?.emoji || '🎙️'} {currentVoice?.label || '少女音'}</span>
-              <span className="text-gray-200">·</span>
-              <span className="text-[10px] text-gray-500">{AVATAR_PRESETS.find(a => a.id === videoAvatarPreset)?.emoji || '🧑'} {AVATAR_PRESETS.find(a => a.id === videoAvatarPreset)?.label || '预设形象'}</span>
-            </div>
-            {linkedHotspot && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-orange-500">🔥</span>
-                <span className="text-[10px] text-orange-600 truncate">{linkedHotspot.title}</span>
-              </div>
-            )}
-          </div>
-
-          {/* 比例切换 */}
-          <div className="flex flex-col gap-1 flex-shrink-0">
-            {(['9:16', '16:9', '1:1'] as const).map(r => (
-              <button key={r} onClick={() => setVideoRatio(r)}
-                className={`px-2 py-1 rounded-lg text-[9px] font-bold transition-all ${videoRatio === r ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'}`}>{r}</button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* 可滚动内容区 */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-hide">
-        <div className="px-4 py-3 space-y-2">
-          {PANELS.map(panel => (
-            <div key={panel.id} ref={el => { panelRefs.current[panel.id] = el }} className="bg-white rounded-2xl overflow-hidden shadow-sm">
-              {/* 模块头部 */}
-              <button onClick={() => togglePanel(panel.id)} className="w-full flex items-center gap-3 px-4 py-3 active:bg-gray-50 transition-colors">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0 transition-all ${(doneMap as any)[panel.id] ? 'bg-gradient-to-br from-green-100 to-emerald-100' : 'bg-gray-100'}`}>
-                  {(doneMap as any)[panel.id] && !panel.optional ? <span className="text-green-500 text-base">✓</span> : panel.icon}
+        <div className="flex flex-col h-full bg-[#F5F6FA]">
+          {/* 顶部标题栏 */}
+          <div className="px-4 pt-12 pb-0 flex-shrink-0 bg-white shadow-[0_1px_8px_rgba(0,0,0,0.06)]">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h1 className="text-xl font-black text-gray-900">🎬 创作工作台</h1>
+                <div className="text-xs text-gray-400 mt-0.5">
+                  {doneCount < 3 ? '先完成选题和文案' : doneCount < 5 ? '配置声音和形象' : '准备好了，可以生成！'}
                 </div>
-                <div className="flex-1 text-left min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-bold text-gray-900">{panel.label}</span>
-                    {panel.optional && <span className="text-[9px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">可选</span>}
-                  </div>
-                  <div className="text-xs text-gray-400 truncate mt-0.5">{panel.desc}</div>
-                </div>
-                <span className={`text-gray-400 text-sm transition-transform duration-200 flex-shrink-0 ${expandedPanel === panel.id ? 'rotate-180' : ''}`}>⌄</span>
+              </div>
+              <button onClick={() => setShowAiPanel(true)} className="w-9 h-9 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-400 shadow-md flex items-center justify-center text-base active:scale-95 transition-transform relative">
+                🤖<span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white" />
               </button>
+            </div>
+            {/* 进度条 */}
+            <div className="flex gap-1 pb-3">
+              {PANELS.map(p => (
+                <div key={p.id} className={`flex-1 h-1 rounded-full transition-all ${(doneMap as any)[p.id] ? 'bg-green-400' : p.optional ? 'bg-gray-100' : 'bg-gray-200'}`} />
+              ))}
+            </div>
+          </div>
 
-              {/* 展开内容 */}
-              {expandedPanel === panel.id && (
-                <div className="border-t border-gray-50 px-4 pb-4 pt-3">
+          {/* 可滚动内容区 */}
+          <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-hide">
+            <div className="px-4 py-4 space-y-3">
 
-                  {/* ── 关联热点 ── */}
-                  {panel.id === 'hotspot' && (
-                    <div className="space-y-2">
-                      <p className="text-xs text-gray-400">选择热点后，AI 生成文案时会自动结合该热点</p>
-                      {[...(hotspots || []).slice(0, 4), ...(radarData?.hotspots || []).slice(0, 2)].map((h: any, i: number) => (
-                        <button key={i} onClick={() => { setLinkedHotspot(h); togglePanel('hotspot') }}
-                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all border-2 ${linkedHotspot?.title === h.title ? 'bg-orange-50 border-orange-300' : 'bg-gray-50 border-transparent hover:border-gray-200'}`}>
-                          <span className="text-orange-500 font-bold text-xs flex-shrink-0">{h.heat ? `🔥${h.heat}` : '📡'}</span>
-                          <span className="text-sm text-gray-800 flex-1 truncate">{h.title}</span>
-                          <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">{h.tag || '雷达'}</span>
-                        </button>
-                      ))}
-                      {linkedHotspot && (
-                        <button onClick={() => setLinkedHotspot(null)} className="w-full py-2 text-xs text-red-400 text-center bg-red-50 rounded-xl">✕ 取消关联</button>
-                      )}
+              {/* ── 大视频预览区 ── */}
+              <div className="bg-white rounded-3xl overflow-hidden shadow-sm">
+                {/* 预览上方：选题 / 热点 / 文案 信息行（点击编辑） */}
+                <div className="px-4 pt-4 pb-3 space-y-2 border-b border-gray-50">
+                  {/* 选题行 */}
+                  <button onClick={() => setExpandedPanel(expandedPanel === 'topic' ? null : 'topic')}
+                    className="w-full flex items-center gap-2.5 py-2 px-3 rounded-2xl bg-gray-50 active:bg-gray-100 transition-colors text-left">
+                    <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${topic ? 'bg-green-100' : 'bg-gray-200'}`}>
+                      {topic ? '✓' : '💡'}
                     </div>
-                  )}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[10px] text-gray-400 font-semibold">选题</div>
+                      <div className={`text-sm font-bold truncate ${topic ? 'text-gray-900' : 'text-gray-300'}`}>
+                        {topic || '点击填写或选择选题...'}
+                      </div>
+                    </div>
+                    <span className={`text-gray-400 text-xs transition-transform flex-shrink-0 ${expandedPanel === 'topic' ? 'rotate-180' : ''}`}>⌄</span>
+                  </button>
 
-                  {/* ── 选题 ── */}
-                  {panel.id === 'topic' && (
-                        <div className="space-y-0">
-                          {/* ── Tab 切换：推荐选题 / 收藏选题 ── */}
-                          <div className="flex gap-1 mb-3 bg-gray-100 p-1 rounded-2xl">
-                            <button onClick={() => setTopicLibTab('recommend')}
-                              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${topicLibTab === 'recommend' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-400'}`}>
-                              ✨ 推荐选题
-                            </button>
-                            <button onClick={() => setTopicLibTab('saved')}
-                              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${topicLibTab === 'saved' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-400'}`}>
-                              🔖 收藏选题 {(savedTopics||[]).length > 0 && <span className="ml-1 text-[9px] bg-purple-100 text-purple-500 px-1.5 py-0.5 rounded-full">{(savedTopics||[]).length}</span>}
-                            </button>
+                  {/* 关联热点行 */}
+                  <button onClick={() => setExpandedPanel(expandedPanel === 'hotspot' ? null : 'hotspot')}
+                    className="w-full flex items-center gap-2.5 py-2 px-3 rounded-2xl bg-gray-50 active:bg-gray-100 transition-colors text-left">
+                    <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${linkedHotspot ? 'bg-orange-100' : 'bg-gray-200'}`}>
+                      {linkedHotspot ? '🔥' : '📡'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[10px] text-gray-400 font-semibold">关联热点 <span className="text-gray-300">可选</span></div>
+                      <div className={`text-sm font-bold truncate ${linkedHotspot ? 'text-orange-600' : 'text-gray-300'}`}>
+                        {linkedHotspot ? linkedHotspot.title : '点击选择热点借势...'}
+                      </div>
+                    </div>
+                    <span className={`text-gray-400 text-xs transition-transform flex-shrink-0 ${expandedPanel === 'hotspot' ? 'rotate-180' : ''}`}>⌄</span>
+                  </button>
+
+                  {/* 文案行 */}
+                  <button onClick={() => setExpandedPanel(expandedPanel === 'copy' ? null : 'copy')}
+                    className="w-full flex items-center gap-2.5 py-2 px-3 rounded-2xl bg-gray-50 active:bg-gray-100 transition-colors text-left">
+                    <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${copy ? 'bg-blue-100' : 'bg-gray-200'}`}>
+                      {copy ? '✓' : '✍️'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[10px] text-gray-400 font-semibold">文案</div>
+                      <div className={`text-sm font-bold truncate ${copy ? 'text-gray-900' : 'text-gray-300'}`}>
+                        {copy ? copy.slice(0, 30) + (copy.length > 30 ? '...' : '') : '点击填写或 AI 生成文案...'}
+                      </div>
+                    </div>
+                    <span className={`text-gray-400 text-xs transition-transform flex-shrink-0 ${expandedPanel === 'copy' ? 'rotate-180' : ''}`}>⌄</span>
+                  </button>
+                </div>
+
+                {/* 预览主体：左侧控制 + 中间大预览 */}
+                <div className="flex gap-3 px-4 py-4 items-end">
+                  {/* 左侧：声音 / 形象 / 背景 竖排按钮 */}
+                  <div className="flex flex-col gap-2 flex-shrink-0">
+                    <button onClick={() => setExpandedPanel(expandedPanel === 'voice' ? null : 'voice')}
+                      className={`flex flex-col items-center gap-1 w-14 py-2.5 rounded-2xl transition-all active:scale-95 ${expandedPanel === 'voice' ? 'bg-blue-500 text-white shadow-md' : 'bg-gray-100 text-gray-600'}`}>
+                      <span className="text-lg">{currentVoice?.emoji || '🎙️'}</span>
+                      <span className="text-[9px] font-bold leading-tight text-center">{currentVoice?.label?.slice(0,3) || '声音'}</span>
+                    </button>
+                    <button onClick={() => setExpandedPanel(expandedPanel === 'avatar' ? null : 'avatar')}
+                      className={`flex flex-col items-center gap-1 w-14 py-2.5 rounded-2xl transition-all active:scale-95 ${expandedPanel === 'avatar' ? 'bg-purple-500 text-white shadow-md' : 'bg-gray-100 text-gray-600'}`}>
+                      <span className="text-lg">{AVATAR_PRESETS.find((a: any) => a.id === videoAvatarPreset)?.emoji || '🧑'}</span>
+                      <span className="text-[9px] font-bold leading-tight text-center">形象</span>
+                    </button>
+                    <button onClick={() => setExpandedPanel(expandedPanel === 'background' ? null : 'background')}
+                      className={`flex flex-col items-center gap-1 w-14 py-2.5 rounded-2xl transition-all active:scale-95 ${expandedPanel === 'background' ? 'bg-pink-500 text-white shadow-md' : 'bg-gray-100 text-gray-600'}`}>
+                      <div className="w-6 h-6 rounded-lg" style={{ background: bgGradient }} />
+                      <span className="text-[9px] font-bold leading-tight text-center text-current">背景</span>
+                    </button>
+                    <div className="flex flex-col gap-1 mt-1">
+                      {(['9:16', '16:9', '1:1'] as const).map(r => (
+                        <button key={r} onClick={() => setVideoRatio(r)}
+                          className={`w-14 py-1 rounded-lg text-[9px] font-bold transition-all ${videoRatio === r ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'}`}>{r}</button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 中间：大视频预览 */}
+                  <div className="flex-1 flex justify-center">
+                    <div className="relative rounded-3xl overflow-hidden shadow-xl"
+                      style={{
+                        background: bgGradient,
+                        width: videoRatio === '16:9' ? '200px' : videoRatio === '1:1' ? '180px' : '140px',
+                        height: videoRatio === '16:9' ? '112px' : videoRatio === '1:1' ? '180px' : '248px',
+                      }}>
+                      <div className="absolute inset-0 opacity-20">
+                        <div className="absolute top-4 right-4 w-16 h-16 rounded-full bg-white/30" />
+                        <div className="absolute bottom-8 left-4 w-10 h-10 rounded-full bg-white/20" />
+                      </div>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <div className="text-5xl mb-2 drop-shadow-lg">{AVATAR_PRESETS.find((a: any) => a.id === videoAvatarPreset)?.emoji || '🧑'}</div>
+                        {copy && (
+                          <div className="text-white text-[9px] text-center leading-tight px-3 opacity-90 font-medium">
+                            {copy.slice(0, 40)}
                           </div>
+                        )}
+                        {!copy && (
+                          <div className="text-white/40 text-[9px] text-center">文案预览</div>
+                        )}
+                      </div>
+                      {subtitleStyle !== 'none' && copy && (
+                        <div className="absolute bottom-2 left-2 right-2 bg-black/60 rounded-lg px-2 py-1 text-center">
+                          <span className="text-white text-[8px] font-medium">{copy.slice(0, 12)}</span>
+                        </div>
+                      )}
+                      <div className="absolute top-2 left-2 bg-black/40 rounded-md px-1.5 py-0.5 text-[8px] text-white font-bold">{videoRatio}</div>
+                      <div className="absolute top-2 right-2 bg-black/40 rounded-md px-1.5 py-0.5 text-[8px] text-white">
+                        {currentVoice?.emoji || '🎙️'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-                          {/* ── 推荐选题 Tab ── */}
-                          {topicLibTab === 'recommend' && (
-                            <div className="space-y-3">
-                              {/* 内容模块 / 内容系列 分类栏 */}
-                              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-                                {[
-                                  { id: 'module', label: '📦 内容模块', desc: '按内容类型分类' },
-                                  { id: 'series', label: '🎯 内容系列', desc: '系列化选题' },
-                                ].map((cat: any) => (
-                                  <button key={cat.id} onClick={() => setTopicCategory(cat.id)}
-                                    className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${topicCategory === cat.id ? 'bg-purple-500 text-white border-purple-500' : 'bg-white text-gray-500 border-gray-200'}`}>
-                                    {cat.label}
-                                  </button>
-                                ))}
-                              </div>
+              {/* ── 展开的编辑面板 ── */}
+              {expandedPanel && (
+                <div ref={el => { panelRefs.current[expandedPanel] = el }} className="bg-white rounded-3xl overflow-hidden shadow-sm">
+                  <div className="px-4 pt-4 pb-1 flex items-center justify-between border-b border-gray-50">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-base">
+                        {PANELS.find(p => p.id === expandedPanel)?.icon}
+                      </div>
+                      <span className="font-black text-gray-900 text-sm">{PANELS.find(p => p.id === expandedPanel)?.label}</span>
+                    </div>
+                    <button onClick={() => setExpandedPanel(null)} className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-xs">✕</button>
+                  </div>
+                  <div className="px-4 pb-4 pt-3">
 
-                              {/* 内容模块子分类 */}
-                              {topicCategory === 'module' && (
-                                <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
-                                  {['全部', '干货教程', '故事共鸣', '热点借势', '产品种草', '日常vlog', '行业观点'].map((m: string) => (
-                                    <button key={m} onClick={() => setTopicModule(m)}
-                                      className={`flex-shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all ${topicModule === m ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                                      {m}
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-
-                              {/* 内容系列子分类 */}
-                              {topicCategory === 'series' && (
-                                <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
-                                  {['全部', '7天挑战', '每周分享', '行业揭秘', '对比测评', '成长记录'].map((s: string) => (
-                                    <button key={s} onClick={() => setTopicModule(s)}
-                                      className={`flex-shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all ${topicModule === s ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                                      {s}
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-
-                              {/* AI 生成按钮 */}
-                              <button onClick={handleGenTopics} disabled={topicGenLoading}
-                                className="w-full py-2.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white text-sm font-bold rounded-xl disabled:opacity-60 active:scale-[0.98] flex items-center justify-center gap-2">
-                                {topicGenLoading ? <><Spinner /><span>AI 生成中...</span></> : <><span>🧠</span><span>AI 生成推荐选题</span></>}
-                              </button>
-
-                              {/* 选题列表 */}
-                              {aiTopics.length > 0 ? (
-                                <div className="space-y-2">
-                                  {aiTopics.map((t: string, i: number) => (
-                                    <div key={i} className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-                                      {/* 选题标题行 */}
-                                      <button onClick={() => setExpandedTopic(expandedTopic === i ? null : i)}
-                                        className="w-full flex items-center gap-3 px-3 py-3 text-left active:bg-gray-50">
-                                        <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-white text-[10px] font-black flex-shrink-0 ${i < 3 ? 'bg-purple-400' : 'bg-gray-300'}`}>{i + 1}</span>
-                                        <span className="flex-1 text-xs font-medium text-gray-800 leading-snug">{t}</span>
-                                        <span className={`text-gray-400 text-xs transition-transform duration-200 flex-shrink-0 ${expandedTopic === i ? 'rotate-180' : ''}`}>⌄</span>
-                                      </button>
-                                      {/* 展开操作项 */}
-                                      {expandedTopic === i && (
-                                        <div className="border-t border-gray-50 px-3 py-2.5 bg-gray-50/50">
-                                          <div className="grid grid-cols-2 gap-1.5 mb-2">
-                                            <button onClick={() => { setTopic(t); togglePanel('copy'); showToast('✅ 已选用，去写文案') }}
-                                              className="flex items-center justify-center gap-1.5 py-2 bg-purple-500 text-white rounded-xl text-xs font-bold active:scale-95">
-                                              <span>✍️</span><span>使用 · 写文案</span>
-                                            </button>
-                                            <button onClick={() => {
-                                              try { const cur = JSON.parse(localStorage.getItem('contentos_saved_topics_' + acc?.id) || '[]'); if (!cur.includes(t)) { cur.unshift(t); localStorage.setItem('contentos_saved_topics_' + acc?.id, JSON.stringify(cur)); } } catch {}
-                                              showToast('✅ 已收藏')
-                                            }} className="flex items-center justify-center gap-1.5 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold active:scale-95">
-                                              <span>🔖</span><span>收藏</span>
-                                            </button>
-                                          </div>
-                                          <button onClick={() => {
-                                            setTopic(t)
-                                            handleGenerateCopy()
-                                            togglePanel('copy')
-                                            showToast('✅ 已选用，AI 生成文案中...')
-                                          }} className="w-full flex items-center justify-center gap-1.5 py-2 bg-gradient-to-r from-purple-500 to-pink-400 text-white rounded-xl text-xs font-bold active:scale-95 mb-1.5">
-                                            <span>✨</span><span>直接生成文案</span>
-                                          </button>
-                                          <button onClick={() => {
-                                            setAiTopics([])
-                                            setTopicGenLoading(true)
-                                            fetch('/api/generate-topics', {
-                                              method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                              body: JSON.stringify({ accountName: acc?.name || '', industry: acc?.industry || '', positioning: acc?.positioning || '', count: 5, similar: t })
-                                            }).then(r => r.json()).then(d => {
-                                              if (d.topics) setAiTopics(d.topics.map((x: any) => typeof x === 'string' ? x : x.title || x))
-                                              showToast('✅ 已生成类似选题')
-                                            }).catch(() => showToast('生成失败')).finally(() => setTopicGenLoading(false))
-                                          }} className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-white border border-gray-200 text-gray-500 rounded-xl text-[10px] font-bold active:scale-95">
-                                            <span>🔄</span><span>AI 生成更多类似选题</span>
-                                          </button>
-                                        </div>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="text-center py-8 text-gray-400">
-                                  <div className="text-3xl mb-2">💡</div>
-                                  <div className="text-xs">点击上方按钮，AI 为你生成推荐选题</div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* ── 收藏选题 Tab ── */}
-                          {topicLibTab === 'saved' && (
-                            <div className="space-y-2">
-                              {(savedTopics || []).length === 0 ? (
-                                <div className="text-center py-8 text-gray-400">
-                                  <div className="text-3xl mb-2">🔖</div>
-                                  <div className="text-xs">还没有收藏的选题<br/>在推荐选题里点收藏即可</div>
-                                </div>
-                              ) : (
-                                (savedTopics || []).map((t: any, i: number) => {
-                                  const title = typeof t === 'string' ? t : t.title || String(t)
-                                  return (
-                                    <div key={i} className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-                                      <button onClick={() => setExpandedTopic(expandedTopic === (1000 + i) ? null : (1000 + i))}
-                                        className="w-full flex items-center gap-3 px-3 py-3 text-left active:bg-gray-50">
-                                        <span className="text-purple-400 text-sm flex-shrink-0">🔖</span>
-                                        <span className="flex-1 text-xs font-medium text-gray-800 leading-snug">{title}</span>
-                                        <span className={`text-gray-400 text-xs transition-transform duration-200 flex-shrink-0 ${expandedTopic === (1000 + i) ? 'rotate-180' : ''}`}>⌄</span>
-                                      </button>
-                                      {expandedTopic === (1000 + i) && (
-                                        <div className="border-t border-gray-50 px-3 py-2.5 bg-gray-50/50">
-                                          <div className="grid grid-cols-2 gap-1.5">
-                                            <button onClick={() => { setTopic(title); togglePanel('copy'); showToast('✅ 已选用，去写文案') }}
-                                              className="flex items-center justify-center gap-1.5 py-2 bg-purple-500 text-white rounded-xl text-xs font-bold active:scale-95">
-                                              <span>✍️</span><span>使用 · 写文案</span>
-                                            </button>
-                                            <button onClick={() => {
-                                              setTopic(title)
-                                              handleGenerateCopy()
-                                              togglePanel('copy')
-                                              showToast('✅ AI 生成文案中...')
-                                            }} className="flex items-center justify-center gap-1.5 py-2 bg-gradient-to-r from-purple-500 to-pink-400 text-white rounded-xl text-xs font-bold active:scale-95">
-                                              <span>✨</span><span>生成文案</span>
-                                            </button>
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  )
-                                })
-                              )}
-                            </div>
-                          )}
-
-                          {topic.trim() && (
-                            <div className="pt-2">
-                              <div className="bg-purple-50 rounded-xl px-3 py-2 mb-2 flex items-center gap-2">
-                                <span className="text-purple-500 text-xs">💡</span>
-                                <span className="text-xs text-purple-700 truncate flex-1">{topic}</span>
-                              </div>
-                              <button onClick={() => togglePanel('copy')}
-                                className="w-full py-2.5 bg-green-500 text-white text-sm font-bold rounded-xl active:scale-[0.98] flex items-center justify-center gap-2">
-                                <span>✅</span><span>确认选题，去写文案</span><span>→</span>
-                              </button>
-                            </div>
+                      {/* ── 关联热点 ── */}
+                      {expandedPanel === 'hotspot' && (
+                        <div className="space-y-2">
+                          <p className="text-xs text-gray-400">选择热点后，AI 生成文案时会自动结合该热点</p>
+                          {[...(hotspots || []).slice(0, 4), ...(radarData?.hotspots || []).slice(0, 2)].map((h: any, i: number) => (
+                            <button key={i} onClick={() => { setLinkedHotspot(h); setExpandedPanel(null) }}
+                              className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-left border-2 transition-all ${linkedHotspot?.title === h.title ? 'bg-orange-50 border-orange-300' : 'bg-gray-50 border-transparent hover:border-gray-200'}`}>
+                              <span className="text-orange-500 font-bold text-xs flex-shrink-0">{h.heat ? `🔥${h.heat}` : '📡'}</span>
+                              <span className="text-sm text-gray-800 flex-1 truncate">{h.title}</span>
+                              <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">{h.tag || '雷达'}</span>
+                            </button>
+                          ))}
+                          {linkedHotspot && (
+                            <button onClick={() => setLinkedHotspot(null)} className="w-full py-2 text-xs text-red-400 text-center bg-red-50 rounded-xl">✕ 取消关联</button>
                           )}
                         </div>
                       )}
 
-                      {/* ── 文案 ── */}{/* ── 文案 ── */}
-                  {panel.id === 'copy' && (
-                    <div className="space-y-3">
-                      {/* 文案风格 */}
-                      <div>
-                        <div className="text-xs text-gray-500 mb-2 font-medium">选择文案风格</div>
-                        <div className="grid grid-cols-3 gap-1.5">
-                          {BUILTIN_STYLES.map((s: any) => (
-                            <button key={s.id} onClick={() => setCopyStyle(s.name)}
-                              className={`flex flex-col items-center gap-1 py-2 rounded-xl text-xs font-medium transition-all ${copyStyle === s.name ? 'bg-purple-500 text-white shadow-sm' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>
-                              <span>{s.icon}</span><span>{s.name}</span>
-                            </button>
-                          ))}
-                          {(styleTemplates || []).map((s: any) => (
-                            <button key={s.id} onClick={() => setCopyStyle(s.name)}
-                              className={`flex flex-col items-center gap-1 py-2 rounded-xl text-xs font-medium transition-all ${copyStyle === s.name ? 'bg-pink-500 text-white shadow-sm' : 'bg-pink-50 text-pink-600'}`}>
-                              <span>🎨</span><span className="truncate w-full text-center">{s.name}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                      {/* ── 选题 ── */}
+                      {expandedPanel === 'topic' && (
+                            <div className="space-y-0">
+                              <div className="flex gap-1 mb-3 bg-gray-100 p-1 rounded-2xl">
+                                <button onClick={() => setTopicLibTab('recommend')}
+                                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${topicLibTab === 'recommend' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-400'}`}>
+                                  ✨ 推荐选题
+                                </button>
+                                <button onClick={() => setTopicLibTab('saved')}
+                                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${topicLibTab === 'saved' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-400'}`}>
+                                  🔖 收藏选题 {(savedTopics||[]).length > 0 && <span className="ml-1 text-[9px] bg-purple-100 text-purple-500 px-1.5 py-0.5 rounded-full">{(savedTopics||[]).length}</span>}
+                                </button>
+                              </div>
 
-                      {/* 快捷工具栏 */}
-                      <div className="flex gap-2">
-                        <button onClick={() => setShowCloneStylePanel(true)}
-                          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all ${clonedStyle ? 'bg-pink-500 text-white' : 'bg-pink-50 text-pink-600 border border-pink-100'}`}>
-                          <span>🎭</span><span>{clonedStyle ? `已克隆: ${clonedStyle.creator?.name || '博主'}` : '克隆博主风格'}</span>
-                        </button>
-                        <button onClick={() => setShowExtractPanel(true)}
-                          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold bg-blue-50 text-blue-600 border border-blue-100">
-                          <span>🔗</span><span>从链接提取</span>
-                        </button>
-                      </div>
+                              {topicLibTab === 'recommend' && (
+                                <div className="space-y-3">
+                                  <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+                                    {[
+                                      { id: 'module', label: '📦 内容模块' },
+                                      { id: 'series', label: '🎯 内容系列' },
+                                    ].map((cat: any) => (
+                                      <button key={cat.id} onClick={() => setTopicCategory(cat.id)}
+                                        className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${topicCategory === cat.id ? 'bg-purple-500 text-white border-purple-500' : 'bg-white text-gray-500 border-gray-200'}`}>
+                                        {cat.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  {topicCategory === 'module' && (
+                                    <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
+                                      {['全部', '干货教程', '故事共鸣', '热点借势', '产品种草', '日常vlog', '行业观点'].map((m: string) => (
+                                        <button key={m} onClick={() => setTopicModule(m)}
+                                          className={`flex-shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all ${topicModule === m ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                          {m}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {topicCategory === 'series' && (
+                                    <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
+                                      {['全部', '7天挑战', '每周分享', '行业揭秘', '对比测评', '成长记录'].map((s: string) => (
+                                        <button key={s} onClick={() => setTopicModule(s)}
+                                          className={`flex-shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all ${topicModule === s ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                          {s}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                  <button onClick={handleGenTopics} disabled={topicGenLoading}
+                                    className="w-full py-2.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white text-sm font-bold rounded-2xl disabled:opacity-60 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                                    {topicGenLoading ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /><span>AI 生成中...</span></> : <><span>✨</span><span>AI 生成推荐选题</span></>}
+                                  </button>
+                                  <div className="space-y-2">
+                                    {(aiTopics.length > 0 ? aiTopics : [
+                                      '普通人如何用副业月入过万？我的真实经历',
+                                      '坚持做这件事90天，我的生活发生了什么变化',
+                                      '分享一个让我受益匪浅的' + (acc?.industry || '行业') + '干货',
+                                      '新手必看！' + (acc?.industry || '行业') + '最容易踩的3个坑',
+                                    ]).map((t: string, i: number) => (
+                                      <div key={i} className={`rounded-2xl border-2 transition-all overflow-hidden ${expandedTopic === i ? 'border-purple-300 bg-purple-50' : 'border-transparent bg-gray-50'}`}>
+                                        <button onClick={() => setExpandedTopic(expandedTopic === i ? null : i)}
+                                          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left">
+                                          <span className="text-xs text-gray-400 font-bold flex-shrink-0">#{i+1}</span>
+                                          <span className="text-sm text-gray-800 flex-1 leading-snug">{t}</span>
+                                          <span className={`text-gray-400 text-xs transition-transform flex-shrink-0 ${expandedTopic === i ? 'rotate-180' : ''}`}>⌄</span>
+                                        </button>
+                                        {expandedTopic === i && (
+                                          <div className="px-3 pb-3 grid grid-cols-2 gap-2">
+                                            <button onClick={() => { setTopic(t); setExpandedPanel(null); showToast('✅ 选题已确认') }}
+                                              className="py-2 bg-purple-500 text-white text-xs font-bold rounded-xl active:scale-95">✍️ 使用·写文案</button>
+                                            <button onClick={() => { const saved = JSON.parse(localStorage.getItem('contentos_saved_topics') || '[]'); saved.unshift(t); localStorage.setItem('contentos_saved_topics', JSON.stringify(saved.slice(0,50))); showToast('✅ 已收藏') }}
+                                              className="py-2 bg-gray-100 text-gray-600 text-xs font-bold rounded-xl active:scale-95">🔖 收藏</button>
+                                            <button onClick={() => { setTopic(t); setExpandedPanel('copy'); showToast('✅ 已填入，去生成文案') }}
+                                              className="py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-xl active:scale-95 col-span-2">⚡ 直接生成文案</button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
 
-                      {/* AI生成文案 */}
-                      <button onClick={handleGenerateCopy} disabled={copyLoading}
-                        className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-400 text-white text-sm font-bold rounded-xl disabled:opacity-60 active:scale-[0.98] flex items-center justify-center gap-2 shadow-sm">
-                        {copyLoading ? <><Spinner /><span>AI 生成中...</span></> : <><span>✨</span><span>AI 生成文案</span>{!topic.trim() && <span className="text-xs opacity-70">（先填选题）</span>}</>}
-                      </button>
+                              {topicLibTab === 'saved' && (
+                                <div className="space-y-2">
+                                  {(savedTopics || []).length === 0 ? (
+                                    <div className="text-center py-8 text-gray-400">
+                                      <div className="text-3xl mb-2">🔖</div>
+                                      <p className="text-sm">还没有收藏的选题</p>
+                                      <p className="text-xs mt-1">在推荐选题中点击收藏</p>
+                                    </div>
+                                  ) : (
+                                    (savedTopics || []).map((t: string, i: number) => (
+                                      <div key={i} className={`rounded-2xl border-2 transition-all overflow-hidden ${expandedTopic === i+1000 ? 'border-purple-300 bg-purple-50' : 'border-transparent bg-gray-50'}`}>
+                                        <button onClick={() => setExpandedTopic(expandedTopic === i+1000 ? null : i+1000)}
+                                          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left">
+                                          <span className="text-orange-400 text-sm flex-shrink-0">🔖</span>
+                                          <span className="text-sm text-gray-800 flex-1 leading-snug">{t}</span>
+                                          <span className={`text-gray-400 text-xs transition-transform flex-shrink-0 ${expandedTopic === i+1000 ? 'rotate-180' : ''}`}>⌄</span>
+                                        </button>
+                                        {expandedTopic === i+1000 && (
+                                          <div className="px-3 pb-3 grid grid-cols-2 gap-2">
+                                            <button onClick={() => { setTopic(t); setExpandedPanel(null); showToast('✅ 选题已确认') }}
+                                              className="py-2 bg-purple-500 text-white text-xs font-bold rounded-xl active:scale-95">✍️ 使用</button>
+                                            <button onClick={() => { setTopic(t); setExpandedPanel('copy'); showToast('✅ 已填入，去生成文案') }}
+                                              className="py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-xl active:scale-95">⚡ 生成文案</button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
+                              )}
 
-                      {/* 文案版本 */}
-                      {copyVersions.length > 1 && (
-                        <div>
-                          <div className="text-xs text-gray-400 mb-1.5 font-medium">生成了 {copyVersions.length} 个版本，点击选用：</div>
+                              <div className="mt-3 pt-3 border-t border-gray-100">
+                                <div className="flex gap-2">
+                                  <input value={topic} onChange={e => setTopic(e.target.value)}
+                                    placeholder="或直接输入自定义选题..."
+                                    className="flex-1 bg-gray-50 rounded-xl px-3 py-2.5 text-sm outline-none border border-gray-100 focus:border-purple-300" />
+                                  <button onClick={() => { if (topic.trim()) { setExpandedPanel(null); showToast('✅ 选题已确认') } }}
+                                    className="px-4 py-2.5 bg-purple-500 text-white text-sm font-bold rounded-xl active:scale-95 flex-shrink-0">确认</button>
+                                </div>
+                              </div>
+                            </div>
+                      )}
+
+                      {/* ── 文案 ── */}
+                      {expandedPanel === 'copy' && (
+                        <div className="space-y-3">
                           <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-                            {copyVersions.map((v: any, i: number) => (
-                              <button key={i} onClick={() => { setSelectedVersion(i); setCopy(v.content); setVideoCopy(v.content) }}
-                                className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${selectedVersion === i ? 'border-purple-400 bg-purple-50 text-purple-700' : 'border-transparent bg-gray-100 text-gray-500'}`}>
-                                版本 {i + 1}
+                            {['犀利观点', '故事叙述', '干货教程', '情感共鸣', '幽默搞笑', '励志正能量'].map(s => (
+                              <button key={s} onClick={() => setCopyStyle(s)}
+                                className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${copyStyle === s ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500'}`}>{s}</button>
+                            ))}
+                          </div>
+                          <textarea value={copy} onChange={e => setCopy(e.target.value)}
+                            placeholder={topic ? `基于选题「${topic.slice(0,15)}...」写文案，或点击 AI 生成` : '输入文案内容，或点击 AI 生成...'}
+                            className="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm outline-none border border-gray-100 focus:border-blue-300 resize-none leading-relaxed"
+                            rows={6} />
+                          <div className="flex items-center justify-between text-xs text-gray-400">
+                            <span>{copy.length} 字</span>
+                            <span className={copy.length > 500 ? 'text-orange-500' : ''}>{copy.length > 500 ? '⚠️ 文案较长' : '建议 150-300 字'}</span>
+                          </div>
+                          <button onClick={async () => {
+                            if (!topic.trim()) { showToast('请先填写选题'); setExpandedPanel('topic'); return }
+                            setCopyLoading(true)
+                            try {
+                              const res = await fetch('/api/generate-copy', {
+                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ topicTitle: topic, accountName: acc?.name, industry: acc?.industry, positioning: acc?.positioning, style: copyStyle, hotspot: linkedHotspot?.title })
+                              })
+                              const data = await res.json()
+                              if (data.versions?.length) { setCopy(data.versions[0].script || data.versions[0].content || ''); setCopyVersions(data.versions); showToast('✅ 文案生成成功') }
+                              else if (data.copy) { setCopy(data.copy); showToast('✅ 文案生成成功') }
+                              else showToast('生成失败，请重试')
+                            } catch { showToast('网络错误') } finally { setCopyLoading(false) }
+                          }} disabled={copyLoading}
+                            className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-sm font-bold rounded-2xl disabled:opacity-60 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                            {copyLoading ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /><span>AI 生成中...</span></> : <><span>✨</span><span>AI 生成文案</span></>}
+                          </button>
+                          {copyVersions.length > 1 && (
+                            <div className="space-y-2">
+                              <p className="text-xs text-gray-400 font-semibold">其他版本：</p>
+                              {copyVersions.slice(1).map((v: any, i: number) => (
+                                <button key={i} onClick={() => setCopy(v.script || v.content || '')}
+                                  className="w-full text-left px-3 py-2.5 bg-gray-50 rounded-xl text-xs text-gray-600 hover:bg-blue-50 transition-colors">
+                                  <span className="font-bold text-blue-500">版本{i+2}：</span>{(v.script || v.content || '').slice(0, 40)}...
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          <button onClick={() => setShowExtractPanel(true)}
+                            className="w-full py-2.5 bg-gray-100 text-gray-600 text-sm font-bold rounded-2xl active:scale-95 flex items-center justify-center gap-2">
+                            🔗 从视频链接提取文案
+                          </button>
+                          {copy.trim() && (
+                            <button onClick={() => setExpandedPanel(null)}
+                              className="w-full py-2.5 bg-green-500 text-white text-sm font-bold rounded-2xl active:scale-95">
+                              ✅ 确认文案
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* ── 声音 ── */}
+                      {expandedPanel === 'voice' && (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 gap-2">
+                            {VOICES.map((v: any) => (
+                              <button key={v.id} onClick={() => setVideoVoiceId(v.id)}
+                                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all border-2 ${videoVoiceId === v.id ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-transparent bg-gray-50 text-gray-600'}`}>
+                                <span className="text-xl flex-shrink-0">{v.emoji}</span>
+                                <div className="text-left">
+                                  <div className="font-bold">{v.label}</div>
+                                  <div className="text-[10px] text-gray-400">{v.desc}</div>
+                                </div>
+                                {videoVoiceId === v.id && <span className="ml-auto text-blue-500 text-xs">✓</span>}
+                              </button>
+                            ))}
+                            {(clonedVoices || []).map((v: any) => (
+                              <button key={v.id} onClick={() => setVideoVoiceId(v.id)}
+                                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all border-2 ${videoVoiceId === v.id ? 'border-green-400 bg-green-50 text-green-700' : 'border-transparent bg-green-50/50 text-gray-600'}`}>
+                                <span className="text-xl flex-shrink-0">🎤</span>
+                                <div className="text-left">
+                                  <div className="font-bold">{v.name}</div>
+                                  <div className="text-[10px] text-gray-400">我的声音</div>
+                                </div>
+                                {videoVoiceId === v.id && <span className="ml-auto text-green-500 text-xs">✓</span>}
                               </button>
                             ))}
                           </div>
-                        </div>
-                      )}
-
-                      {/* 文案编辑框 */}
-                      <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs text-gray-500 font-medium">✏️ 编辑文案</span>
-                          <span className="text-[10px] text-gray-400">{copy.length} 字 · 约 {Math.ceil(copy.length / 4)} 秒</span>
-                        </div>
-                        <textarea value={copy} onChange={(e: any) => { setCopy(e.target.value); setVideoCopy(e.target.value) }}
-                          placeholder="在此输入或编辑口播文案..."
-                          className="w-full bg-gray-50 rounded-xl px-3 py-2.5 text-sm text-gray-800 outline-none resize-none border border-gray-100 focus:border-purple-300" rows={6} />
-                      </div>
-
-                      {copy.trim() && (
-                        <button onClick={() => togglePanel('voice')}
-                          className="w-full py-2.5 bg-green-500 text-white text-sm font-bold rounded-xl active:scale-[0.98] flex items-center justify-center gap-2">
-                          <span>✅</span><span>确认文案，去配声音</span><span>→</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {/* ── 声音 ── */}
-                  {panel.id === 'voice' && (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-2">
-                        {VOICES.map((v: any) => (
-                          <button key={v.id} onClick={() => setVideoVoiceId(v.id)}
-                            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all border-2 ${videoVoiceId === v.id ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-transparent bg-gray-50 text-gray-600'}`}>
-                            <span className="text-xl flex-shrink-0">{v.emoji}</span>
-                            <div className="text-left">
-                              <div className="font-bold">{v.label}</div>
-                              <div className="text-[10px] text-gray-400">{v.desc}</div>
-                            </div>
-                            {videoVoiceId === v.id && <span className="ml-auto text-blue-500 text-xs">✓</span>}
+                          <button onClick={() => setShowClonePanel(true)}
+                            className="w-full py-2.5 bg-gradient-to-r from-green-400 to-teal-400 text-white text-sm font-bold rounded-2xl active:scale-95 flex items-center justify-center gap-2">
+                            🎤 克隆我的声音
                           </button>
-                        ))}
-                        {(clonedVoices || []).map((v: any) => (
-                          <button key={v.id} onClick={() => setVideoVoiceId(v.id)}
-                            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all border-2 ${videoVoiceId === v.id ? 'border-green-400 bg-green-50 text-green-700' : 'border-transparent bg-green-50/50 text-gray-600'}`}>
-                            <span className="text-xl flex-shrink-0">🎤</span>
-                            <div className="text-left">
-                              <div className="font-bold">{v.name}</div>
-                              <div className="text-[10px] text-gray-400">我的声音</div>
+                          <div className="space-y-2">
+                            <p className="text-xs text-gray-500 font-semibold">语速</p>
+                            <div className="flex gap-2">
+                              {[{ v: 0.8, l: '慢速' }, { v: 1.0, l: '正常' }, { v: 1.2, l: '快速' }, { v: 1.5, l: '极快' }].map(s => (
+                                <button key={s.v} onClick={() => setVideoSpeed(s.v)}
+                                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${videoSpeed === s.v ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500'}`}>{s.l}</button>
+                              ))}
                             </div>
-                            {videoVoiceId === v.id && <span className="ml-auto text-green-500 text-xs">✓</span>}
-                          </button>
-                        ))}
-                      </div>
-
-                      <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs text-gray-500 font-medium">语速调节</span>
-                          <span className="text-xs font-bold text-purple-600">{videoSpeed}x</span>
-                        </div>
-                        <input type="range" min="0.7" max="1.5" step="0.1" value={videoSpeed}
-                          onChange={(e: any) => setVideoSpeed(parseFloat(e.target.value))} className="w-full accent-purple-500" />
-                        <div className="flex justify-between text-[10px] text-gray-400 mt-0.5"><span>0.7x 慢</span><span>1.0x 正常</span><span>1.5x 快</span></div>
-                      </div>
-
-                      <button onClick={() => setShowClonePanel(true)}
-                        className="w-full py-2.5 bg-gradient-to-r from-green-400 to-teal-400 text-white text-xs font-bold rounded-xl active:scale-[0.98] flex items-center justify-center gap-2">
-                        <span>🎤</span><span>克隆我的声音</span>
-                        {(clonedVoices || []).length > 0 && <span className="bg-white/30 px-1.5 py-0.5 rounded-full text-[10px]">{(clonedVoices || []).length} 个</span>}
-                      </button>
-                    </div>
-                  )}
-
-                  {/* ── 形象 ── */}
-                  {panel.id === 'avatar' && (
-                    <div className="space-y-3">
-                      <div className="flex gap-2">
-                        <button onClick={() => setVideoAvatarType('preset')} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${videoAvatarType === 'preset' ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'}`}>预设形象</button>
-                        <button onClick={() => setVideoAvatarType('upload')} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${videoAvatarType === 'upload' ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'}`}>上传照片</button>
-                      </div>
-                      {videoAvatarType === 'preset' && (
-                        <div className="grid grid-cols-2 gap-2">
-                          {AVATAR_PRESETS.map((a: any) => (
-                            <button key={a.id} onClick={() => setVideoAvatarPreset(a.id)}
-                              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all border-2 ${videoAvatarPreset === a.id ? 'border-purple-400 bg-purple-50 text-purple-700' : 'border-transparent bg-gray-50 text-gray-600'}`}>
-                              <span className="text-2xl">{a.emoji}</span>
-                              <span className="font-bold">{a.label}</span>
-                              {videoAvatarPreset === a.id && <span className="ml-auto text-purple-500 text-xs">✓</span>}
-                            </button>
-                          ))}
-                          {(clonedAvatars || []).map((a: any) => (
-                            <button key={a.id} onClick={() => { setVideoAvatarType('preset'); setVideoAvatarPreset(a.id) }}
-                              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all border-2 ${videoAvatarPreset === a.id ? 'border-green-400 bg-green-50 text-green-700' : 'border-transparent bg-green-50/50 text-gray-600'}`}>
-                              {a.imageUrl ? <img src={a.imageUrl} className="w-8 h-8 rounded-full object-cover" alt="" /> : <span className="text-2xl">🧑</span>}
-                              <span className="font-bold">{a.name}</span>
-                              {videoAvatarPreset === a.id && <span className="ml-auto text-green-500 text-xs">✓</span>}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      {videoAvatarType === 'upload' && (
-                        <div className="bg-gray-50 rounded-xl p-5 text-center border-2 border-dashed border-gray-200">
-                          <div className="text-3xl mb-2">📸</div>
-                          <div className="text-sm font-bold text-gray-700 mb-1">上传照片生成数字人</div>
-                          <div className="text-xs text-gray-400 mb-3">支持正面清晰照片，AI 自动生成口播形象</div>
-                          <button className="px-5 py-2 bg-purple-500 text-white text-xs font-bold rounded-xl active:scale-95">选择照片</button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* ── 背景 ── */}
-                  {panel.id === 'background' && (
-                    <div className="space-y-3">
-                      <div>
-                        <div className="text-xs text-gray-500 mb-2 font-medium">背景风格</div>
-                        <div className="grid grid-cols-3 gap-2">
-                          {BG_PRESETS.map((bg: any, i: number) => (
-                            <button key={i} onClick={() => setBgGradient(bg.gradient)}
-                              className={`relative rounded-xl overflow-hidden h-16 border-2 transition-all ${bgGradient === bg.gradient ? 'border-purple-400 shadow-md scale-[1.03]' : 'border-transparent'}`}
-                              style={{ background: bg.gradient }}>
-                              <span className="absolute bottom-1 left-0 right-0 text-center text-[9px] text-white font-bold drop-shadow">{bg.label}</span>
-                              {bgGradient === bg.gradient && <span className="absolute top-1 right-1 text-white text-xs">✓</span>}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500 mb-2 font-medium">字幕样式</div>
-                        <div className="grid grid-cols-3 gap-2">
-                          {[{id:'none',label:'无字幕',icon:'🚫'},{id:'bottom',label:'底部字幕',icon:'📝'},{id:'karaoke',label:'卡拉OK',icon:'🎤'}].map((s: any) => (
-                            <button key={s.id} onClick={() => setSubtitleStyle(s.id)}
-                              className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-bold transition-all ${subtitleStyle === s.id ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                              <span>{s.icon}</span><span>{s.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ── 生成模式 ── */}
-                  {panel.id === 'genmode' && (
-                    <div className="space-y-2">
-                      {[
-                        { id: 'tts', icon: '🎙️', label: '纯配音', desc: '文字转语音，生成 MP3 音频', tag: '最快' },
-                        { id: 'avatar', icon: '🧑‍💻', label: '数字人口播', desc: '数字人说话，生成 MP4 视频', tag: '推荐' },
-                        { id: 'full', icon: '🎬', label: '完整视频', desc: '数字人+背景+字幕，完整合成', tag: '最完整' },
-                      ].map((m: any) => (
-                        <button key={m.id} onClick={() => setGenMode(m.id)}
-                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all border-2 ${genMode === m.id ? 'border-purple-400 bg-purple-50' : 'border-transparent bg-gray-50 hover:bg-gray-100'}`}>
-                          <span className="text-2xl flex-shrink-0">{m.icon}</span>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-bold text-gray-800">{m.label}</span>
-                              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${genMode === m.id ? 'bg-purple-200 text-purple-700' : 'bg-gray-200 text-gray-500'}`}>{m.tag}</span>
-                            </div>
-                            <div className="text-xs text-gray-400 mt-0.5">{m.desc}</div>
                           </div>
-                          {genMode === m.id && <div className="w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs flex-shrink-0">✓</div>}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                        </div>
+                      )}
 
+                      {/* ── 形象 ── */}
+                      {expandedPanel === 'avatar' && (
+                        <div className="space-y-3">
+                          <div className="flex gap-2 mb-2">
+                            <button onClick={() => setVideoAvatarType('preset')}
+                              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${videoAvatarType === 'preset' ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'}`}>预设形象</button>
+                            <button onClick={() => setVideoAvatarType('custom')}
+                              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${videoAvatarType === 'custom' ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'}`}>自定义形象</button>
+                          </div>
+                          {videoAvatarType === 'preset' && (
+                            <div className="grid grid-cols-3 gap-2">
+                              {AVATAR_PRESETS.map((a: any) => (
+                                <button key={a.id} onClick={() => setVideoAvatarPreset(a.id)}
+                                  className={`flex flex-col items-center gap-1 py-3 rounded-2xl transition-all border-2 ${videoAvatarPreset === a.id ? 'border-purple-400 bg-purple-50' : 'border-transparent bg-gray-50'}`}>
+                                  <span className="text-2xl">{a.emoji}</span>
+                                  <span className="text-[10px] font-bold text-gray-600">{a.label}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {videoAvatarType === 'custom' && (
+                            <div className="space-y-3">
+                              {(clonedAvatars || []).length === 0 ? (
+                                <div className="text-center py-6 text-gray-400">
+                                  <div className="text-3xl mb-2">🧑</div>
+                                  <p className="text-sm">还没有自定义形象</p>
+                                </div>
+                              ) : (
+                                <div className="grid grid-cols-3 gap-2">
+                                  {(clonedAvatars || []).map((a: any) => (
+                                    <button key={a.id} onClick={() => setVideoAvatarPreset(a.id)}
+                                      className={`flex flex-col items-center gap-1 py-3 rounded-2xl transition-all border-2 ${videoAvatarPreset === a.id ? 'border-purple-400 bg-purple-50' : 'border-transparent bg-gray-50'}`}>
+                                      <span className="text-2xl">🧑</span>
+                                      <span className="text-[10px] font-bold text-gray-600">{a.name}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                              <button className="w-full py-2.5 bg-purple-500 text-white text-sm font-bold rounded-2xl active:scale-95">
+                                + 上传形象素材
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* ── 背景 ── */}
+                      {expandedPanel === 'background' && (
+                        <div className="space-y-3">
+                          <div className="flex gap-2 mb-2">
+                            <button onClick={() => setVideoBgType('gradient')}
+                              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${videoBgType === 'gradient' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-500'}`}>渐变色</button>
+                            <button onClick={() => setVideoBgType('solid')}
+                              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${videoBgType === 'solid' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-500'}`}>纯色</button>
+                            <button onClick={() => setVideoBgType('image')}
+                              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${videoBgType === 'image' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-500'}`}>图片</button>
+                          </div>
+                          {videoBgType === 'gradient' && (
+                            <div className="grid grid-cols-4 gap-2">
+                              {BG_GRADIENTS.map((g: any) => (
+                                <button key={g.id} onClick={() => setVideoBgColor(g.id)}
+                                  className={`aspect-square rounded-2xl transition-all border-3 ${videoBgColor === g.id ? 'border-gray-900 scale-95' : 'border-transparent'}`}
+                                  style={{ background: g.value }} />
+                              ))}
+                            </div>
+                          )}
+                          {videoBgType === 'solid' && (
+                            <div className="grid grid-cols-5 gap-2">
+                              {['#000000', '#ffffff', '#1a1a2e', '#16213e', '#0f3460', '#e94560', '#533483', '#2b2d42', '#ef233c', '#8d99ae'].map(c => (
+                                <button key={c} onClick={() => setVideoBgColor(c)}
+                                  className={`aspect-square rounded-xl border-2 ${videoBgColor === c ? 'border-gray-900 scale-90' : 'border-transparent'}`}
+                                  style={{ background: c }} />
+                              ))}
+                            </div>
+                          )}
+                          {videoBgType === 'image' && (
+                            <div className="text-center py-6 text-gray-400">
+                              <div className="text-3xl mb-2">🖼️</div>
+                              <p className="text-sm">上传背景图片</p>
+                              <button className="mt-3 px-4 py-2 bg-pink-500 text-white text-xs font-bold rounded-xl">选择图片</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                  </div>
                 </div>
               )}
-            </div>
-          ))}
 
-          {/* 生成按钮 */}
-          <button onClick={() => { if (!copy.trim()) { showToast('请先填写文案'); togglePanel('copy'); return }; generateTTS() }}
-            disabled={videoLoading || !copy.trim()}
-            className={`w-full py-4 text-white text-base font-black rounded-2xl disabled:opacity-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2 ${copy.trim() ? 'bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 shadow-lg shadow-purple-200/50' : 'bg-gray-300'}`}>
-            {videoLoading ? <><Spinner size="md" /><span>生成中...</span></> : copy.trim() ? <><span>🚀</span><span>开始生成</span><span className="text-sm opacity-80">({genMode === 'tts' ? '配音' : genMode === 'avatar' ? '数字人' : '完整视频'})</span></> : <><span>⚠️</span><span>请先填写文案</span></>}
-          </button>
-
-          {/* 生成结果 */}
-          {videoAudioB64 && (
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-green-100">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center text-xl">✅</div>
-                <div>
-                  <div className="text-sm font-bold text-gray-900">生成完成！</div>
-                  <div className="text-xs text-gray-400">音频已就绪，可下载使用</div>
+              {/* ── 生成模式 ── */}
+              <div className="bg-white rounded-3xl p-4 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-base">⚙️</div>
+                  <span className="font-black text-gray-900 text-sm">生成模式</span>
+                </div>
+                <div className="space-y-2">
+                  {[
+                    { id: 'tts', icon: '🎙️', label: '纯配音', tag: '最快', desc: '只生成配音音频，速度最快', color: 'blue' },
+                    { id: 'avatar', icon: '🧑', label: '数字人', tag: '推荐', desc: '数字人口播视频，效果好', color: 'purple' },
+                    { id: 'full', icon: '🎬', label: '完整视频', tag: '最完整', desc: '含背景、字幕、特效的完整视频', color: 'orange' },
+                  ].map((m: any) => (
+                    <button key={m.id} onClick={() => setGenMode(m.id)}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all border-2 ${genMode === m.id ? `border-${m.color}-400 bg-${m.color}-50` : 'border-transparent bg-gray-50'}`}>
+                      <span className="text-xl flex-shrink-0">{m.icon}</span>
+                      <div className="flex-1 text-left">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-gray-900">{m.label}</span>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${genMode === m.id ? `bg-${m.color}-200 text-${m.color}-700` : 'bg-gray-200 text-gray-500'}`}>{m.tag}</span>
+                        </div>
+                        <div className="text-xs text-gray-400 mt-0.5">{m.desc}</div>
+                      </div>
+                      {genMode === m.id && <div className="w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs flex-shrink-0">✓</div>}
+                    </button>
+                  ))}
                 </div>
               </div>
-              <audio controls src={`data:audio/mp3;base64,${videoAudioB64}`} className="w-full mb-3" style={{ height: '40px' }} />
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => { const a = document.createElement('a'); a.href = `data:audio/mp3;base64,${videoAudioB64}`; a.download = `voice_${Date.now()}.mp3`; a.click() }}
-                  className="py-2.5 bg-blue-500 text-white text-xs font-bold rounded-xl active:scale-95 flex items-center justify-center gap-1">
-                  <span>⬇️</span><span>下载音频</span>
-                </button>
-                <button onClick={() => { try { localStorage.setItem('contentos_video_copy_transfer', copy) } catch {}; showToast('✅ 已保存到内容库') }}
-                  className="py-2.5 bg-gray-100 text-gray-600 text-xs font-bold rounded-xl active:scale-95 flex items-center justify-center gap-1">
-                  <span>💾</span><span>保存到内容库</span>
+
+              {/* ── 生成按钮 ── */}
+              <button onClick={() => { if (!copy.trim()) { showToast('请先填写文案'); setExpandedPanel('copy'); return }; generateTTS() }}
+                disabled={videoLoading || !copy.trim()}
+                className={`w-full py-4 text-white text-base font-black rounded-3xl disabled:opacity-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2 ${copy.trim() ? 'bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 shadow-lg shadow-purple-200/50' : 'bg-gray-300'}`}>
+                {videoLoading ? <><Spinner size="md" /><span>生成中...</span></> : copy.trim() ? <><span>🚀</span><span>开始生成</span><span className="text-sm opacity-80">({genMode === 'tts' ? '配音' : genMode === 'avatar' ? '数字人' : '完整视频'})</span></> : <><span>⚠️</span><span>请先填写文案</span></>}
+              </button>
+
+              {/* 生成结果 */}
+              {videoAudioB64 && (
+                <div className="bg-white rounded-3xl p-4 shadow-sm border border-green-100">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center text-xl">✅</div>
+                    <div>
+                      <div className="text-sm font-bold text-gray-900">生成完成！</div>
+                      <div className="text-xs text-gray-400">音频已就绪，可下载使用</div>
+                    </div>
+                  </div>
+                  <audio controls src={`data:audio/mp3;base64,${videoAudioB64}`} className="w-full mb-3" style={{ height: '40px' }} />
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => { const a = document.createElement('a'); a.href = `data:audio/mp3;base64,${videoAudioB64}`; a.download = `voice_${Date.now()}.mp3`; a.click() }}
+                      className="py-2.5 bg-blue-500 text-white text-xs font-bold rounded-xl active:scale-95 flex items-center justify-center gap-1">
+                      <span>⬇️</span><span>下载音频</span>
+                    </button>
+                    <button onClick={() => { try { localStorage.setItem('contentos_video_copy_transfer', copy) } catch {}; showToast('✅ 已保存到内容库') }}
+                      className="py-2.5 bg-gray-100 text-gray-600 text-xs font-bold rounded-xl active:scale-95 flex items-center justify-center gap-1">
+                      <span>💾</span><span>保存到内容库</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </div>
+
+          {/* 克隆声音弹窗 */}
+          {showClonePanel && (
+            <div className="absolute inset-0 bg-black/50 z-50 flex flex-col justify-end rounded-[50px] overflow-hidden" onClick={() => setShowClonePanel(false)}>
+              <div className="bg-white rounded-t-3xl p-5 space-y-4" onClick={(e: any) => e.stopPropagation()}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-black text-gray-900">🎤 克隆我的声音</div>
+                    <div className="text-xs text-gray-400 mt-0.5">上传 10-30 秒清晰录音，AI 自动克隆</div>
+                  </div>
+                  <button onClick={() => setShowClonePanel(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
+                </div>
+                <input value={cloneVoiceName} onChange={(e: any) => setCloneVoiceName(e.target.value)} placeholder="给声音起个名字..." className="w-full bg-gray-50 rounded-xl px-3 py-2.5 text-sm outline-none border border-gray-100 focus:border-green-300" />
+                <div className="bg-gray-50 rounded-2xl p-4 text-center">
+                  <div className="text-3xl mb-2">🎙️</div>
+                  <p className="text-sm text-gray-500">点击上传录音文件</p>
+                  <p className="text-xs text-gray-400 mt-1">支持 MP3、WAV、M4A 格式</p>
+                </div>
+                <button disabled={isCloning} className="w-full py-3 bg-gradient-to-r from-green-400 to-teal-400 text-white text-sm font-bold rounded-2xl disabled:opacity-60">
+                  {isCloning ? `克隆中 ${cloneProgress}%...` : '开始克隆'}
                 </button>
               </div>
             </div>
           )}
 
-          <div className="h-4" />
-        </div>
-      </div>
+          {/* 克隆风格弹窗 */}
+          {showCloneStylePanel && (
+            <div className="absolute inset-0 bg-black/50 z-50 flex flex-col justify-end rounded-[50px] overflow-hidden" onClick={() => setShowCloneStylePanel(false)}>
+              <div className="bg-white rounded-t-3xl p-5 space-y-4" onClick={(e: any) => e.stopPropagation()}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-black text-gray-900">🎨 克隆博主风格</div>
+                    <div className="text-xs text-gray-400 mt-0.5">输入博主主页链接，AI 分析其文案风格</div>
+                  </div>
+                  <button onClick={() => setShowCloneStylePanel(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
+                </div>
+                <div className="flex gap-2">
+                  <input value={cloneStyleUrl} onChange={(e: any) => setCloneStyleUrl(e.target.value)}
+                    placeholder="粘贴博主主页链接（抖音/小红书）..."
+                    className="flex-1 bg-gray-50 rounded-xl px-3 py-2.5 text-sm outline-none border border-gray-100 focus:border-pink-300" />
+                  <button onClick={handleCloneStyle} disabled={cloneStyleLoading}
+                    className="px-4 py-2.5 bg-pink-500 text-white text-sm font-bold rounded-xl disabled:opacity-60 active:scale-95 flex-shrink-0">
+                    {cloneStyleLoading ? '分析中...' : '分析'}
+                  </button>
+                </div>
+                {clonedStyle && (
+                  <div className="bg-pink-50 rounded-xl px-3 py-2.5 flex items-center gap-2">
+                    <span className="text-pink-500">✅</span>
+                    <span className="text-sm text-pink-700">已分析 {clonedStyle.creator?.name || '博主'} 的风格，将融入文案生成</span>
+                    <button onClick={() => setClonedStyle(null)} className="ml-auto text-xs text-gray-400">清除</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
-      {/* 克隆博主风格弹窗 */}
-      {showCloneStylePanel && (
-        <div className="absolute inset-0 bg-black/50 z-50 flex flex-col justify-end rounded-[50px] overflow-hidden" onClick={() => setShowCloneStylePanel(false)}>
-          <div className="bg-white rounded-t-3xl p-5 space-y-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-black text-gray-900">🎭 克隆博主文案风格</div>
-                <div className="text-xs text-gray-400 mt-0.5">分析博主视频，提取文案风格特征</div>
+          {/* 从链接提取文案弹窗 */}
+          {showExtractPanel && (
+            <div className="absolute inset-0 bg-black/50 z-50 flex flex-col justify-end rounded-[50px] overflow-hidden" onClick={() => setShowExtractPanel(false)}>
+              <div className="bg-white rounded-t-3xl p-5 space-y-4" onClick={(e: any) => e.stopPropagation()}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-black text-gray-900">🔗 从视频链接提取文案</div>
+                    <div className="text-xs text-gray-400 mt-0.5">粘贴抖音/小红书视频链接，自动提取口播文案</div>
+                  </div>
+                  <button onClick={() => setShowExtractPanel(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
+                </div>
+                <div className="flex gap-2">
+                  <input ref={extractUrlRef} placeholder="粘贴视频链接..."
+                    className="flex-1 bg-gray-50 rounded-xl px-3 py-2.5 text-sm outline-none border border-gray-100 focus:border-blue-300" />
+                  <button onClick={async () => {
+                    const url = extractUrlRef.current?.value?.trim()
+                    if (!url) { showToast('请输入链接'); return }
+                    setExtractLoading(true)
+                    try {
+                      const res = await fetch('/api/extract-script', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) })
+                      const data = await res.json()
+                      if (data.script) { setCopy(data.script); setShowExtractPanel(false); showToast('✅ 文案提取成功') }
+                      else showToast('提取失败：' + (data.error || '未知错误'))
+                    } catch { showToast('网络错误') } finally { setExtractLoading(false) }
+                  }} disabled={extractLoading}
+                    className="px-4 py-2.5 bg-blue-500 text-white text-sm font-bold rounded-xl disabled:opacity-60 active:scale-95 flex-shrink-0">
+                    {extractLoading ? '提取中...' : '提取'}
+                  </button>
+                </div>
+                <div className="text-xs text-gray-400 bg-gray-50 rounded-xl px-3 py-2">
+                  💡 支持抖音、小红书视频链接，自动识别口播内容
+                </div>
               </div>
-              <button onClick={() => setShowCloneStylePanel(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
             </div>
-            <div className="flex gap-2">
-              <input value={cloneStyleUrl} onChange={(e: any) => setCloneStyleUrl(e.target.value)}
-                placeholder="粘贴博主主页链接（抖音/小红书）..."
-                className="flex-1 bg-gray-50 rounded-xl px-3 py-2.5 text-sm outline-none border border-gray-100 focus:border-pink-300" />
-              <button onClick={handleCloneStyle} disabled={cloneStyleLoading}
-                className="px-4 py-2.5 bg-pink-500 text-white text-sm font-bold rounded-xl disabled:opacity-60 active:scale-95 flex-shrink-0">
-                {cloneStyleLoading ? '分析中...' : '分析'}
-              </button>
-            </div>
-            {clonedStyle && (
-              <div className="bg-pink-50 rounded-xl px-3 py-2.5 flex items-center gap-2">
-                <span className="text-pink-500">✅</span>
-                <span className="text-sm text-pink-700">已分析 {clonedStyle.creator?.name || '博主'} 的风格，将融入文案生成</span>
-                <button onClick={() => setClonedStyle(null)} className="ml-auto text-xs text-gray-400">清除</button>
-              </div>
-            )}
-          </div>
+          )}
         </div>
-      )}
-
-      {/* 从链接提取文案弹窗 */}
-      {showExtractPanel && (
-        <div className="absolute inset-0 bg-black/50 z-50 flex flex-col justify-end rounded-[50px] overflow-hidden" onClick={() => setShowExtractPanel(false)}>
-          <div className="bg-white rounded-t-3xl p-5 space-y-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-black text-gray-900">🔗 从视频链接提取文案</div>
-                <div className="text-xs text-gray-400 mt-0.5">粘贴抖音/小红书视频链接，自动提取口播文案</div>
-              </div>
-              <button onClick={() => setShowExtractPanel(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
-            </div>
-            <div className="flex gap-2">
-              <input ref={extractUrlRef} placeholder="粘贴视频链接..."
-                className="flex-1 bg-gray-50 rounded-xl px-3 py-2.5 text-sm outline-none border border-gray-100 focus:border-blue-300" />
-              <button onClick={handleExtractCopy} disabled={copyLoading}
-                className="px-4 py-2.5 bg-blue-500 text-white text-sm font-bold rounded-xl disabled:opacity-60 active:scale-95 flex-shrink-0">
-                {copyLoading ? '提取中...' : '提取'}
-              </button>
-            </div>
-            <div className="text-xs text-gray-400 bg-gray-50 rounded-xl px-3 py-2">
-              💡 支持抖音、小红书视频链接，自动识别口播内容
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
+      )
 }
 
 function VideoStudio({ acc, step, setStep, copy: videoCopy, setCopy: setVideoCopy, voiceId, setVoiceId, speed, setSpeed, avatarType, setAvatarType, avatarPreset, setAvatarPreset, bgType, setBgType, bgColor, setBgColor, loading, audioB64, error, generateTTS, showToast, savedContents, setTab, setShowAiPanel, setQuickRecordData, setShowVideoRecord, videoSegments, setVideoSegments, segmentMode, setSegmentMode, activeSegment, setActiveSegment, segmentAudios, setSegmentAudios, segmentLoading, setSegmentLoading, subtitlePreview, setSubtitlePreview, subtitleLines, setSubtitleLines, currentSubLine, setCurrentSubLine, clonedVoices, setClonedVoices, isCloning, setIsCloning, cloneProgress, setCloneProgress, showClonePanel, setShowClonePanel, cloneVoiceName, setCloneVoiceName, clonedAvatars, setClonedAvatars }: any) {
