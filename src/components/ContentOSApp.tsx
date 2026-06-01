@@ -2765,6 +2765,8 @@ export default function ContentOSApp() {
             videoRecords={videoRecords} schedule={schedule}
             syncToCloud={syncToCloud} loadFromCloud={loadFromCloud}
             syncLoading={syncLoading} lastSyncTime={lastSyncTime}
+            modulePrompts={modulePrompts} setModulePrompts={setModulePrompts}
+            expandedModuleKey={expandedModuleKey} setExpandedModuleKey={setExpandedModuleKey}
           />
         )}
       </div>
@@ -11830,6 +11832,8 @@ function Profile({
   syncToCloud, loadFromCloud,
   syncLoading, lastSyncTime,
   videoRecords, schedule,
+  modulePrompts, setModulePrompts,
+  expandedModuleKey, setExpandedModuleKey,
 }: any) {
   const TABS = [
     { id: 'ai', label: '🤖 AI 设置' },
