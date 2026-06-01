@@ -716,6 +716,7 @@ export default function ContentOSApp() {
     radar: '',
     positioning: '',
   })
+  const [expandedModuleKey, setExpandedModuleKey] = useState<string | null>(null)
   const [credits, setCredits] = useState(1000)
   const [creditLogs, setCreditLogs] = useState<Array<{action:string;cost:number;time:string;desc:string}>>([])
   const [profileTab, setProfileTab] = useState<'ai' | 'accounts' | 'credits' | 'about'>('ai')
@@ -12164,58 +12165,58 @@ function Profile({
             </div>
 
             {/* ── 模块提示词 ── */}
-            <div className="bg-white rounded-3xl p-4 shadow-sm">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="font-black text-gray-900 text-sm">🧩 模块专属提示词</div>
-              </div>
-              <div className="text-xs text-gray-400 mb-3">为每个功能模块单独设置 AI 提示词，优先级高于全局系统提示词</div>
-              <div className="space-y-3">
-                {[
-                  { key: 'topics', icon: '💡', label: '选题推荐', placeholder: '如：请结合当前热点，生成适合本地餐饮账号的爆款选题，风格轻松幽默...' },
-                  { key: 'copy', icon: '✍️', label: '文案生成', placeholder: '如：文案风格要接地气，多用口语化表达，结尾加上行动号召...' },
-                  { key: 'radar', icon: '📡', label: '热点分析', placeholder: '如：重点关注本地生活、美食、探店类热点，分析借势角度...' },
-                  { key: 'positioning', icon: '🎯', label: '账号定位', placeholder: '如：帮我打造差异化的账号定位，突出本地特色和个人IP...' },
-                  { key: 'operations', icon: '📊', label: '运营建议', placeholder: '如：结合数据给出具体可执行的发布时间和内容优化建议...' },
-                ].map(({ key, icon, label, placeholder }) => {
-                  const [expanded, setExpanded] = React.useState(false)
-                  return (
-                    <div key={key} className="border border-gray-100 rounded-2xl overflow-hidden">
-                      <button
-                        onClick={() => setExpanded(!expanded)}
-                        className="w-full flex items-center gap-2 px-3 py-2.5 bg-gray-50 active:bg-gray-100 transition-all"
-                      >
-                        <span className="text-base">{icon}</span>
-                        <span className="flex-1 text-left text-sm font-bold text-gray-700">{label}</span>
-                        {modulePrompts[key] ? (
-                          <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold">已配置</span>
-                        ) : (
-                          <span className="text-[10px] text-gray-400">未设置</span>
-                        )}
-                        <span className="text-gray-400 text-xs ml-1">{expanded ? '▲' : '▼'}</span>
-                      </button>
-                      {expanded && (
-                        <div className="px-3 pb-3 pt-2 bg-white">
-                          <textarea
-                            value={modulePrompts[key] || ''}
-                            onChange={e => setModulePrompts((prev: any) => ({ ...prev, [key]: e.target.value }))}
-                            placeholder={placeholder}
-                            className="w-full px-3 py-2.5 rounded-xl bg-gray-50 text-xs outline-none resize-none h-20 text-gray-700 leading-relaxed"
-                          />
-                          {modulePrompts[key] && (
-                            <button
-                              onClick={() => setModulePrompts((prev: any) => ({ ...prev, [key]: '' }))}
-                              className="mt-1.5 text-[10px] text-red-400 active:text-red-600"
-                            >
-                              ✕ 清除此模块提示词
-                            </button>
+            {(() => {
+              const MODULE_LIST = [
+                { key: 'topics', icon: '💡', label: '选题推荐', placeholder: '如：请结合当前热点，生成适合本地餐饮账号的爆款选题，风格轻松幽默...' },
+                { key: 'copy', icon: '✍️', label: '文案生成', placeholder: '如：文案风格要接地气，多用口语化表达，结尾加上行动号召...' },
+                { key: 'radar', icon: '📡', label: '热点分析', placeholder: '如：重点关注本地生活、美食、探店类热点，分析借势角度...' },
+                { key: 'positioning', icon: '🎯', label: '账号定位', placeholder: '如：帮我打造差异化的账号定位，突出本地特色和个人IP...' },
+                { key: 'operations', icon: '📊', label: '运营建议', placeholder: '如：结合数据给出具体可执行的发布时间和内容优化建议...' },
+              ]
+              return (
+                <div className="bg-white rounded-3xl p-4 shadow-sm">
+                  <div className="font-black text-gray-900 text-sm mb-1">🧩 模块专属提示词</div>
+                  <div className="text-xs text-gray-400 mb-3">为每个功能模块单独设置 AI 提示词，优先级高于全局系统提示词</div>
+                  <div className="space-y-3">
+                    {MODULE_LIST.map(({ key, icon, label, placeholder }) => (
+                      <div key={key} className="border border-gray-100 rounded-2xl overflow-hidden">
+                        <button
+                          onClick={() => setExpandedModuleKey(expandedModuleKey === key ? null : key)}
+                          className="w-full flex items-center gap-2 px-3 py-2.5 bg-gray-50 active:bg-gray-100 transition-all"
+                        >
+                          <span className="text-base">{icon}</span>
+                          <span className="flex-1 text-left text-sm font-bold text-gray-700">{label}</span>
+                          {modulePrompts[key] ? (
+                            <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold">已配置</span>
+                          ) : (
+                            <span className="text-[10px] text-gray-400">未设置</span>
                           )}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
+                          <span className="text-gray-400 text-xs ml-1">{expandedModuleKey === key ? '▲' : '▼'}</span>
+                        </button>
+                        {expandedModuleKey === key && (
+                          <div className="px-3 pb-3 pt-2 bg-white">
+                            <textarea
+                              value={modulePrompts[key] || ''}
+                              onChange={e => setModulePrompts((prev: any) => ({ ...prev, [key]: e.target.value }))}
+                              placeholder={placeholder}
+                              className="w-full px-3 py-2.5 rounded-xl bg-gray-50 text-xs outline-none resize-none h-20 text-gray-700 leading-relaxed"
+                            />
+                            {modulePrompts[key] && (
+                              <button
+                                onClick={() => setModulePrompts((prev: any) => ({ ...prev, [key]: '' }))}
+                                className="mt-1.5 text-[10px] text-red-400 active:text-red-600"
+                              >
+                                ✕ 清除此模块提示词
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
 
             <button onClick={saveAiSettings} className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md">
               💾 保存 AI 设置
