@@ -6799,6 +6799,7 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
   const [subtitleStyle, setSubtitleStyle] = React.useState<'none' | 'bottom' | 'karaoke'>('bottom')
   const [videoRatio, setVideoRatio] = React.useState<'9:16' | '16:9' | '1:1'>('9:16')
   const extractUrlRef = React.useRef<HTMLInputElement>(null)
+  const [extractLoading, setExtractLoading] = React.useState(false)
   const panelRefs = React.useRef<Record<string, HTMLDivElement | null>>({})
   const scrollRef = React.useRef<HTMLDivElement>(null)
 
