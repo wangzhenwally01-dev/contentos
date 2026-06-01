@@ -7423,7 +7423,16 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
                           </div>
                           {videoBgType === 'gradient' && (
                             <div className="grid grid-cols-4 gap-2">
-                              {BG_GRADIENTS.map((g: any) => (
+                              {[
+                                { id: 'dark', value: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)' },
+                                { id: 'purple', value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+                                { id: 'pink', value: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+                                { id: 'blue', value: 'linear-gradient(135deg, #0f3460 0%, #533483 100%)' },
+                                { id: 'green', value: 'linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%)' },
+                                { id: 'orange', value: 'linear-gradient(135deg, #f7971e 0%, #ffd200 100%)' },
+                                { id: 'red', value: 'linear-gradient(135deg, #f953c6 0%, #b91d73 100%)' },
+                                { id: 'tech', value: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)' },
+                              ].map((g: any) => (
                                 <button key={g.id} onClick={() => setVideoBgColor(g.id)}
                                   className={`aspect-square rounded-2xl transition-all border-3 ${videoBgColor === g.id ? 'border-gray-900 scale-95' : 'border-transparent'}`}
                                   style={{ background: g.value }} />
