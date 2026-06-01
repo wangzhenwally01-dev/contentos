@@ -7452,6 +7452,7 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
                       )}
 
                   </div>
+                  </div>
                 </div>
               )}
 
