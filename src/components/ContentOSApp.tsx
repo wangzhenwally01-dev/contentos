@@ -3538,6 +3538,13 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
   ]
   const [trendingSubTab, setTrendingSubTab] = React.useState<'trending' | 'radar'>('radar')
   const [mineSubTab, setMineSubTab] = React.useState<'knowledge' | 'style' | 'extract'>('knowledge')
+
+  // 进入爆款库且切换到雷达Tab时，自动触发加载
+  React.useEffect(() => {
+    if (matTab === 'trending' && trendingSubTab === 'radar' && !radarData && !radarLoading) {
+      fetchRadar()
+    }
+  }, [matTab, trendingSubTab])
   const [topicsSubTab, setTopicsSubTab] = React.useState<'topics' | 'saved'>('topics')
   // 已选素材（从爆款库选入选题库的内容）
   const [selectedMaterials, setSelectedMaterials] = React.useState<any[]>([])
@@ -3754,13 +3761,6 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
       <div className="px-4 pt-12 pb-0 flex-shrink-0 bg-white shadow-[0_1px_12px_rgba(0,0,0,0.06)]">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-black text-gray-900">素材中心</h1>
-          <button
-            onClick={() => setShowAiPanel(true)}
-            className="w-9 h-9 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 shadow-md shadow-blue-200/60 flex items-center justify-center text-base active:scale-95 transition-transform relative"
-          >
-            🤖
-            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white" />
-          </button>
         </div>
         <div className="flex gap-1.5 pb-3">
           {TABS.map(t => (
@@ -4072,9 +4072,29 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                   </div>
                 )}
 
-                {!radarData ? (
+                {radarLoading && !radarData ? (
                       <div className="space-y-3">
-                        {/* 账号定制推荐卡片 */}
+                        {/* 加载骨架屏 */}
+                        <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl p-5 text-white shadow-lg">
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center text-xl animate-pulse">📡</div>
+                            <div>
+                              <div className="font-black text-base">正在为你分析热点...</div>
+                              <div className="text-xs text-blue-100 mt-0.5">{acc?.name || '你的账号'} · {acc?.industry || '行业'}</div>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            {[1,2,3].map(i => (
+                              <div key={i} className="bg-white/15 rounded-2xl px-4 py-3 animate-pulse">
+                                <div className="h-3 bg-white/30 rounded-full w-3/4 mb-2" />
+                                <div className="h-2 bg-white/20 rounded-full w-1/2" />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : !radarData ? (
+                      <div className="space-y-3">
                         <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl p-5 text-white shadow-lg">
                           <div className="flex items-center gap-3 mb-3">
                             <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center text-xl">📡</div>
@@ -4083,40 +4103,13 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                               <div className="text-xs text-blue-100 mt-0.5">{acc?.name || '你的账号'} · {acc?.industry || '行业'}</div>
                             </div>
                           </div>
-                          <div className="grid grid-cols-2 gap-2 mb-4">
-                            {[
-                              { icon: '🎯', label: '与账号相关热点', desc: '基于你的行业和定位' },
-                              { icon: '🔥', label: '爆款内容形式', desc: '当前最高完播率形式' },
-                              { icon: '📈', label: '关键词热度', desc: '行业高搜索词推荐' },
-                              { icon: '⚡', label: '一键借势文案', desc: '热点+你的风格融合' },
-                            ].map((item: any, i: number) => (
-                              <div key={i} className="bg-white/15 rounded-2xl px-3 py-2.5">
-                                <div className="text-base mb-1">{item.icon}</div>
-                                <div className="text-xs font-bold leading-tight">{item.label}</div>
-                                <div className="text-[10px] text-blue-100 mt-0.5">{item.desc}</div>
-                              </div>
-                            ))}
-                          </div>
                           <button
                             onClick={fetchRadar}
                             disabled={radarLoading}
                             className="w-full py-3 bg-white text-blue-600 text-sm font-black rounded-2xl disabled:opacity-60 active:scale-[0.97] transition-transform shadow-sm flex items-center justify-center gap-2"
                           >
-                            {radarLoading ? (
-                              <><span className="w-4 h-4 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin" /><span>分析中...</span></>
-                            ) : <><span>📡</span><span>立即获取今日热点推荐</span></>}
+                            <span>📡</span><span>获取今日热点推荐</span>
                           </button>
-                        </div>
-                        <div className="bg-white rounded-2xl px-4 py-3 shadow-sm">
-                          <div className="text-xs font-bold text-gray-700 mb-2">📊 数据来源</div>
-                          <div className="grid grid-cols-4 gap-2 text-center">
-                            {[{icon:'🔥',name:'微博'},{icon:'🎵',name:'抖音'},{icon:'📺',name:'B站'},{icon:'💬',name:'知乎'}].map((p: any) => (
-                              <div key={p.name} className="bg-gray-50 rounded-xl py-2">
-                                <div className="text-base">{p.icon}</div>
-                                <div className="text-[10px] text-gray-500 mt-0.5">{p.name}</div>
-                              </div>
-                            ))}
-                          </div>
                         </div>
                       </div>
                     ) : (
@@ -6978,9 +6971,6 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
                   {doneCount < 3 ? '先完成选题和文案' : doneCount < 5 ? '配置声音和形象' : '准备好了，可以生成！'}
                 </div>
               </div>
-              <button onClick={() => setShowAiPanel(true)} className="w-9 h-9 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-400 shadow-md flex items-center justify-center text-base active:scale-95 transition-transform relative">
-                🤖<span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white" />
-              </button>
             </div>
             {/* 进度条 */}
             <div className="flex gap-1 pb-3">
@@ -7108,10 +7098,11 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
                 </div>
               </div>
 
-              {/* ── 展开的编辑面板 ── */}
+              {/* ── 展开的编辑面板（底部浮层）── */}
               {expandedPanel && (
-                <div ref={el => { panelRefs.current[expandedPanel] = el }} className="bg-white rounded-3xl overflow-hidden shadow-sm">
-                  <div className="px-4 pt-4 pb-1 flex items-center justify-between border-b border-gray-50">
+                <div className="absolute inset-0 z-40 flex flex-col justify-end rounded-[50px] overflow-hidden" style={{ background: 'rgba(0,0,0,0.45)' }} onClick={() => setExpandedPanel(null)}>
+                  <div ref={el => { panelRefs.current[expandedPanel] = el }} className="bg-white rounded-t-3xl overflow-hidden max-h-[80%] flex flex-col" onClick={(e: any) => e.stopPropagation()}>
+                  <div className="px-4 pt-4 pb-1 flex items-center justify-between border-b border-gray-50 flex-shrink-0">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-base">
                         {PANELS.find(p => p.id === expandedPanel)?.icon}
@@ -7120,7 +7111,7 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
                     </div>
                     <button onClick={() => setExpandedPanel(null)} className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-xs">✕</button>
                   </div>
-                  <div className="px-4 pb-4 pt-3">
+                  <div className="px-4 pb-6 pt-3 overflow-y-auto scrollbar-hide flex-1">
 
                       {/* ── 关联热点 ── */}
                       {expandedPanel === 'hotspot' && (
@@ -7986,13 +7977,6 @@ ${line}
       <div className="px-5 pt-12 pb-3 flex-shrink-0">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-black text-gray-900">视频生成</h1>
-          <button
-            onClick={() => setShowAiPanel(true)}
-            className="w-9 h-9 rounded-2xl bg-gradient-to-br from-red-400 to-rose-500 shadow-sm flex items-center justify-center text-base active:scale-95 transition-transform relative"
-          >
-            🤖
-            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white" />
-          </button>
         </div>
 
         {/* 当前选题/文案展示 */}
@@ -11689,13 +11673,6 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
           <div className="px-4 pt-12 pb-0 flex-shrink-0 bg-white shadow-[0_1px_12px_rgba(0,0,0,0.06)]">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-black text-gray-900">📊 运营中心</h1>
-          <button
-            onClick={() => setShowAiPanel(true)}
-            className="w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-400 shadow-md shadow-purple-200/60 flex items-center justify-center text-base active:scale-95 transition-transform relative"
-          >
-            🤖
-            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white" />
-          </button>
         </div>
         <div className="flex gap-1.5 pb-3">
           {TABS.map(t => (
