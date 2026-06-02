@@ -3092,19 +3092,6 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
   const [editAccData, setEditAccData] = React.useState<any>(null)
       const EMOJIS = ['🏪', '🍜', '💪', '💄', '📚', '🏠', '🚗', '🎵', '🌿', '☕']
 
-      // 实时时钟
-      const [currentTime, setCurrentTime] = React.useState(() => {
-        const now = new Date()
-        return now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
-      })
-      React.useEffect(() => {
-        const timer = setInterval(() => {
-          const now = new Date()
-          setCurrentTime(now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }))
-        }, 1000)
-        return () => clearInterval(timer)
-      }, [])
-
       // 任务完成状态
       const [completedTasks, setCompletedTasks] = React.useState<Set<string>>(new Set())
       const [showDailyPlan, setShowDailyPlan] = React.useState(false)
@@ -3416,8 +3403,8 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                   <div className="font-black text-base">{dateStr}</div>
                 </div>
                 <div className="text-right">
-                  <div className="font-black text-2xl tracking-widest tabular-nums">{currentTime}</div>
-                  <div className="text-white/70 text-[10px] mt-0.5">任务完成 {completedCount}/{totalCount}</div>
+                  <div className="text-white/70 text-[10px]">任务完成</div>
+                  <div className="font-black text-sm">{completedCount}/{totalCount}</div>
                 </div>
               </div>
             </div>
