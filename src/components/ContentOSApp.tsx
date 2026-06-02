@@ -555,6 +555,19 @@ export default function ContentOSApp() {
   const [showAddKnowledge, setShowAddKnowledge] = useState(false)
   const [knowledgeSearch, setKnowledgeSearch] = useState('')
 
+  // 灵感搜集
+  const [inspirations, setInspirations] = useState<Array<{id:string;text:string;tag:string;time:string}>>([])
+  const [inspirationInput, setInspirationInput] = useState('')
+  const [showInspirationInput, setShowInspirationInput] = useState(false)
+
+  // AI 调试窗口
+  const [showAiDebug, setShowAiDebug] = useState(false)
+  const [aiDebugTab, setAiDebugTab] = useState<'test'|'prompts'|'config'>('config')
+  const [aiDebugInput, setAiDebugInput] = useState('')
+  const [aiDebugOutput, setAiDebugOutput] = useState('')
+  const [aiDebugLoading, setAiDebugLoading] = useState(false)
+  const [aiDebugModule, setAiDebugModule] = useState<'copy'|'topics'|'radar'|'positioning'>('copy')
+
   const [trendingItems, setTrendingItems] = useState<any[]>([])
   const [trendingLoading, setTrendingLoading] = useState(false)
   const [trendingCategory, setTrendingCategory] = useState('全部')
@@ -776,6 +789,7 @@ export default function ContentOSApp() {
   React.useEffect(() => { if (acc?.id) { saveAccData(acc.id, 'schedule', schedule); autoSync() } }, [schedule])
   React.useEffect(() => { if (acc?.id) { saveAccData(acc.id, 'knowledge', knowledgeItems); autoSync() } }, [knowledgeItems])
   React.useEffect(() => { if (acc?.id) { saveAccData(acc.id, 'platform_stats', platformStats) } }, [platformStats])
+  React.useEffect(() => { if (acc?.id) { saveAccData(acc.id, 'inspirations', inspirations) } }, [inspirations])
 
   // 切换到运营中心时，从 localStorage 重新加载排期（合并文案/视频页写入的数据）
   React.useEffect(() => {
@@ -844,6 +858,7 @@ export default function ContentOSApp() {
       const vr = localStorage.getItem(getAccKey(accId, 'video_records')); setVideoRecords(vr ? JSON.parse(vr) : [])
       const sch = localStorage.getItem(getAccKey(accId, 'schedule')); setSchedule(sch ? JSON.parse(sch) : [])
       const kb = localStorage.getItem(getAccKey(accId, 'knowledge')); setKnowledgeItems(kb ? JSON.parse(kb) : [])
+      const insp = localStorage.getItem(getAccKey(accId, 'inspirations')); setInspirations(insp ? JSON.parse(insp) : [])
       // 加载账号专属的platformStats
       const ps = localStorage.getItem(getAccKey(accId, 'platform_stats'))
       if (ps) setPlatformStats(JSON.parse(ps))
@@ -1074,6 +1089,52 @@ export default function ContentOSApp() {
     setKnowledgeItems(updated)
     saveAccLocal('knowledge', updated)
     showToast('已删除')
+  }
+
+  // ─── 灵感搜集操作 ──────────────────────────────────────
+  function addInspiration(text: string, tag = '灵感') {
+    if (!text.trim()) return
+    const item = { id: Date.now().toString(), text: text.trim(), tag, time: new Date().toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }
+    const updated = [item, ...inspirations]
+    setInspirations(updated)
+    setInspirationInput('')
+    setShowInspirationInput(false)
+    showToast('✅ 灵感已记录')
+  }
+  function deleteInspiration(id: string) {
+    setInspirations(inspirations.filter((i: any) => i.id !== id))
+  }
+  function useInspirationAsTopic(text: string) {
+    try { localStorage.setItem('contentos_pending_topic', text) } catch {}
+    setTab('content')
+    showToast('✅ 已带入创作工作台')
+  }
+
+  // ─── AI 调试函数 ──────────────────────────────────────
+  async function runAiDebugTest() {
+    if (!aiDebugInput.trim()) { showToast('请输入测试内容'); return }
+    setAiDebugLoading(true)
+    setAiDebugOutput('')
+    try {
+      const endpoint = aiDebugModule === 'copy' ? '/api/generate-copy'
+        : aiDebugModule === 'topics' ? '/api/generate-topics'
+        : aiDebugModule === 'radar' ? '/api/daily-radar'
+        : '/api/generate-positioning'
+      const body = aiDebugModule === 'copy'
+        ? { topicTitle: aiDebugInput, accountName: acc?.name, industry: acc?.industry, positioning: acc?.positioning, style: '犀利观点', aiModel, aiApiKey, aiApiBase, aiTemperature, modulePrompt: modulePrompts['copy'] }
+        : aiDebugModule === 'topics'
+        ? { accountName: acc?.name, industry: acc?.industry, positioning: acc?.positioning, count: 5, aiModel, aiApiKey, aiApiBase, aiTemperature, modulePrompt: modulePrompts['topics'] }
+        : aiDebugModule === 'radar'
+        ? { industry: acc?.industry, aiModel, aiApiKey, aiApiBase, aiTemperature, modulePrompt: modulePrompts['radar'] }
+        : { industry: acc?.industry, product: aiDebugInput, targetCustomer: acc?.targetAudience, aiModel, aiApiKey, aiApiBase, aiTemperature }
+      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      const data = await res.json()
+      setAiDebugOutput(JSON.stringify(data, null, 2))
+    } catch (e: any) {
+      setAiDebugOutput('错误：' + e.message)
+    } finally {
+      setAiDebugLoading(false)
+    }
   }
 
   // ─── 三合一超级文案生成 ──────────────────────────────────
@@ -1967,6 +2028,199 @@ export default function ContentOSApp() {
     )
   }
 
+  // ─── AI 调试窗口 ─────────────────────────────────────────────
+  if (showAiDebug) {
+    const MODULE_OPTIONS = [
+      { id: 'copy', label: '✍️ 文案生成', api: '/api/generate-copy' },
+      { id: 'topics', label: '💡 选题推荐', api: '/api/generate-topics' },
+      { id: 'radar', label: '📡 热点分析', api: '/api/daily-radar' },
+      { id: 'positioning', label: '🎯 账号定位', api: '/api/generate-positioning' },
+    ]
+    return (
+      <div className="w-[390px] h-[844px] rounded-[50px] overflow-hidden bg-[#F5F6FA] flex flex-col shadow-[0_0_0_10px_#111,0_40px_100px_rgba(0,0,0,.7)] relative">
+        {/* Header */}
+        <div className="px-5 pt-12 pb-3 flex-shrink-0 flex items-center gap-3 bg-white border-b border-gray-100">
+          <button onClick={() => setShowAiDebug(false)} className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-lg">←</button>
+          <div className="flex-1">
+            <h1 className="text-base font-black text-gray-900">🔧 AI 调试中心</h1>
+            <p className="text-[10px] text-gray-400">测试 API · 查看提示词 · 调试生成效果</p>
+          </div>
+        </div>
+
+        {/* Tab 切换 */}
+        <div className="flex gap-1 px-4 pt-3 pb-0 flex-shrink-0">
+          {[
+            { id: 'config', label: '⚙️ 配置' },
+            { id: 'prompts', label: '📝 提示词' },
+            { id: 'test', label: '🧪 测试' },
+          ].map((t: any) => (
+            <button key={t.id} onClick={() => setAiDebugTab(t.id)}
+              className={`flex-1 py-2 rounded-2xl text-xs font-bold transition-all ${aiDebugTab === t.id ? 'bg-blue-500 text-white shadow-sm' : 'bg-white text-gray-500'}`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 pb-8">
+
+          {/* ── 配置 Tab ── */}
+          {aiDebugTab === 'config' && (
+            <>
+              <div className="bg-white rounded-3xl p-4 shadow-sm">
+                <div className="font-black text-gray-900 text-sm mb-3">🤖 当前 AI 配置</div>
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between py-2 border-b border-gray-50">
+                    <span className="text-xs text-gray-500">模型</span>
+                    <span className="text-xs font-bold text-gray-800 bg-blue-50 px-2 py-0.5 rounded-lg">{aiModel || 'deepseek-chat'}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-2 border-b border-gray-50">
+                    <span className="text-xs text-gray-500">API Base</span>
+                    <span className="text-xs font-mono text-gray-600 truncate max-w-[180px]">{aiApiBase || 'https://api.deepseek.com/v1'}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-2 border-b border-gray-50">
+                    <span className="text-xs text-gray-500">API Key</span>
+                    <span className="text-xs font-mono text-gray-600">{aiApiKey ? aiApiKey.slice(0, 8) + '...' + aiApiKey.slice(-4) : '未配置'}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-2 border-b border-gray-50">
+                    <span className="text-xs text-gray-500">创意度</span>
+                    <span className="text-xs font-bold text-blue-500">{aiTemperature}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-xs text-gray-500">账号</span>
+                    <span className="text-xs font-bold text-gray-800">{acc?.name} · {acc?.industry}</span>
+                  </div>
+                </div>
+                <button onClick={() => { setShowAiDebug(false); setTab('profile'); setProfileTab('ai') }}
+                  className="w-full mt-3 py-2.5 bg-blue-500 text-white text-xs font-bold rounded-2xl active:scale-[0.98]">
+                  前往 AI 设置修改 →
+                </button>
+              </div>
+
+              <div className="bg-white rounded-3xl p-4 shadow-sm">
+                <div className="font-black text-gray-900 text-sm mb-3">🛣️ 内容生成路径</div>
+                <div className="space-y-2">
+                  {[
+                    { step: '1', label: '选题生成', desc: '行业+定位+热点 → AI生成选题列表', icon: '💡', color: 'bg-purple-50 text-purple-600' },
+                    { step: '2', label: '文案生成', desc: '选题+风格+知识库 → AI生成3版文案', icon: '✍️', color: 'bg-blue-50 text-blue-600' },
+                    { step: '3', label: '热点分析', desc: '行业关键词 → 实时热点+借势角度', icon: '📡', color: 'bg-orange-50 text-orange-600' },
+                    { step: '4', label: '视频合成', desc: '文案+声音+形象 → TTS/数字人视频', icon: '🎬', color: 'bg-green-50 text-green-600' },
+                  ].map((item: any) => (
+                    <div key={item.step} className="flex items-start gap-3 p-3 bg-gray-50 rounded-2xl">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${item.color}`}>{item.icon}</div>
+                      <div className="flex-1">
+                        <div className="text-xs font-bold text-gray-800">{item.step}. {item.label}</div>
+                        <div className="text-[10px] text-gray-400 mt-0.5">{item.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── 提示词 Tab ── */}
+          {aiDebugTab === 'prompts' && (
+            <>
+              <div className="bg-white rounded-3xl p-4 shadow-sm">
+                <div className="font-black text-gray-900 text-sm mb-1">📝 模块专属提示词</div>
+                <div className="text-xs text-gray-400 mb-3">这些提示词会在生成时自动注入，优先级高于全局提示词</div>
+                <div className="space-y-3">
+                  {[
+                    { key: 'topics', icon: '💡', label: '选题推荐', placeholder: '如：生成适合本地餐饮账号的爆款选题，风格轻松幽默...' },
+                    { key: 'copy', icon: '✍️', label: '文案生成', placeholder: '如：文案要接地气，多用口语，结尾加行动号召...' },
+                    { key: 'radar', icon: '📡', label: '热点分析', placeholder: '如：重点关注本地生活、美食类热点...' },
+                    { key: 'positioning', icon: '🎯', label: '账号定位', placeholder: '如：帮我打造差异化定位，突出本地特色...' },
+                    { key: 'operations', icon: '📊', label: '运营建议', placeholder: '如：结合数据给出具体可执行的优化建议...' },
+                  ].map(({ key, icon, label, placeholder }: any) => (
+                    <div key={key} className="border border-gray-100 rounded-2xl overflow-hidden">
+                      <div className="flex items-center gap-2 px-3 py-2 bg-gray-50">
+                        <span>{icon}</span>
+                        <span className="text-xs font-bold text-gray-700 flex-1">{label}</span>
+                        {modulePrompts[key] && <span className="text-[9px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">已配置</span>}
+                      </div>
+                      <div className="px-3 py-2">
+                        <textarea
+                          value={modulePrompts[key] || ''}
+                          onChange={e => setModulePrompts((prev: any) => ({ ...prev, [key]: e.target.value }))}
+                          placeholder={placeholder}
+                          className="w-full px-2.5 py-2 rounded-xl bg-gray-50 text-[11px] outline-none resize-none h-16 text-gray-700"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => { saveToLocal('contentos_module_prompts', modulePrompts); showToast('✅ 提示词已保存') }}
+                  className="w-full mt-3 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white text-xs font-bold rounded-2xl active:scale-[0.98]">
+                  💾 保存所有提示词
+                </button>
+              </div>
+
+              <div className="bg-amber-50 rounded-2xl p-3">
+                <div className="text-xs font-bold text-amber-700 mb-1.5">💡 提示词写法建议</div>
+                <div className="space-y-1 text-[10px] text-amber-600">
+                  <div>• 描述你的账号风格和目标受众</div>
+                  <div>• 指定内容调性（幽默/专业/接地气）</div>
+                  <div>• 说明禁止使用的词汇或风格</div>
+                  <div>• 可以加入行业专业术语要求</div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── 测试 Tab ── */}
+          {aiDebugTab === 'test' && (
+            <>
+              <div className="bg-white rounded-3xl p-4 shadow-sm">
+                <div className="font-black text-gray-900 text-sm mb-3">🧪 API 测试</div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1.5 block">测试模块</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {MODULE_OPTIONS.map((m: any) => (
+                        <button key={m.id} onClick={() => setAiDebugModule(m.id)}
+                          className={`py-2 rounded-xl text-xs font-bold transition-all ${aiDebugModule === m.id ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                          {m.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1.5 block">
+                      {aiDebugModule === 'copy' ? '输入选题' : aiDebugModule === 'topics' ? '输入行业关键词' : aiDebugModule === 'radar' ? '输入行业（可选）' : '输入产品/服务描述'}
+                    </label>
+                    <textarea
+                      value={aiDebugInput}
+                      onChange={e => setAiDebugInput(e.target.value)}
+                      placeholder={aiDebugModule === 'copy' ? '如：探店本地最火的火锅店' : aiDebugModule === 'topics' ? '如：本地餐饮' : aiDebugModule === 'radar' ? '如：餐饮' : '如：本地特色火锅'}
+                      className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-16"
+                    />
+                  </div>
+                  <button onClick={runAiDebugTest} disabled={aiDebugLoading}
+                    className="w-full py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white text-sm font-bold rounded-2xl disabled:opacity-50 active:scale-[0.98] flex items-center justify-center gap-2">
+                    {aiDebugLoading ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/><span>测试中...</span></> : <><span>🚀</span><span>发送测试请求</span></>}
+                  </button>
+                </div>
+              </div>
+
+              {aiDebugOutput && (
+                <div className="bg-white rounded-3xl p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-black text-gray-900 text-sm">📤 返回结果</div>
+                    <button onClick={() => setAiDebugOutput('')} className="text-xs text-gray-400">清除</button>
+                  </div>
+                  <div className="bg-gray-900 rounded-2xl p-3 overflow-x-auto">
+                    <pre className="text-[10px] text-green-400 font-mono whitespace-pre-wrap break-all leading-relaxed">{aiDebugOutput}</pre>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+        </div>
+      </div>
+    )
+  }
+
   // ─── Positioning Wizard Modal v16.3 ─────────────────────────────
   if (showPositioning) {
     const chatStepLabels = ['', '行业', '产品/服务', '目标客户', '城市', '优势', '准备生成']
@@ -2253,9 +2507,15 @@ export default function ContentOSApp() {
           {/* 表单模式 Step 1 */}
           {posMode === 'form' && posStep === 1 && (
             <div className="space-y-3 px-5 pt-4">
+              {/* 行业快速选择 */}
               <div className="bg-white rounded-2xl p-4 shadow-sm">
                 <label className="text-xs font-bold text-gray-500 mb-2 block">行业 *</label>
-                <input value={posIndustry} onChange={e => setPosIndustry(e.target.value)} placeholder="如：餐饮、健身、美妆、教育..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none" />
+                <input value={posIndustry} onChange={e => setPosIndustry(e.target.value)} placeholder="如：餐饮、健身、美妆、教育..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none mb-2" />
+                <div className="flex flex-wrap gap-1.5">
+                  {['🍜 餐饮', '💪 健身', '💄 美妆', '📚 教育', '🏠 家居', '👗 服装', '🐾 宠物', '🌿 健康', '💻 科技', '🎨 设计', '📸 摄影', '🎵 音乐', '✈️ 旅游', '🏗️ 装修', '💰 财经'].map(tag => (
+                    <button key={tag} onClick={() => setPosIndustry(tag.replace(/^[^\s]+\s/, ''))} className={`px-2 py-1 rounded-lg text-[10px] font-medium transition-all border ${posIndustry === tag.replace(/^[^\s]+\s/, '') ? 'bg-blue-500 text-white border-blue-500' : 'bg-gray-50 text-gray-500 border-gray-200 active:bg-blue-50'}`}>{tag}</button>
+                  ))}
+                </div>
               </div>
               <div className="bg-white rounded-2xl p-4 shadow-sm">
                 <label className="text-xs font-bold text-gray-500 mb-2 block">产品/服务 *</label>
@@ -2263,26 +2523,36 @@ export default function ContentOSApp() {
               </div>
               <div className="bg-white rounded-2xl p-4 shadow-sm">
                 <label className="text-xs font-bold text-gray-500 mb-2 block">目标客户 *</label>
-                <input value={posCustomer} onChange={e => setPosCustomer(e.target.value)} placeholder="如：周边上班族、宝妈、大学生..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none" />
+                <input value={posCustomer} onChange={e => setPosCustomer(e.target.value)} placeholder="如：周边上班族、宝妈、大学生..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none mb-2" />
+                <div className="flex flex-wrap gap-1.5">
+                  {['上班族', '宝妈', '大学生', '中老年', '年轻女性', '男性', '创业者', '全年龄'].map(tag => (
+                    <button key={tag} onClick={() => setPosCustomer(tag)} className={`px-2 py-1 rounded-lg text-[10px] font-medium transition-all border ${posCustomer === tag ? 'bg-purple-500 text-white border-purple-500' : 'bg-gray-50 text-gray-500 border-gray-200 active:bg-purple-50'}`}>{tag}</button>
+                  ))}
+                </div>
               </div>
               <div className="bg-white rounded-2xl p-4 shadow-sm">
                 <label className="text-xs font-bold text-gray-500 mb-2 block">城市（可选）</label>
-                <input value={posCity} onChange={e => setPosCity(e.target.value)} placeholder="如：上海、成都、全国..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none" />
+                <input value={posCity} onChange={e => setPosCity(e.target.value)} placeholder="如：上海、成都、全国..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none mb-2" />
+                <div className="flex flex-wrap gap-1.5">
+                  {['全国', '北京', '上海', '广州', '深圳', '成都', '杭州', '武汉', '西安'].map(tag => (
+                    <button key={tag} onClick={() => setPosCity(tag)} className={`px-2 py-1 rounded-lg text-[10px] font-medium transition-all border ${posCity === tag ? 'bg-green-500 text-white border-green-500' : 'bg-gray-50 text-gray-500 border-gray-200 active:bg-green-50'}`}>{tag}</button>
+                  ))}
+                </div>
               </div>
               <div className="bg-white rounded-2xl p-4 shadow-sm">
                 <label className="text-xs font-bold text-gray-500 mb-2 block">你的优势（可选）</label>
-                <textarea value={posAdvantage} onChange={e => setPosAdvantage(e.target.value)} placeholder="如：10年厨师经验、价格比同行低30%、独家配方..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20" />
+                <textarea value={posAdvantage} onChange={e => setPosAdvantage(e.target.value)} placeholder="如：10年厨师经验、价格比同行低30%、独家配方..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-16" />
               </div>
               <div className="bg-white rounded-2xl p-4 shadow-sm">
                 <label className="text-xs font-bold text-gray-500 mb-1 block">竞品账号（可选）</label>
                 <p className="text-[10px] text-gray-400 mb-2">填写竞品账号名称，AI 将分析竞争格局，帮你找差异化空间</p>
-                <textarea value={posCompetitors} onChange={e => setPosCompetitors(e.target.value)} placeholder="如：@老王面馆、@张记牛肉面..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-16" />
+                <textarea value={posCompetitors} onChange={e => setPosCompetitors(e.target.value)} placeholder="如：@老王面馆、@张记牛肉面..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-14" />
               </div>
               <button
                 onClick={() => { if (!posIndustry || !posProduct || !posCustomer) { showToast('请填写必填项'); return }; setPosStep(2) }}
-                className="w-full py-3 bg-blue-500 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all"
+                className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md"
               >
-                下一步 →
+                下一步，生成行业报告 →
               </button>
             </div>
           )}
@@ -2575,6 +2845,10 @@ export default function ContentOSApp() {
                 accSwitching={accSwitching}
                 setAccounts={setAccounts}
                 saveToLocal={saveToLocal}
+                setShowAiDebug={setShowAiDebug}
+                inspirations={inspirations} inspirationInput={inspirationInput} setInspirationInput={setInspirationInput}
+                showInspirationInput={showInspirationInput} setShowInspirationInput={setShowInspirationInput}
+                addInspiration={addInspiration} useInspirationAsTopic={useInspirationAsTopic}
               />
             )}
         {tab === 'materials' && (
@@ -2805,7 +3079,7 @@ export default function ContentOSApp() {
 // ═══════════════════════════════════════════════════════════
 // DASHBOARD v2 — 工作台首页（每日任务+快捷入口+数据概览）
 // ═══════════════════════════════════════════════════════════
-function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab, showToast, user, onLogout, savedContents, schedule, onPositioning, showAddAccount, setShowAddAccount, newAccName, setNewAccName, newAccIndustry, setNewAccIndustry, newAccEmoji, setNewAccEmoji, addAccount, hotspots, radarData, fetchRadar, radarLoading, savedTopics, setShowAiPanel, videoRecords, savedTopicsCount, setShowGlobalSearch, setShowSuperGen, knowledgeItems, setShowRecommendPanel, recommendTopicsFn, recommendLoading, accSwitching, setAccounts, saveToLocal }: any) {
+function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab, showToast, user, onLogout, savedContents, schedule, onPositioning, showAddAccount, setShowAddAccount, newAccName, setNewAccName, newAccIndustry, setNewAccIndustry, newAccEmoji, setNewAccEmoji, addAccount, hotspots, radarData, fetchRadar, radarLoading, savedTopics, setShowAiPanel, videoRecords, savedTopicsCount, setShowGlobalSearch, setShowSuperGen, knowledgeItems, setShowRecommendPanel, recommendTopicsFn, recommendLoading, accSwitching, setAccounts, saveToLocal, setShowAiDebug, inspirations, inspirationInput, setInspirationInput, showInspirationInput, setShowInspirationInput, addInspiration, useInspirationAsTopic }: any) {
   const [showAccSwitcher, setShowAccSwitcher] = React.useState(false)
   const [showAccSettings, setShowAccSettings] = React.useState(false)
   const [editAccData, setEditAccData] = React.useState<any>(null)
@@ -3054,9 +3328,10 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                   <div className="text-[10px] text-gray-400 mt-0.5">{acc.industry} · {acc.positioning === '待完善' ? <span className="text-orange-400 font-medium">定位待完善 ⚡</span> : acc.positioning?.slice(0, 12)}</div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <button onClick={() => setShowGlobalSearch(true)} className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-sm active:scale-95 transition-all">🔍</button>
-                <button onClick={() => setShowAccSettings(true)} className="flex items-center gap-1 px-2.5 py-1.5 bg-gray-100 rounded-xl text-xs font-bold text-gray-600 active:scale-95 transition-all">⚙️ 设置</button>
+                <button onClick={() => setShowAiDebug(true)} className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-sm active:scale-95 transition-all shadow-sm shadow-blue-200/60" title="AI 调试中心">🔧</button>
+                <button onClick={() => setShowAccSettings(true)} className="flex items-center gap-1 px-2.5 py-1.5 bg-gray-100 rounded-xl text-xs font-bold text-gray-600 active:scale-95 transition-all">⚙️</button>
               </div>
             </div>
 
@@ -3120,12 +3395,10 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                   <div className="text-white/60 text-[10px] font-medium uppercase tracking-wider mb-0.5">TODAY</div>
                   <div className="font-black text-base">{dateStr}</div>
                 </div>
-                <button
-                  onClick={generateDailyPlan}
-                  className="bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition-all active:scale-95"
-                >
-                  📋 今日计划
-                </button>
+                <div className="text-right">
+                  <div className="text-white/70 text-[10px]">任务完成</div>
+                  <div className="font-black text-sm">{completedCount}/{totalCount}</div>
+                </div>
               </div>
               {/* 进度条 */}
               <div className="bg-white/20 rounded-full h-1.5 mb-2">
@@ -3141,56 +3414,6 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
             </div>
 
 
-            {/* 每日内容计划弹层 */}
-            {showDailyPlan && (
-              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
-                  <div className="font-bold text-gray-900 text-sm">📋 今日内容计划</div>
-                  <button onClick={() => setShowDailyPlan(false)} className="text-gray-400 text-sm">✕</button>
-                </div>
-                {planLoading ? (
-                  <div className="flex items-center justify-center py-8 gap-2">
-                    <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-                    <span className="text-xs text-gray-400">AI 正在生成今日计划...</span>
-                  </div>
-                ) : (
-                  <div className="p-4 space-y-3">
-                    {dailyPlan.map((item: any, i: number) => {
-                      const colorMap: any = {
-                        blue: 'bg-blue-50 text-blue-500',
-                        purple: 'bg-purple-50 text-purple-500',
-                        green: 'bg-green-50 text-green-500',
-                        orange: 'bg-orange-50 text-orange-500',
-                        red: 'bg-red-50 text-red-500',
-                        gray: 'bg-gray-50 text-gray-500',
-                      }
-                      return (
-                        <div key={i} className="flex items-start gap-3">
-                          <div className="flex flex-col items-center flex-shrink-0">
-                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm ${colorMap[item.color]}`}>{item.icon}</div>
-                            {i < dailyPlan.length - 1 && <div className="w-0.5 h-4 bg-gray-100 mt-1" />}
-                          </div>
-                          <div className="flex-1 min-w-0 pb-1">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-[10px] text-gray-400 font-mono">{item.time}</span>
-                              <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">{item.type}</span>
-                              {item.status === 'scheduled' && <span className="text-[10px] text-green-500 bg-green-50 px-1.5 py-0.5 rounded-full">已排期</span>}
-                            </div>
-                            <div className="text-xs font-medium text-gray-800">{item.title}</div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                    <button
-                      onClick={() => setTab('operations')}
-                      className="w-full mt-2 py-2 bg-blue-50 text-blue-500 text-xs font-semibold rounded-xl"
-                    >
-                      前往运营中心管理排期 →
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* 数据概览 */}
             <div className="grid grid-cols-4 gap-2">
@@ -3210,16 +3433,121 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
               })}
             </div>
 
-            {/* 智能任务清单 */}
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
-                <div className="flex items-center gap-2">
-                  <div className="font-bold text-gray-900 text-sm">✅ 今日任务</div>
-                  <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{completedCount}/{totalCount}</span>
+            {/* 每日推荐热点 - 移到顶部 */}
+            {hotspots && hotspots.length > 0 && (
+              <div className="bg-white rounded-3xl p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="font-black text-gray-900 text-sm">🔥 今日热点</div>
+                    <span className="text-[10px] bg-red-50 text-red-400 px-2 py-0.5 rounded-full font-bold">实时</span>
+                  </div>
+                  <button onClick={() => { setTab('materials'); setMatTab('trending') }} className="text-xs text-blue-500 font-medium">全部 →</button>
                 </div>
+                <div className="space-y-2">
+                  {hotspots.slice(0, 3).map((h: any, i: number) => (
+                    <div key={i} className="flex items-center gap-2.5">
+                      <span className={`text-xs font-black w-4 text-center flex-shrink-0 ${i === 0 ? 'text-red-400' : i === 1 ? 'text-orange-400' : 'text-amber-400'}`}>{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium text-gray-800 truncate">{h.title}</div>
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        {h.heat && <span className="text-[10px] text-red-400 font-bold">{h.heat}</span>}
+                        <button onClick={() => { try { localStorage.setItem('contentos_pending_topic', h.title) } catch {}; setTab('content'); showToast('✅ 已带入创作') }} className="text-[10px] text-white bg-purple-500 px-1.5 py-0.5 rounded-full font-bold active:scale-95">✍️</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 知识库 + 灵感搜集 并排 */}
+            <div className="grid grid-cols-2 gap-2">
+              {/* 知识库 */}
+              <div className="bg-white rounded-3xl p-3 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm">🧠</span>
+                    <span className="font-black text-gray-900 text-xs">知识库</span>
+                    {knowledgeItems.length > 0 && <span className="text-[9px] bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded-full font-bold">{knowledgeItems.length}</span>}
+                  </div>
+                  <button onClick={() => { setTab('materials'); setMatTab('mine') }} className="text-[10px] text-blue-500 font-medium">管理 →</button>
+                </div>
+                {knowledgeItems.length === 0 ? (
+                  <button onClick={() => { setTab('materials'); setMatTab('mine') }} className="w-full py-3 border-2 border-dashed border-gray-200 rounded-2xl text-[10px] text-gray-400 text-center active:bg-gray-50">
+                    + 添加专业知识<br/>让 AI 更懂你
+                  </button>
+                ) : (
+                  <div className="space-y-1.5">
+                    {knowledgeItems.slice(0, 2).map((k: any) => (
+                      <div key={k.id} className="bg-indigo-50 rounded-xl px-2.5 py-1.5">
+                        <div className="text-[10px] font-bold text-indigo-700 truncate">{k.title}</div>
+                        <div className="text-[9px] text-indigo-400 truncate mt-0.5">{k.content?.slice(0, 30)}...</div>
+                      </div>
+                    ))}
+                    {knowledgeItems.length > 2 && (
+                      <button onClick={() => { setTab('materials'); setMatTab('mine') }} className="w-full text-[9px] text-gray-400 text-center py-1">还有 {knowledgeItems.length - 2} 条 →</button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 灵感搜集 */}
+              <div className="bg-white rounded-3xl p-3 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm">💫</span>
+                    <span className="font-black text-gray-900 text-xs">灵感</span>
+                    {inspirations.length > 0 && <span className="text-[9px] bg-amber-50 text-amber-500 px-1.5 py-0.5 rounded-full font-bold">{inspirations.length}</span>}
+                  </div>
+                  <button onClick={() => setShowInspirationInput(!showInspirationInput)} className="w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center text-white text-xs font-black active:scale-95">+</button>
+                </div>
+                {showInspirationInput && (
+                  <div className="mb-2">
+                    <textarea
+                      value={inspirationInput}
+                      onChange={e => setInspirationInput(e.target.value)}
+                      placeholder="记录灵感..."
+                      className="w-full px-2.5 py-2 rounded-xl bg-amber-50 text-[11px] outline-none resize-none h-14 text-gray-700"
+                      autoFocus
+                    />
+                    <div className="flex gap-1.5 mt-1">
+                      {['灵感', '选题', '文案', '热点'].map(tag => (
+                        <button key={tag} onClick={() => addInspiration(inspirationInput, tag)} className="flex-1 py-1 bg-amber-400 text-white text-[9px] font-bold rounded-lg active:scale-95">{tag}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {inspirations.length === 0 && !showInspirationInput ? (
+                  <button onClick={() => setShowInspirationInput(true)} className="w-full py-3 border-2 border-dashed border-gray-200 rounded-2xl text-[10px] text-gray-400 text-center active:bg-gray-50">
+                    + 记录今日灵感<br/>随时捕捉创意
+                  </button>
+                ) : (
+                  <div className="space-y-1.5">
+                    {inspirations.slice(0, 2).map((insp: any) => (
+                      <div key={insp.id} className="bg-amber-50 rounded-xl px-2.5 py-1.5 flex items-start gap-1.5">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[10px] text-amber-700 leading-snug line-clamp-2">{insp.text}</div>
+                          <div className="text-[9px] text-amber-400 mt-0.5">{insp.tag} · {insp.time}</div>
+                        </div>
+                        <button onClick={() => useInspirationAsTopic(insp.text)} className="text-[9px] text-white bg-purple-400 px-1.5 py-0.5 rounded-full flex-shrink-0 active:scale-95">✍️</button>
+                      </div>
+                    ))}
+                    {inspirations.length > 2 && (
+                      <div className="text-[9px] text-gray-400 text-center py-0.5">还有 {inspirations.length - 2} 条灵感</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 智能任务清单 - 紧凑版 */}
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-50">
                 <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-bold text-gray-700">✅ 今日任务</span>
+                  <span className="text-[9px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">{completedCount}/{totalCount}</span>
                   {completedCount === totalCount && totalCount > 0 && (
-                    <span className="text-[10px] text-green-500 bg-green-50 px-2 py-0.5 rounded-full font-bold">全部完成 🎉</span>
+                    <span className="text-[9px] text-green-500 bg-green-50 px-1.5 py-0.5 rounded-full font-bold">全完成🎉</span>
                   )}
                 </div>
               </div>
@@ -3230,25 +3558,21 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                   return (
                     <div
                       key={task.id}
-                      className={`flex items-center gap-3 px-4 py-3 transition-all ${done ? 'opacity-50' : ''}`}
+                      className={`flex items-center gap-2 px-3 py-2 transition-all ${done ? 'opacity-40' : ''}`}
                     >
-                      {/* 勾选框 */}
                       <button
                         onClick={() => toggleTask(task.id)}
-                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${done ? 'bg-green-400 border-green-400' : `border-gray-200 ${cfg.bg}`}`}
+                        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${done ? 'bg-green-400 border-green-400' : `border-gray-200`}`}
                       >
-                        {done && <span className="text-white text-[10px] font-black">✓</span>}
+                        {done && <span className="text-white text-[8px] font-black">✓</span>}
                       </button>
-                      {/* 任务内容 */}
                       <button
                         onClick={() => handleTaskAction(task.action)}
-                        className="flex-1 flex items-center gap-3 text-left min-w-0"
+                        className="flex-1 flex items-center gap-2 text-left min-w-0"
                       >
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-base flex-shrink-0 ${cfg.bg}`}>
-                          {task.icon}
-                        </div>
+                        <span className="text-sm flex-shrink-0">{task.icon}</span>
                         <div className="flex-1 min-w-0">
-                          <div className={`text-xs font-semibold ${done ? 'line-through text-gray-400' : 'text-gray-800'}`}>{task.label}</div>
+                          <div className={`text-[11px] font-semibold ${done ? 'line-through text-gray-400' : 'text-gray-800'}`}>{task.label}</div>
                           <div className="text-[10px] text-gray-400 mt-0.5 truncate">{task.desc}</div>
                         </div>
                         <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -3349,41 +3673,6 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                 ))}
               </div>
             </div>
-
-            {/* 今日热点预览 */}
-            {hotspots && hotspots.length > 0 && (
-              <div className="bg-white rounded-3xl p-4 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="font-black text-gray-900 text-sm">🔥 今日热点</div>
-                  <button
-                    onClick={() => { setTab('materials'); setMatTab('trending') }}
-                    className="text-xs text-blue-500 font-medium"
-                  >查看全部 →</button>
-                </div>
-                <div className="space-y-2.5">
-                  {hotspots.slice(0, 4).map((h: any, i: number) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <span className={`text-xs font-black w-5 text-center flex-shrink-0 ${i === 0 ? 'text-red-400' : i === 1 ? 'text-orange-400' : i === 2 ? 'text-amber-400' : 'text-gray-300'}`}>{i + 1}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium text-gray-800 truncate">{h.title}</div>
-                        {h.desc && <div className="text-[10px] text-gray-400 truncate mt-0.5">{h.desc}</div>}
-                      </div>
-                      <div className="flex gap-1 flex-shrink-0 items-center">
-                            {h.heat && <span className="text-[10px] text-red-400 font-bold">{h.heat}</span>}
-                            <button onClick={() => {
-                              try { const cur = JSON.parse(localStorage.getItem('contentos_saved_topics_' + acc?.id) || '[]'); if (!cur.includes(h.title)) { cur.unshift(h.title); localStorage.setItem('contentos_saved_topics_' + acc?.id, JSON.stringify(cur)); } } catch {}
-                              showToast('✅ 已收藏')
-                            }} className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full font-bold active:scale-95">🔖</button>
-                            <button onClick={() => {
-                              try { localStorage.setItem('contentos_pending_topic', h.title) } catch {}
-                              setTab('content'); showToast('✅ 已带入创作工作台')
-                            }} className="text-[10px] text-white bg-purple-500 px-1.5 py-0.5 rounded-full font-bold active:scale-95">✍️</button>
-                          </div>
-                        </div>
-                      ))}
-                </div>
-              </div>
-            )}
 
             {/* 最近文案 */}
             {savedContents.length > 0 && (
