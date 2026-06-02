@@ -5,10 +5,10 @@ export async function POST(req: NextRequest) {
     const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY || ''
     const MINIMAX_GROUP_ID = process.env.MINIMAX_GROUP_ID || ''
 
-    if (!MINIMAX_API_KEY || !MINIMAX_GROUP_ID) {
+    if (!MINIMAX_API_KEY) {
       return NextResponse.json({
         error: 'MiniMax API 未配置',
-        hint: '请在 Vercel 环境变量中添加 MINIMAX_API_KEY 和 MINIMAX_GROUP_ID',
+        hint: '请在 Vercel 环境变量中添加 MINIMAX_API_KEY',
         configured: false
       }, { status: 503 })
     }
@@ -48,7 +48,11 @@ export async function POST(req: NextRequest) {
 
     const formData = Buffer.concat(parts)
 
-    const res = await fetch(`https://api.minimax.chat/v1/voice_clone?GroupId=${MINIMAX_GROUP_ID}`, {
+    const apiUrl = MINIMAX_GROUP_ID
+      ? `https://api.minimaxi.com/v1/voice_clone?GroupId=${MINIMAX_GROUP_ID}`
+      : `https://api.minimaxi.com/v1/voice_clone`
+
+    const res = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${MINIMAX_API_KEY}`,
@@ -60,9 +64,9 @@ export async function POST(req: NextRequest) {
 
     const data = await res.json()
 
-    if (!res.ok || data.base_resp?.status_code !== 0) {
+    if (!res.ok || (data.base_resp?.status_code !== undefined && data.base_resp?.status_code !== 0)) {
       const errMsg = data.base_resp?.status_msg || data.error || `克隆失败 (${res.status})`
-      return NextResponse.json({ error: errMsg, configured: true }, { status: 500 })
+      return NextResponse.json({ error: errMsg, detail: JSON.stringify(data).slice(0,300), configured: true }, { status: 500 })
     }
 
     return NextResponse.json({
