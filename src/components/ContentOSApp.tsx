@@ -3092,6 +3092,19 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
   const [editAccData, setEditAccData] = React.useState<any>(null)
       const EMOJIS = ['🏪', '🍜', '💪', '💄', '📚', '🏠', '🚗', '🎵', '🌿', '☕']
 
+      // 实时时钟
+      const [currentTime, setCurrentTime] = React.useState(() => {
+        const now = new Date()
+        return now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+      })
+      React.useEffect(() => {
+        const timer = setInterval(() => {
+          const now = new Date()
+          setCurrentTime(now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }))
+        }, 1000)
+        return () => clearInterval(timer)
+      }, [])
+
       // 任务完成状态
       const [completedTasks, setCompletedTasks] = React.useState<Set<string>>(new Set())
       const [showDailyPlan, setShowDailyPlan] = React.useState(false)
@@ -3397,26 +3410,15 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
 
             {/* 日期 + 进度概览 */}
             <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-500 rounded-3xl p-4 text-white shadow-lg shadow-blue-200/60">
-              <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center justify-between">
                 <div>
                   <div className="text-white/60 text-[10px] font-medium uppercase tracking-wider mb-0.5">TODAY</div>
                   <div className="font-black text-base">{dateStr}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-white/70 text-[10px]">任务完成</div>
-                  <div className="font-black text-sm">{completedCount}/{totalCount}</div>
+                  <div className="font-black text-2xl tracking-widest tabular-nums">{currentTime}</div>
+                  <div className="text-white/70 text-[10px] mt-0.5">任务完成 {completedCount}/{totalCount}</div>
                 </div>
-              </div>
-              {/* 进度条 */}
-              <div className="bg-white/20 rounded-full h-1.5 mb-2">
-                <div
-                  className="bg-white rounded-full h-1.5 transition-all duration-700"
-                  style={{ width: `${progressPct}%` }}
-                />
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-white/70 text-[11px]">今日任务完成度</span>
-                <span className="font-black text-[11px]">{completedCount}/{totalCount} · {progressPct}%</span>
               </div>
             </div>
 
@@ -3845,6 +3847,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
     }
   }, [matTab, trendingSubTab])
   const [topicsSubTab, setTopicsSubTab] = React.useState<'topics' | 'saved'>('topics')
+  const [expandedTopicId, setExpandedTopicId] = React.useState<number | null>(null)
   // 已选素材（从爆款库选入选题库的内容）
   const [selectedMaterials, setSelectedMaterials] = React.useState<any[]>([])
 
@@ -5449,43 +5452,49 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                     const title = typeof t === 'string' ? t : (t.title || t)
                     const isSaved = savedTopics.some((s: any) => (typeof s === 'string' ? s : s.title) === title)
                     return (
-                      <div key={i} className="bg-white rounded-2xl p-4 shadow-sm animate-fade-in-up" style={{animationDelay:`${i*30}ms`}}>
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <div className="flex-1">
+                      <div key={i} className="bg-white rounded-2xl shadow-sm animate-fade-in-up overflow-hidden" style={{animationDelay:`${i*30}ms`}}>
+                        {/* 标题行 - 点击展开/收起 */}
+                        <div
+                          className="flex items-center justify-between gap-2 p-3.5 cursor-pointer active:bg-gray-50 transition-colors"
+                          onClick={() => setExpandedTopicId(expandedTopicId === i ? null : i)}
+                        >
+                          <div className="flex-1 min-w-0">
                             <div className="text-sm font-semibold text-gray-800 leading-snug">{title}</div>
                             {t.category && t.category !== '全部' && (
                               <span className="text-[10px] bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded-full font-medium mt-1 inline-block">{t.category}</span>
                             )}
                           </div>
-                          <div className="flex gap-1.5 flex-shrink-0">
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
                             <button
-                              onClick={() => saveTopic(t)}
+                              onClick={(e: any) => { e.stopPropagation(); saveTopic(t) }}
                               className={`text-xs font-semibold px-2 py-0.5 rounded-lg transition-all ${isSaved ? 'bg-orange-50 text-orange-500' : 'bg-gray-100 text-gray-500'}`}
                             >{isSaved ? '⭐' : '☆'}</button>
-                            <button
-                              onClick={() => useTopic(title)}
-                              className="text-xs text-white font-semibold px-2.5 py-0.5 bg-blue-500 rounded-lg active:scale-95 transition-transform"
-                            >写文案</button>
+                            <span className={`text-gray-300 text-xs transition-transform duration-200 ${expandedTopicId === i ? 'rotate-180' : ''}`}>▼</span>
                           </div>
                         </div>
-                        {t.reason && <div className="text-xs text-gray-400 leading-relaxed mb-1.5">{t.reason}</div>}
-                        {t.hook && <div className="text-xs text-orange-500 bg-orange-50 px-2 py-1 rounded-lg">💡 {t.hook}</div>}
-                        {/* 快速操作 */}
-                        <div className="flex gap-2 mt-2.5 pt-2.5 border-t border-gray-50">
-                          <button
-                            onClick={() => { useTopic(title); setTab('content'); showToast('✅ 已带入内容中心，开始写文案'); }}
-                            className="flex-1 py-1.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white text-xs font-bold rounded-xl active:scale-[0.97] transition-transform"
-                          >✍️ 一键写文案</button>
-                          <button
-                            onClick={() => {
-                              const videoTitle = title
-                              setVideoCopy(videoTitle)
-                              setTab('video')
-                              showToast('✅ 已跳转视频生成')
-                            }}
-                            className="flex-1 py-1.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white text-xs font-bold rounded-xl active:scale-[0.97] transition-transform"
-                          >🎬 直接做视频</button>
-                        </div>
+                        {/* 展开详情 */}
+                        {expandedTopicId === i && (
+                          <div className="px-3.5 pb-3.5 border-t border-gray-50">
+                            {t.reason && <div className="text-xs text-gray-400 leading-relaxed mt-2 mb-1.5">{t.reason}</div>}
+                            {t.hook && <div className="text-xs text-orange-500 bg-orange-50 px-2 py-1 rounded-lg mb-2.5">💡 {t.hook}</div>}
+                            {/* 快速操作 */}
+                            <div className="flex gap-2 mt-2">
+                              <button
+                                onClick={() => { useTopic(title); setTab('content'); showToast('✅ 已带入内容中心，开始写文案'); }}
+                                className="flex-1 py-1.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white text-xs font-bold rounded-xl active:scale-[0.97] transition-transform"
+                              >✍️ 一键写文案</button>
+                              <button
+                                onClick={() => {
+                                  const videoTitle = title
+                                  setVideoCopy(videoTitle)
+                                  setTab('video')
+                                  showToast('✅ 已跳转视频生成')
+                                }}
+                                className="flex-1 py-1.5 bg-gradient-to-r from-purple-500 to-pink-400 text-white text-xs font-bold rounded-xl active:scale-[0.97] transition-transform"
+                              >🎬 直接做视频</button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )
                   })}
