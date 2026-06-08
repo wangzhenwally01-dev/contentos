@@ -2824,7 +2824,7 @@ export default function ContentOSApp() {
           </div>
         )}
         {tab === 'dashboard' && (
-          <div className="flex-1 overflow-hidden animate-fade-in"><Dashboard
+          <Dashboard
                 acc={acc} accounts={accounts} accountIdx={accountIdx}
                 setAccountIdx={setAccountIdx} setTab={setTab} setMatTab={setMatTab} showToast={showToast}
                 user={user} onLogout={handleLogout} savedContents={savedContents}
