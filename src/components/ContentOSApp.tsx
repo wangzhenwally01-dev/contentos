@@ -2778,6 +2778,19 @@ export default function ContentOSApp() {
 
   return (
     <div className="w-[390px] h-[844px] rounded-[52px] overflow-hidden bg-[#F2F2F7] flex flex-col relative" style={{boxShadow:"0 0 0 10px #1C1C1E, 0 0 0 11px #3A3A3C, 0 40px 100px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.05) inset"}}>
+      {/* Apple 状态栏 */}
+      <div style={{position:'absolute',top:0,left:0,right:0,height:44,zIndex:100,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 28px',pointerEvents:'none'}}>
+        <span style={{fontSize:15,fontWeight:600,letterSpacing:-0.3,color:'#000'}}>{new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',hour12:false})}</span>
+        <div style={{display:'flex',alignItems:'center',gap:6}}>
+          <svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="3" width="3" height="9" rx="1" fill="#000" opacity="0.35"/><rect x="4.5" y="2" width="3" height="10" rx="1" fill="#000" opacity="0.55"/><rect x="9" y="0.5" width="3" height="11.5" rx="1" fill="#000" opacity="0.75"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="#000"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 2.5C10.2 2.5 12.2 3.4 13.6 4.9L15 3.4C13.2 1.5 10.7 0.3 8 0.3C5.3 0.3 2.8 1.5 1 3.4L2.4 4.9C3.8 3.4 5.8 2.5 8 2.5Z" fill="#000" opacity="0.35"/><path d="M8 5.5C9.5 5.5 10.8 6.1 11.8 7.1L13.2 5.6C11.8 4.2 9.9 3.3 8 3.3C6.1 3.3 4.2 4.2 2.8 5.6L4.2 7.1C5.2 6.1 6.5 5.5 8 5.5Z" fill="#000" opacity="0.65"/><circle cx="8" cy="10" r="1.5" fill="#000"/></svg>
+          <div style={{display:'flex',alignItems:'center',gap:2}}>
+            <div style={{width:25,height:12,borderRadius:3.5,border:'1.5px solid rgba(0,0,0,0.35)',padding:'1.5px',display:'flex',alignItems:'center'}}>
+              <div style={{width:'75%',height:'100%',background:'#000',borderRadius:2}}/>
+            </div>
+          </div>
+        </div>
+      </div>
       <Toast msg={toast} />
       <GlobalSearch
         show={showGlobalSearch}
@@ -3052,7 +3065,7 @@ export default function ContentOSApp() {
         )}
       </div>
             
-                <div className="glass-nav flex items-end flex-shrink-0 z-50" style={{paddingBottom:'max(20px, env(safe-area-inset-bottom, 20px))'}}>
+                <div className="glass-nav flex items-end z-50" style={{position:'absolute',bottom:0,left:0,right:0,paddingBottom:'max(20px, env(safe-area-inset-bottom, 20px))'}}>
         {NAV_TABS.map((t, idx) => {
           const isActive = t.id === 'create' ? (tab === 'content' || tab === 'video') : tab === t.id
           const isCreate = t.id === 'create'
@@ -3343,43 +3356,50 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
             </div>
           )}
 
-          {/* 顶部账号栏 */}
-          <div className="bg-white px-4 pt-12 pb-3 shadow-[0_1px_12px_rgba(0,0,0,0.06)]">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2.5">
-                <div className={`w-10 h-10 rounded-[14px] bg-gradient-to-br ${acc.color || 'from-blue-400 to-cyan-400'} flex items-center justify-center text-xl shadow-md`}>
+          {/* 顶部账号栏 - Apple 大标题风格 */}
+          <div style={{background:'rgba(242,242,247,0.95)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',paddingTop:52,paddingBottom:12,paddingLeft:20,paddingRight:20,borderBottom:'0.5px solid rgba(0,0,0,0.08)'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+              <div style={{display:'flex',alignItems:'center',gap:10}}>
+                <div className={`w-11 h-11 rounded-[16px] bg-gradient-to-br ${acc.color || 'from-blue-400 to-cyan-400'} flex items-center justify-center text-2xl`} style={{boxShadow:'0 4px 12px rgba(0,0,0,0.15)'}}>
                   {acc.emoji || '🏪'}
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-900 text-[15px] leading-tight">{acc.name}</div>
-                  <div className="text-[10px] text-gray-400 mt-0.5">{acc.industry} · {acc.positioning === '待完善' ? <span className="text-[#FF9500] font-medium">定位待完善 ⚡</span> : acc.positioning?.slice(0, 12)}</div>
+                  <div style={{fontSize:17,fontWeight:700,color:'#000',letterSpacing:-0.4,lineHeight:1.2}}>{acc.name}</div>
+                  <div style={{fontSize:11,color:'#8E8E93',marginTop:1}}>{acc.industry} · {acc.positioning === '待完善' ? <span style={{color:'#FF9500',fontWeight:600}}>定位待完善 ⚡</span> : acc.positioning?.slice(0, 12)}</div>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <button onClick={() => setShowGlobalSearch(true)} className="w-8 h-8 rounded-full bg-gray-100/80 flex items-center justify-center text-sm press">🔍</button>
-                <button onClick={() => setShowAiDebug(true)} className="w-8 h-8 rounded-full bg-gradient-to-br from-[#007AFF] to-[#5856D6] flex items-center justify-center text-sm press shadow-sm shadow-blue-200/60" title="AI 调试中心">🔧</button>
-                <button onClick={() => setShowAccSettings(true)} className="flex items-center gap-1 px-2.5 py-1.5 bg-gray-100 rounded-xl text-xs font-bold text-gray-600 press">⚙️</button>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <button onClick={() => setShowGlobalSearch(true)} style={{width:34,height:34,borderRadius:17,background:'rgba(0,0,0,0.06)',border:'none',display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,cursor:'pointer'}} className="press">🔍</button>
+                <button onClick={() => setShowAiDebug(true)} style={{width:34,height:34,borderRadius:17,background:'linear-gradient(135deg,#007AFF,#5856D6)',border:'none',display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,cursor:'pointer',boxShadow:'0 3px 10px rgba(0,122,255,0.4)'}} className="press" title="AI 调试中心">🔧</button>
+                <button onClick={() => setShowAccSettings(true)} style={{height:34,borderRadius:17,background:'rgba(0,0,0,0.06)',border:'none',padding:'0 12px',fontSize:12,fontWeight:600,color:'#3C3C43',cursor:'pointer'}} className="press">⚙️</button>
               </div>
             </div>
 
-            {/* 账号切换 */}
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+            {/* 账号切换 - Apple 横向滚动 */}
+            <div style={{display:'flex',gap:8,overflowX:'auto',paddingBottom:4,scrollbarWidth:'none',msOverflowStyle:'none'}}>
               {accounts.map((a: any, i: number) => {
-                // 读取各账号的视频数和排期数
                 const accVR = (() => { try { const k = `contentos_${a.id}_video_records`; const d = localStorage.getItem(k); return d ? JSON.parse(d).length : 0 } catch { return 0 } })()
                 const accSch = (() => { try { const k = `contentos_${a.id}_schedule`; const d = localStorage.getItem(k); return d ? JSON.parse(d).filter((s: any) => s.status !== '已发布').length : 0 } catch { return 0 } })()
+                const isActive = i === accountIdx
                 return (
                   <button
                     key={a.id}
                     onClick={() => { setAccountIdx(i); if (typeof navigator !== 'undefined') navigator.vibrate?.(10) }}
-                    className={`flex-shrink-0 flex flex-col items-start gap-0.5 px-3 py-2 rounded-2xl text-xs font-semibold transition-all active:scale-95 ${i === accountIdx ? 'bg-gradient-to-br from-[#007AFF] to-[#5856D6] text-white shadow-md shadow-blue-200/60' : 'bg-gray-50 text-gray-600 border border-gray-100'}`}
+                    style={{
+                      flexShrink:0, display:'flex', flexDirection:'column', alignItems:'flex-start', gap:2,
+                      padding:'8px 12px', borderRadius:14, border:'none', cursor:'pointer',
+                      background: isActive ? 'linear-gradient(135deg,#007AFF 0%,#5856D6 100%)' : 'white',
+                      boxShadow: isActive ? '0 4px 14px rgba(0,122,255,0.35)' : '0 1px 4px rgba(0,0,0,0.08)',
+                      transform:'scale(1)', transition:'all 0.2s cubic-bezier(0.34,1.56,0.64,1)'
+                    }}
+                    className="press"
                   >
-                    <div className="flex items-center gap-1.5">
-                      <span>{a.emoji || '🏪'}</span>
-                      <span className="max-w-[60px] truncate font-bold">{a.name}</span>
-                      {i === accountIdx && accSwitching && <div className="w-3 h-3 border-2 border-white/60 border-t-transparent rounded-full animate-spin" />}
+                    <div style={{display:'flex',alignItems:'center',gap:6}}>
+                      <span style={{fontSize:16}}>{a.emoji || '🏪'}</span>
+                      <span style={{fontSize:13,fontWeight:700,color:isActive?'white':'#000',maxWidth:60,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.name}</span>
+                      {isActive && accSwitching && <div style={{width:10,height:10,border:'2px solid rgba(255,255,255,0.6)',borderTopColor:'transparent',borderRadius:'50%'}} className="animate-spin" />}
                     </div>
-                    <div className={`text-[9px] ${i === accountIdx ? 'text-white/70' : 'text-gray-400'}`}>
+                    <div style={{fontSize:10,color:isActive?'rgba(255,255,255,0.7)':'#8E8E93'}}>
                       {accVR}视频 · {accSch}排期
                     </div>
                   </button>
@@ -3387,33 +3407,34 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
               })}
               <button
                 onClick={() => onPositioning()}
-                className="flex-shrink-0 flex flex-col items-center justify-center gap-0.5 px-3 py-2 rounded-2xl text-xs font-semibold border-2 border-dashed border-gray-200 text-gray-400 press"
+                style={{flexShrink:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:2,padding:'8px 14px',borderRadius:14,border:'1.5px dashed rgba(0,0,0,0.15)',background:'transparent',cursor:'pointer',color:'#8E8E93'}}
+                className="press"
               >
-                <span className="text-base">＋</span>
-                <span className="text-[9px]">新账号</span>
+                <span style={{fontSize:18,lineHeight:1}}>＋</span>
+                <span style={{fontSize:10}}>新账号</span>
               </button>
             </div>
           </div>
 
-          {/* v18.0: 全账号数据汇总 */}
-          <div className="flex gap-2 px-4 py-2.5 border-t border-gray-100/50 bg-white/95">
+          {/* 全账号数据汇总 - Apple Widget风格 */}
+          <div style={{display:'flex',gap:8,padding:'10px 16px 10px',background:'rgba(242,242,247,0.95)',borderBottom:'0.5px solid rgba(0,0,0,0.06)'}}>
             {[
-              { label: '总粉丝', value: (() => { try { return accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.fans) || 0) } return sum }, 0).toLocaleString() } catch { return '0' } })(), icon: '👥', color: 'text-[#007AFF]', bg: 'bg-[#007AFF]/8' },
-              { label: '粉丝增量', value: (() => { try { return '+' + accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.fansGrowth) || 0) } return sum }, 0).toLocaleString() } catch { return '+0' } })(), icon: '📈', color: 'text-[#34C759]', bg: 'bg-[#34C759]/8' },
-              { label: '总曝光', value: (() => { try { const total = accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.plays) || 0) } return sum }, 0); return total >= 10000 ? (total/10000).toFixed(1)+'万' : total.toLocaleString() } catch { return '0' } })(), icon: '👁️', color: 'text-[#5856D6]', bg: 'bg-[#5856D6]/8' },
+              { label: '总粉丝', value: (() => { try { return accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.fans) || 0) } return sum }, 0).toLocaleString() } catch { return '0' } })(), icon: '👥', color: '#007AFF', bg: 'rgba(0,122,255,0.1)' },
+              { label: '粉丝增量', value: (() => { try { return '+' + accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.fansGrowth) || 0) } return sum }, 0).toLocaleString() } catch { return '+0' } })(), icon: '📈', color: '#34C759', bg: 'rgba(52,199,89,0.1)' },
+              { label: '总曝光', value: (() => { try { const total = accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.plays) || 0) } return sum }, 0); return total >= 10000 ? (total/10000).toFixed(1)+'万' : total.toLocaleString() } catch { return '0' } })(), icon: '👁️', color: '#5856D6', bg: 'rgba(88,86,214,0.1)' },
             ].map((item, i) => (
-              <div key={i} className="flex-1 flex items-center gap-2 bg-gray-50 rounded-2xl px-3 py-2">
-                <div className={`w-7 h-7 rounded-xl ${item.bg} flex items-center justify-center text-sm flex-shrink-0`}>{item.icon}</div>
+              <div key={i} style={{flex:1,display:'flex',alignItems:'center',gap:8,background:'white',borderRadius:14,padding:'8px 10px',boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>
+                <div style={{width:28,height:28,borderRadius:9,background:item.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,flexShrink:0}}>{item.icon}</div>
                 <div>
-                  <div className={`text-sm font-bold ${item.color} leading-tight`}>{item.value}</div>
-                  <div className="text-[9px] text-gray-400">{item.label}</div>
+                  <div style={{fontSize:14,fontWeight:700,color:item.color,letterSpacing:-0.3,lineHeight:1}}>{item.value}</div>
+                  <div style={{fontSize:9,color:'#8E8E93',marginTop:2}}>{item.label}</div>
                 </div>
               </div>
             ))}
           </div>
 
           {/* 主内容区 */}
-          <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4 pb-24 scrollbar-hide">
+          <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4 pb-28 scrollbar-hide">
 
             {/* 日期 + 进度概览 */}
             <div style={{
