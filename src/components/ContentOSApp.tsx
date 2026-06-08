@@ -3073,41 +3073,47 @@ export default function ContentOSApp() {
             <button key={t.id} onClick={() => {
                   if (t.id === 'create') { setTab('content') }
                   else { setTab(t.id as Tab) }
-                }} style={{WebkitTapHighlightColor:'transparent',outline:'none',border:'none',background:'none',cursor:'pointer'}} className={`flex-1 flex flex-col items-center pb-0.5 ${isCreate ? 'relative -mt-7 pt-0' : 'pt-2'}`}>
-                  {isCreate ? (
-                    <div style={{
-                      width:54, height:54, borderRadius:17,
-                      background:'linear-gradient(145deg,#007AFF 0%,#5856D6 100%)',
-                      boxShadow: isActive ? '0 6px 24px rgba(0,122,255,0.52)' : '0 4px 16px rgba(0,122,255,0.4)',
-                      display:'flex', alignItems:'center', justifyContent:'center',
-                      transform: isActive ? 'scale(1.07)' : 'scale(1)',
-                      transition:'all 0.28s cubic-bezier(0.34,1.56,0.64,1)'
-                    }}>
-                      <span style={{fontSize:22, lineHeight:1}}>{t.icon}</span>
-                    </div>
-                  ) : (
-                    <div style={{
-                      width:42, height:42, borderRadius:13,
-                      background: isActive ? 'rgba(0,122,255,0.1)' : 'transparent',
-                      display:'flex', alignItems:'center', justifyContent:'center',
-                      transform: isActive ? 'scale(1.1)' : 'scale(1)',
-                      transition:'all 0.24s cubic-bezier(0.34,1.56,0.64,1)'
-                    }}>
-                      <span style={{fontSize:21, lineHeight:1, transition:'all 0.2s ease'}}>{t.icon}</span>
-                    </div>
-                  )}
-                  <span style={{
-                    fontSize:10, lineHeight:1.3,
-                    fontWeight: isActive ? 600 : 400,
-                    color: isActive ? '#007AFF' : '#8E8E93',
-                    marginTop: isCreate ? 5 : 2,
-                    transition:'color 0.2s ease',
-                    letterSpacing:0.1
-                  }}>{t.label}</span>
-                </button>
+                }}
+              style={{WebkitTapHighlightColor:'transparent',outline:'none',border:'none',background:'none',cursor:'pointer',flex:1,display:'flex',flexDirection:'column',alignItems:'center',paddingBottom:2,paddingTop: isCreate ? 0 : 8,position:'relative'}}>
+              {isCreate ? (
+                /* 创作按钮 — 凸起圆角方块 */
+                <div style={{
+                  marginTop:-22,
+                  width:52, height:52, borderRadius:16,
+                  background: isActive
+                    ? 'linear-gradient(145deg,#007AFF 0%,#5856D6 100%)'
+                    : 'linear-gradient(145deg,#007AFF 0%,#5856D6 100%)',
+                  boxShadow: isActive
+                    ? '0 6px 20px rgba(0,122,255,0.5), 0 2px 8px rgba(0,122,255,0.3)'
+                    : '0 4px 14px rgba(0,122,255,0.4)',
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  transform: isActive ? 'scale(1.06)' : 'scale(1)',
+                  transition:'all 0.25s cubic-bezier(0.34,1.56,0.64,1)'
+                }}>
+                  <span style={{fontSize:22}}>{t.icon}</span>
+                </div>
+              ) : (
+                /* 普通Tab图标 */
+                <div style={{
+                  width:44, height:32, borderRadius:10,
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  background: isActive ? 'rgba(0,122,255,0.1)' : 'transparent',
+                  transform: isActive ? 'scale(1.08)' : 'scale(1)',
+                  transition:'all 0.22s cubic-bezier(0.34,1.56,0.64,1)'
+                }}>
+                  <span style={{fontSize:20}}>{t.icon}</span>
+                </div>
+              )}
+              <span style={{
+                fontSize:10, lineHeight:1.2, marginTop: isCreate ? 5 : 2,
+                fontWeight: isActive ? 600 : 400,
+                color: isActive ? '#007AFF' : '#8E8E93',
+                letterSpacing: 0.1,
+                transition:'color 0.18s ease'
+              }}>{t.label}</span>
+            </button>
           )
-        })}
-      </div>
+        })}      </div>
     </div>
   )
 }
@@ -3356,180 +3362,193 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
             </div>
           )}
 
-          {/* 顶部账号栏 - Apple 大标题风格 */}
-          <div style={{background:'rgba(242,242,247,0.95)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',paddingTop:52,paddingBottom:12,paddingLeft:20,paddingRight:20,borderBottom:'0.5px solid rgba(0,0,0,0.08)'}}>
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
-              <div style={{display:'flex',alignItems:'center',gap:10}}>
-                <div className={`w-11 h-11 rounded-[16px] bg-gradient-to-br ${acc.color || 'from-blue-400 to-cyan-400'} flex items-center justify-center text-2xl`} style={{boxShadow:'0 4px 12px rgba(0,0,0,0.15)'}}>
+          {/* 顶部 Header — iOS 大标题风格 */}
+          <div style={{background:'#F2F2F7',paddingTop:50,paddingBottom:0}}>
+            {/* 大标题行 */}
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 20px 10px'}}>
+              <div style={{display:'flex',alignItems:'center',gap:12}}>
+                <div className={`bg-gradient-to-br ${acc.color || 'from-blue-400 to-cyan-400'}`} style={{width:44,height:44,borderRadius:14,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,boxShadow:'0 3px 10px rgba(0,0,0,0.18)'}}>
                   {acc.emoji || '🏪'}
                 </div>
                 <div>
-                  <div style={{fontSize:17,fontWeight:700,color:'#000',letterSpacing:-0.4,lineHeight:1.2}}>{acc.name}</div>
-                  <div style={{fontSize:11,color:'#8E8E93',marginTop:1}}>{acc.industry} · {acc.positioning === '待完善' ? <span style={{color:'#FF9500',fontWeight:600}}>定位待完善 ⚡</span> : acc.positioning?.slice(0, 12)}</div>
+                  <div style={{fontSize:20,fontWeight:700,color:'#000',letterSpacing:-0.5,lineHeight:1.15}}>{acc.name}</div>
+                  <div style={{fontSize:12,color:'#8E8E93',marginTop:1,letterSpacing:-0.1}}>
+                    {acc.industry}
+                    {acc.positioning === '待完善'
+                      ? <span style={{color:'#FF9500',fontWeight:600}}> · 定位待完善</span>
+                      : acc.positioning ? <span style={{color:'#8E8E93'}}> · {acc.positioning?.slice(0,10)}</span> : null}
+                  </div>
                 </div>
               </div>
-              <div style={{display:'flex',alignItems:'center',gap:8}}>
-                <button onClick={() => setShowGlobalSearch(true)} style={{width:34,height:34,borderRadius:17,background:'rgba(0,0,0,0.06)',border:'none',display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,cursor:'pointer'}} className="press">🔍</button>
-                <button onClick={() => setShowAiDebug(true)} style={{width:34,height:34,borderRadius:17,background:'linear-gradient(135deg,#007AFF,#5856D6)',border:'none',display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,cursor:'pointer',boxShadow:'0 3px 10px rgba(0,122,255,0.4)'}} className="press" title="AI 调试中心">🔧</button>
-                <button onClick={() => setShowAccSettings(true)} style={{height:34,borderRadius:17,background:'rgba(0,0,0,0.06)',border:'none',padding:'0 12px',fontSize:12,fontWeight:600,color:'#3C3C43',cursor:'pointer'}} className="press">⚙️</button>
+              <div style={{display:'flex',alignItems:'center',gap:6}}>
+                <button onClick={() => setShowGlobalSearch(true)} style={{width:36,height:36,borderRadius:18,background:'rgba(118,118,128,0.12)',border:'none',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,cursor:'pointer'}} className="press">🔍</button>
+                <button onClick={() => setShowAccSettings(true)} style={{width:36,height:36,borderRadius:18,background:'rgba(118,118,128,0.12)',border:'none',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,cursor:'pointer'}} className="press">⚙️</button>
               </div>
             </div>
 
-            {/* 账号切换 - Apple 横向滚动 */}
-            <div style={{display:'flex',gap:8,overflowX:'auto',paddingBottom:4,scrollbarWidth:'none',msOverflowStyle:'none'}}>
+            {/* 账号切换 — iOS 横向胶囊 */}
+            <div style={{display:'flex',gap:6,overflowX:'auto',padding:'0 20px 14px',scrollbarWidth:'none'}}>
               {accounts.map((a: any, i: number) => {
                 const accVR = (() => { try { const k = `contentos_${a.id}_video_records`; const d = localStorage.getItem(k); return d ? JSON.parse(d).length : 0 } catch { return 0 } })()
                 const accSch = (() => { try { const k = `contentos_${a.id}_schedule`; const d = localStorage.getItem(k); return d ? JSON.parse(d).filter((s: any) => s.status !== '已发布').length : 0 } catch { return 0 } })()
                 const isActive = i === accountIdx
                 return (
-                  <button
-                    key={a.id}
+                  <button key={a.id}
                     onClick={() => { setAccountIdx(i); if (typeof navigator !== 'undefined') navigator.vibrate?.(10) }}
                     style={{
-                      flexShrink:0, display:'flex', flexDirection:'column', alignItems:'flex-start', gap:2,
-                      padding:'8px 12px', borderRadius:14, border:'none', cursor:'pointer',
-                      background: isActive ? 'linear-gradient(135deg,#007AFF 0%,#5856D6 100%)' : 'white',
-                      boxShadow: isActive ? '0 4px 14px rgba(0,122,255,0.35)' : '0 1px 4px rgba(0,0,0,0.08)',
-                      transform:'scale(1)', transition:'all 0.2s cubic-bezier(0.34,1.56,0.64,1)'
-                    }}
-                    className="press"
-                  >
-                    <div style={{display:'flex',alignItems:'center',gap:6}}>
-                      <span style={{fontSize:16}}>{a.emoji || '🏪'}</span>
-                      <span style={{fontSize:13,fontWeight:700,color:isActive?'white':'#000',maxWidth:60,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.name}</span>
-                      {isActive && accSwitching && <div style={{width:10,height:10,border:'2px solid rgba(255,255,255,0.6)',borderTopColor:'transparent',borderRadius:'50%'}} className="animate-spin" />}
+                      flexShrink:0, display:'flex', alignItems:'center', gap:7,
+                      padding:'7px 12px 7px 8px', borderRadius:22, border:'none', cursor:'pointer',
+                      background: isActive ? '#007AFF' : 'white',
+                      boxShadow: isActive ? '0 3px 12px rgba(0,122,255,0.38)' : '0 1px 4px rgba(0,0,0,0.08)',
+                    }} className="press">
+                    <div style={{width:26,height:26,borderRadius:8,background:isActive?'rgba(255,255,255,0.25)':'rgba(0,122,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,flexShrink:0}}>
+                      {a.emoji || '🏪'}
                     </div>
-                    <div style={{fontSize:10,color:isActive?'rgba(255,255,255,0.7)':'#8E8E93'}}>
-                      {accVR}视频 · {accSch}排期
+                    <div style={{textAlign:'left'}}>
+                      <div style={{fontSize:13,fontWeight:600,color:isActive?'white':'#000',letterSpacing:-0.2,whiteSpace:'nowrap'}}>{a.name}</div>
+                      <div style={{fontSize:10,color:isActive?'rgba(255,255,255,0.65)':'#8E8E93',marginTop:0.5}}>{accVR}视频 · {accSch}排期</div>
                     </div>
+                    {isActive && accSwitching && <div style={{width:10,height:10,border:'2px solid rgba(255,255,255,0.5)',borderTopColor:'transparent',borderRadius:'50%',flexShrink:0}} className="animate-spin" />}
                   </button>
                 )
               })}
-              <button
-                onClick={() => onPositioning()}
-                style={{flexShrink:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:2,padding:'8px 14px',borderRadius:14,border:'1.5px dashed rgba(0,0,0,0.15)',background:'transparent',cursor:'pointer',color:'#8E8E93'}}
-                className="press"
-              >
-                <span style={{fontSize:18,lineHeight:1}}>＋</span>
-                <span style={{fontSize:10}}>新账号</span>
+              <button onClick={() => onPositioning()}
+                style={{flexShrink:0,display:'flex',alignItems:'center',gap:5,padding:'7px 14px',borderRadius:22,border:'1.5px dashed rgba(0,0,0,0.12)',background:'transparent',cursor:'pointer'}} className="press">
+                <span style={{fontSize:16,color:'#8E8E93'}}>＋</span>
+                <span style={{fontSize:12,color:'#8E8E93',fontWeight:500}}>新账号</span>
               </button>
             </div>
           </div>
 
-          {/* 全账号数据汇总 - Apple Widget风格 */}
-          <div style={{display:'flex',gap:8,padding:'10px 16px 10px',background:'rgba(242,242,247,0.95)',borderBottom:'0.5px solid rgba(0,0,0,0.06)'}}>
+          {/* 数据概览 — iOS 分组列表风格 */}
+          <div style={{margin:'0 16px 0',background:'white',borderRadius:16,overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>
             {[
               { label: '总粉丝', value: (() => { try { return accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.fans) || 0) } return sum }, 0).toLocaleString() } catch { return '0' } })(), icon: '👥', color: '#007AFF', bg: 'rgba(0,122,255,0.1)' },
               { label: '粉丝增量', value: (() => { try { return '+' + accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.fansGrowth) || 0) } return sum }, 0).toLocaleString() } catch { return '+0' } })(), icon: '📈', color: '#34C759', bg: 'rgba(52,199,89,0.1)' },
               { label: '总曝光', value: (() => { try { const total = accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.plays) || 0) } return sum }, 0); return total >= 10000 ? (total/10000).toFixed(1)+'万' : total.toLocaleString() } catch { return '0' } })(), icon: '👁️', color: '#5856D6', bg: 'rgba(88,86,214,0.1)' },
-            ].map((item, i) => (
-              <div key={i} style={{flex:1,display:'flex',alignItems:'center',gap:8,background:'white',borderRadius:14,padding:'8px 10px',boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>
-                <div style={{width:28,height:28,borderRadius:9,background:item.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,flexShrink:0}}>{item.icon}</div>
-                <div>
-                  <div style={{fontSize:14,fontWeight:700,color:item.color,letterSpacing:-0.3,lineHeight:1}}>{item.value}</div>
-                  <div style={{fontSize:9,color:'#8E8E93',marginTop:2}}>{item.label}</div>
+            ].map((item, i, arr) => (
+              <div key={i} style={{display:'flex',alignItems:'center',padding:'13px 16px',borderBottom: i < arr.length-1 ? '0.5px solid rgba(60,60,67,0.12)' : 'none'}}>
+                <div style={{width:34,height:34,borderRadius:10,background:item.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0,marginRight:12}}>{item.icon}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:15,fontWeight:600,color:'#000',letterSpacing:-0.2}}>{item.label}</div>
                 </div>
+                <div style={{fontSize:17,fontWeight:600,color:item.color,letterSpacing:-0.3}}>{item.value}</div>
               </div>
             ))}
           </div>
 
           {/* 主内容区 */}
-          <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4 pb-28 scrollbar-hide">
+          <div className="flex-1 overflow-y-auto scrollbar-hide" style={{padding:"16px 16px 110px",display:"flex",flexDirection:"column",gap:12}}>
 
-            {/* 日期 + 进度概览 */}
+                        {/* 日期卡片 — iOS 大渐变卡片 */}
             <div style={{
-                    background:'linear-gradient(145deg,#007AFF 0%,#0055CC 50%,#5856D6 100%)',
-                    borderRadius:22,
-                    padding:'18px 20px',
-                    color:'white',
-                    boxShadow:'0 8px 32px rgba(0,122,255,0.32), 0 2px 8px rgba(0,122,255,0.2)'
-                  }}>
-                    <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between'}}>
-                      <div>
-                        <div style={{fontSize:11,fontWeight:500,color:'rgba(255,255,255,0.55)',letterSpacing:1.5,textTransform:'uppercase',marginBottom:4}}>TODAY</div>
-                        <div style={{fontSize:20,fontWeight:700,letterSpacing:-0.5,lineHeight:1.2}}>{dateStr}</div>
-                      </div>
-                      <div style={{textAlign:'right'}}>
-                        <div style={{fontSize:11,color:'rgba(255,255,255,0.55)',marginBottom:2}}>任务完成</div>
-                        <div style={{fontSize:26,fontWeight:700,letterSpacing:-0.5,lineHeight:1}}>{completedCount}<span style={{fontSize:14,fontWeight:400,color:'rgba(255,255,255,0.5)'}}>/{totalCount}</span></div>
-                      </div>
-                    </div>
-                    {totalCount > 0 && (
-                      <div style={{marginTop:14}}>
-                        <div style={{height:3,background:'rgba(255,255,255,0.2)',borderRadius:100,overflow:'hidden'}}>
-                          <div style={{height:'100%',background:'rgba(255,255,255,0.9)',borderRadius:100,width:`${Math.round(completedCount/totalCount*100)}%`,transition:'width 0.6s cubic-bezier(0.34,1.56,0.64,1)'}} />
-                        </div>
-                        <div style={{fontSize:10,color:'rgba(255,255,255,0.5)',marginTop:5,textAlign:'right'}}>{Math.round(completedCount/totalCount*100)}% 完成</div>
-                      </div>
-                    )}
+              background:'linear-gradient(150deg,#007AFF 0%,#0A84FF 40%,#5856D6 100%)',
+              borderRadius:20,
+              padding:'20px 20px 18px',
+              color:'white',
+              boxShadow:'0 8px 28px rgba(0,122,255,0.38)',
+              position:'relative',
+              overflow:'hidden'
+            }}>
+              {/* 背景装饰圆 */}
+              <div style={{position:'absolute',top:-30,right:-20,width:120,height:120,borderRadius:'50%',background:'rgba(255,255,255,0.07)',pointerEvents:'none'}} />
+              <div style={{position:'absolute',bottom:-40,right:30,width:90,height:90,borderRadius:'50%',background:'rgba(255,255,255,0.05)',pointerEvents:'none'}} />
+              
+              <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',position:'relative'}}>
+                <div>
+                  <div style={{fontSize:11,fontWeight:500,color:'rgba(255,255,255,0.6)',letterSpacing:1.2,textTransform:'uppercase',marginBottom:4}}>TODAY</div>
+                  <div style={{fontSize:24,fontWeight:700,letterSpacing:-0.6,lineHeight:1.1}}>{dateStr}</div>
+                </div>
+                <div style={{textAlign:'right'}}>
+                  <div style={{fontSize:11,color:'rgba(255,255,255,0.6)',marginBottom:2}}>任务完成</div>
+                  <div style={{fontSize:22,fontWeight:700,letterSpacing:-0.5}}>
+                    {completedCount}<span style={{fontSize:14,fontWeight:400,opacity:0.6}}>/{totalCount}</span>
                   </div>
-    
+                </div>
+              </div>
+              
+              {totalCount > 0 && (
+                <div style={{marginTop:14,position:'relative'}}>
+                  <div style={{height:4,background:'rgba(255,255,255,0.2)',borderRadius:100,overflow:'hidden'}}>
+                    <div style={{height:'100%',background:'rgba(255,255,255,0.9)',borderRadius:100,width:`${Math.round(completedCount/totalCount*100)}%`,transition:'width 0.6s cubic-bezier(0.34,1.56,0.64,1)'}} />
+                  </div>
+                  <div style={{fontSize:11,color:'rgba(255,255,255,0.5)',marginTop:6,textAlign:'right'}}>{Math.round(completedCount/totalCount*100)}% 完成</div>
+                </div>
+              )}
+            </div>
 
-            {/* 数据概览 */}
-            <div className="grid grid-cols-4 gap-2.5">
+            {/* 数据概览 — iOS Widget 2x2 */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
               {statsCards.map((card: any) => {
-                const colorMap: any = { blue: 'bg-[#007AFF]/8 text-[#007AFF]', purple: 'bg-[#5856D6]/8 text-[#5856D6]', indigo: 'bg-[#007AFF]/8 text-[#007AFF]', green: 'bg-[#34C759]/8 text-[#34C759]' }
+                const colorMap: any = {
+                  blue:   { bg:'rgba(0,122,255,0.1)',   color:'#007AFF',  icon_bg:'rgba(0,122,255,0.15)' },
+                  purple: { bg:'rgba(88,86,214,0.1)',   color:'#5856D6',  icon_bg:'rgba(88,86,214,0.15)' },
+                  indigo: { bg:'rgba(0,122,255,0.1)',   color:'#007AFF',  icon_bg:'rgba(0,122,255,0.15)' },
+                  green:  { bg:'rgba(52,199,89,0.1)',   color:'#34C759',  icon_bg:'rgba(52,199,89,0.15)' },
+                }
+                const c = colorMap[card.color] || { bg:'rgba(120,120,128,0.1)', color:'#8E8E93', icon_bg:'rgba(120,120,128,0.12)' }
                 return (
-                  <button
-                        key={card.label}
-                        onClick={() => { if (card.action === 'topics') { setTab('content') } else if (card.action === 'knowledge') { setTab('materials'); setMatTab('mine') } else setTab(card.action) }}
-                        style={{background:'white',borderRadius:18,padding:'12px 6px',textAlign:'center',boxShadow:'0 2px 8px rgba(0,0,0,0.07)',WebkitTapHighlightColor:'transparent',border:'none',cursor:'pointer',transition:'transform 0.12s cubic-bezier(0.34,1.56,0.64,1)'}}
-                        onMouseDown={(e:any)=>e.currentTarget.style.transform='scale(0.93)'}
-                        onMouseUp={(e:any)=>e.currentTarget.style.transform='scale(1)'}
-                        onTouchStart={(e:any)=>e.currentTarget.style.transform='scale(0.93)'}
-                        onTouchEnd={(e:any)=>e.currentTarget.style.transform='scale(1)'}
-                      >
-                        <div className={`w-9 h-9 rounded-[12px] ${colorMap[card.color] || 'bg-gray-50 text-gray-500'} flex items-center justify-center text-lg mx-auto mb-2`}>{card.icon}</div>
-                        <div style={{fontSize:20,fontWeight:700,color:'#000',letterSpacing:-0.5,lineHeight:1}}>{card.value}</div>
-                        <div style={{fontSize:10,color:'#8E8E93',marginTop:3,lineHeight:1.3}}>{card.label}</div>
-                      </button>
-                    )
+                  <button key={card.label}
+                    onClick={() => { if (card.action === 'topics') { setTab('content') } else if (card.action === 'knowledge') { setTab('materials'); setMatTab('mine') } else setTab(card.action) }}
+                    style={{
+                      background:'white', borderRadius:16, padding:'14px 14px 12px',
+                      textAlign:'left', border:'none', cursor:'pointer',
+                      boxShadow:'0 1px 4px rgba(0,0,0,0.07)',
+                      WebkitTapHighlightColor:'transparent',
+                    }} className="press">
+                    <div style={{width:36,height:36,borderRadius:11,background:c.icon_bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,marginBottom:10}}>{card.icon}</div>
+                    <div style={{fontSize:22,fontWeight:700,color:'#000',letterSpacing:-0.5,lineHeight:1}}>{card.value}</div>
+                    <div style={{fontSize:12,color:'#8E8E93',marginTop:4,letterSpacing:-0.1}}>{card.label}</div>
+                  </button>
+                )
               })}
             </div>
 
-            {/* 每日推荐热点 - 优先用radarData真实数据，兜底用HOTSPOTS */}
+            {/* 热点卡片 — iOS 分组列表 */}
             {(() => {
               const realHotspots = radarData?.hotspots?.length ? radarData.hotspots : null
               const displayHotspots = realHotspots || hotspots
               const isReal = !!realHotspots
               if (!displayHotspots?.length) return null
               return (
-                <div style={{background:"white",borderRadius:20,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.07)"}}>
-                  <div className="flex items-center justify-between mb-2.5">
-                    <div className="flex items-center gap-2">
-                      <div className="font-semibold text-gray-900 text-[15px] tracking-tight">🔥 今日热点</div>
+                <div style={{background:'white',borderRadius:16,overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,0.07)'}}>
+                  {/* 卡片标题 */}
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 16px 10px'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <div style={{width:28,height:28,borderRadius:8,background:'rgba(255,59,48,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14}}>🔥</div>
+                      <span style={{fontSize:15,fontWeight:600,color:'#000',letterSpacing:-0.2}}>今日热点</span>
                       {isReal
-                        ? <span className="text-[10px] bg-[#34C759]/8 text-[#34C759] px-2 py-0.5 rounded-full font-bold">🌐 实时</span>
-                        : <span className="text-[10px] bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full font-bold">示例</span>
+                        ? <span style={{fontSize:10,background:'rgba(52,199,89,0.1)',color:'#34C759',padding:'2px 7px',borderRadius:20,fontWeight:600}}>实时</span>
+                        : <span style={{fontSize:10,background:'rgba(120,120,128,0.1)',color:'#8E8E93',padding:'2px 7px',borderRadius:20}}>示例</span>
                       }
                     </div>
-                    <button onClick={() => { setTab('materials'); setMatTab('trending') }} className="text-xs text-[#007AFF] font-medium">全部 →</button>
+                    <button onClick={() => { setTab('materials'); setMatTab('trending') }} style={{fontSize:13,color:'#007AFF',background:'none',border:'none',cursor:'pointer',fontWeight:500}}>全部</button>
                   </div>
                   {!isReal && (
-                    <div className="mb-2 px-3 py-2 bg-[#FF9500]/8 rounded-xl flex items-center gap-1.5">
-                      <span className="text-[11px] text-[#C93400]">💡 点击「全部」→ 获取今日实时热点</span>
+                    <div style={{margin:'0 16px 10px',padding:'8px 12px',background:'rgba(255,149,0,0.08)',borderRadius:10}}>
+                      <span style={{fontSize:11,color:'#C93400'}}>💡 点击「全部」获取今日实时热点</span>
                     </div>
                   )}
-                  <div className="space-y-2">
-                    {displayHotspots.slice(0, 3).map((h: any, i: number) => (
-                      <div key={i} className="flex items-center gap-2.5">
-                        <span className={`text-xs font-bold w-4 text-center flex-shrink-0 ${i === 0 ? 'text-[#FF3B30]/80' : i === 1 ? 'text-[#FF9500]' : 'text-amber-400'}`}>{i + 1}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs font-medium text-gray-800 truncate">{h.title}</div>
-                          {h.tag && <div className="text-[9px] text-gray-400 mt-0.5">{h.tag}</div>}
-                        </div>
-                        <div className="flex gap-1 flex-shrink-0">
-                          {h.heat && <span className="text-[10px] text-[#FF3B30]/80 font-bold">{h.heat}</span>}
-                          <button onClick={() => { try { localStorage.setItem('contentos_pending_topic', h.title) } catch {}; setTab('content'); showToast('✅ 已带入创作') }} className="text-[10px] text-white bg-[#5856D6] px-1.5 py-0.5 rounded-full font-semibold active:scale-95">✍️</button>
-                        </div>
+                  {/* 列表 */}
+                  {displayHotspots.slice(0, 3).map((h: any, i: number) => (
+                    <div key={i} style={{display:'flex',alignItems:'center',padding:'11px 16px',borderTop:'0.5px solid rgba(60,60,67,0.1)'}}>
+                      <div style={{width:22,height:22,borderRadius:7,background:i===0?'rgba(255,59,48,0.1)':i===1?'rgba(255,149,0,0.1)':'rgba(255,204,0,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:i===0?'#FF3B30':i===1?'#FF9500':'#FFCC00',flexShrink:0,marginRight:10}}>{i+1}</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:14,fontWeight:500,color:'#000',letterSpacing:-0.2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h.title}</div>
+                        {h.tag && <div style={{fontSize:11,color:'#8E8E93',marginTop:1}}>{h.tag}</div>}
                       </div>
-                    ))}
-                  </div>
+                      <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0,marginLeft:8}}>
+                        {h.heat && <span style={{fontSize:11,color:'#FF3B30',fontWeight:600}}>{h.heat}</span>}
+                        <button onClick={() => { try { localStorage.setItem('contentos_pending_topic', h.title) } catch {}; setTab('content'); showToast('✅ 已带入创作') }}
+                          style={{fontSize:11,color:'white',background:'#007AFF',padding:'4px 10px',borderRadius:20,border:'none',cursor:'pointer',fontWeight:600}} className="press">用</button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )
             })()}
 
-            {/* 知识库 + 灵感搜集 并排 */}
+{/* 知识库 + 灵感搜集 并排 */}
             <div className="grid grid-cols-2 gap-3">
               {/* 知识库 */}
               <div className="bg-white rounded-[20px] p-3 s2">

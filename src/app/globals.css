@@ -20,109 +20,53 @@ body {
 /* ══════════════════════════════════════
    APPLE 动效系统
 ══════════════════════════════════════ */
-
-/* 页面切换 — 从右滑入 */
-@keyframes pageSlideIn {
-  from { opacity: 0; transform: translateX(24px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-/* 页面切换 — 从下弹入 */
 @keyframes pageSlideUp {
-  from { opacity: 0; transform: translateY(20px) scale(0.98); }
+  from { opacity: 0; transform: translateY(16px) scale(0.99); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-/* 卡片弹入 */
 @keyframes cardSpring {
-  0%   { opacity: 0; transform: scale(0.92) translateY(12px); }
-  60%  { opacity: 1; transform: scale(1.01) translateY(-2px); }
+  0%   { opacity: 0; transform: scale(0.94) translateY(10px); }
+  60%  { opacity: 1; transform: scale(1.01) translateY(-1px); }
   100% { transform: scale(1) translateY(0); }
 }
-/* 淡入上移 */
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-/* 纯淡入 */
 @keyframes fadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-/* 弹窗从底部滑入 */
 @keyframes sheetUp {
-  from { opacity: 0; transform: translateY(100%); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
 }
-/* 数字跳动 */
-@keyframes numPop {
-  0%   { transform: scale(1); }
-  40%  { transform: scale(1.15); }
-  100% { transform: scale(1); }
-}
-/* 脉冲点 */
-@keyframes pulseDot {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50%       { transform: scale(1.5); opacity: 0.6; }
-}
-/* 浮动 */
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-5px); }
-}
-/* 骨架屏 */
-@keyframes shimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-/* 旋转 */
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
-/* 弹簧缩放 */
-@keyframes springScale {
-  0%   { transform: scale(0.85); opacity: 0; }
-  60%  { transform: scale(1.04); opacity: 1; }
-  100% { transform: scale(1); }
-}
 
-/* ── 动画工具类 ── */
-.page-enter        { animation: pageSlideUp 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
-.page-enter-right  { animation: pageSlideIn 0.28s cubic-bezier(0.4, 0, 0.2, 1) both; }
-.card-spring       { animation: cardSpring 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
-.fade-up           { animation: fadeUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) both; }
-.fade-in           { animation: fadeIn 0.2s ease both; }
-.sheet-up          { animation: sheetUp 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
-.spring-scale      { animation: springScale 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
-.float-anim        { animation: float 3s ease-in-out infinite; }
-.pulse-dot         { animation: pulseDot 1.5s ease-in-out infinite; }
-.spin-anim         { animation: spin 0.8s linear infinite; }
-
-/* 延迟工具 */
-.delay-50  { animation-delay: 50ms; }
-.delay-100 { animation-delay: 100ms; }
-.delay-150 { animation-delay: 150ms; }
-.delay-200 { animation-delay: 200ms; }
-.delay-250 { animation-delay: 250ms; }
-.delay-300 { animation-delay: 300ms; }
+.page-enter  { animation: pageSlideUp 0.32s cubic-bezier(0.25,0.46,0.45,0.94) both; }
+.card-spring { animation: cardSpring 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
+.fade-up     { animation: fadeUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both; }
+.fade-in     { animation: fadeIn 0.2s ease both; }
+.sheet-up    { animation: sheetUp 0.36s cubic-bezier(0.32,0.72,0,1) both; }
+.animate-spin { animation: spin 0.8s linear infinite; }
 
 /* ══════════════════════════════════════
-   APPLE 触感系统
+   APPLE 触感反馈
 ══════════════════════════════════════ */
 .press {
-  transition: transform 0.1s cubic-bezier(0.34, 1.56, 0.64, 1),
-              opacity 0.1s ease;
   -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s cubic-bezier(0.34,1.56,0.64,1), opacity 0.12s ease;
   cursor: pointer;
 }
-.press:active { transform: scale(0.94); opacity: 0.8; }
-
-.press-sm:active { transform: scale(0.96); }
-.press-lg:active { transform: scale(0.97); }
+.press:active { transform: scale(0.94); opacity: 0.85; }
 
 /* ══════════════════════════════════════
    APPLE 毛玻璃
 ══════════════════════════════════════ */
 .glass {
-  background: rgba(255,255,255,0.75);
+  background: rgba(255,255,255,0.72);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 0.5px solid rgba(255,255,255,0.6);
@@ -134,7 +78,7 @@ body {
   border: 0.5px solid rgba(255,255,255,0.08);
 }
 .glass-nav {
-  background: rgba(249,249,251,0.65);
+  background: rgba(249,249,251,0.62);
   backdrop-filter: blur(40px) saturate(180%) brightness(1.04);
   -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(1.04);
   border-top: 0.5px solid rgba(255,255,255,0.9);
@@ -145,263 +89,121 @@ body {
    APPLE 阴影系统
 ══════════════════════════════════════ */
 .s1 { box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); }
-.s2 { box-shadow: 0 2px 8px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04); }
-.s3 { box-shadow: 0 4px 16px rgba(0,0,0,0.09), 0 2px 6px rgba(0,0,0,0.05); }
-.s4 { box-shadow: 0 8px 28px rgba(0,0,0,0.12), 0 3px 10px rgba(0,0,0,0.06); }
-.s5 { box-shadow: 0 16px 48px rgba(0,0,0,0.16), 0 6px 18px rgba(0,0,0,0.08); }
+.s2 { box-shadow: 0 2px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04); }
+.s3 { box-shadow: 0 4px 20px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.05); }
+.s4 { box-shadow: 0 8px 32px rgba(0,0,0,0.13), 0 3px 10px rgba(0,0,0,0.06); }
+.s5 { box-shadow: 0 16px 48px rgba(0,0,0,0.18), 0 6px 18px rgba(0,0,0,0.08); }
 
-/* 彩色阴影 */
-.s-blue   { box-shadow: 0 8px 28px rgba(0,122,255,0.35), 0 3px 10px rgba(0,122,255,0.2); }
-.s-purple { box-shadow: 0 8px 28px rgba(88,86,214,0.35), 0 3px 10px rgba(88,86,214,0.2); }
-.s-green  { box-shadow: 0 8px 28px rgba(52,199,89,0.3), 0 3px 10px rgba(52,199,89,0.15); }
-.s-orange { box-shadow: 0 8px 28px rgba(255,149,0,0.3), 0 3px 10px rgba(255,149,0,0.15); }
+.s-blue   { box-shadow: 0 8px 28px rgba(0,122,255,0.32), 0 3px 10px rgba(0,122,255,0.18); }
+.s-purple { box-shadow: 0 8px 28px rgba(88,86,214,0.32), 0 3px 10px rgba(88,86,214,0.18); }
+.s-green  { box-shadow: 0 8px 28px rgba(52,199,89,0.28), 0 3px 10px rgba(52,199,89,0.14); }
+.s-orange { box-shadow: 0 8px 28px rgba(255,149,0,0.28), 0 3px 10px rgba(255,149,0,0.14); }
 
 /* ══════════════════════════════════════
    APPLE 分段控制器
 ══════════════════════════════════════ */
 .seg {
+  display: flex;
   background: rgba(118,118,128,0.12);
   border-radius: 10px;
   padding: 2px;
-  display: flex;
   gap: 0;
 }
 .seg-item {
   flex: 1;
-  padding: 6px 8px;
+  padding: 6px 12px;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
+  color: #3C3C43;
   text-align: center;
-  color: rgba(0,0,0,0.5);
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   cursor: pointer;
-  white-space: nowrap;
+  transition: all 0.2s ease;
+  border: none;
+  background: transparent;
+  -webkit-tap-highlight-color: transparent;
 }
-.seg-item.on {
+.seg-item.active {
   background: white;
   color: #000;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.06);
   font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12), 0 0.5px 1px rgba(0,0,0,0.08);
 }
-
-/* ══════════════════════════════════════
-   APPLE 列表
-══════════════════════════════════════ */
-.list-group {
-  background: white;
-  border-radius: 16px;
-  overflow: hidden;
-}
-.list-row {
-  padding: 13px 16px;
-  border-bottom: 0.5px solid rgba(60,60,67,0.1);
-  display: flex;
-  align-items: center;
-  transition: background 0.12s ease;
-  cursor: pointer;
-}
-.list-row:last-child { border-bottom: none; }
-.list-row:active { background: rgba(0,0,0,0.04); }
-
-/* ══════════════════════════════════════
-   APPLE 进度条
-══════════════════════════════════════ */
-.progress-track {
-  height: 4px;
-  background: rgba(0,0,0,0.08);
-  border-radius: 100px;
-  overflow: hidden;
-}
-.progress-fill {
-  height: 100%;
-  border-radius: 100px;
-  background: #007AFF;
-  transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* ══════════════════════════════════════
-   APPLE 开关
-══════════════════════════════════════ */
-.toggle {
-  width: 51px; height: 31px;
-  border-radius: 100px;
-  background: #E5E5EA;
-  position: relative;
-  cursor: pointer;
-  transition: background 0.22s ease;
-  flex-shrink: 0;
-}
-.toggle.on { background: #34C759; }
-.toggle::after {
-  content: '';
-  position: absolute;
-  width: 27px; height: 27px;
-  border-radius: 50%;
-  background: white;
-  top: 2px; left: 2px;
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.22);
-}
-.toggle.on::after { transform: translateX(20px); }
-
-/* ══════════════════════════════════════
-   APPLE Toast
-══════════════════════════════════════ */
-.toast {
-  background: rgba(50,50,50,0.92);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 14px;
-  color: white;
-  font-size: 14px;
-  font-weight: 500;
-  padding: 11px 18px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.28);
-}
-
-/* ══════════════════════════════════════
-   APPLE 骨架屏
-══════════════════════════════════════ */
-.skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s infinite;
-  border-radius: 8px;
-}
-
-/* ══════════════════════════════════════
-   滚动条隐藏
-══════════════════════════════════════ */
-.no-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-.no-scroll::-webkit-scrollbar { display: none; }
-.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-.scrollbar-hide::-webkit-scrollbar { display: none; }
 
 /* ══════════════════════════════════════
    APPLE 字体层级
 ══════════════════════════════════════ */
-.t-largetitle { font-size: 34px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.15; }
-.t-title1     { font-size: 28px; font-weight: 700; letter-spacing: -0.4px; line-height: 1.2; }
-.t-title2     { font-size: 22px; font-weight: 700; letter-spacing: -0.35px; line-height: 1.25; }
-.t-title3     { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; line-height: 1.3; }
-.t-headline   { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; line-height: 1.4; }
-.t-body       { font-size: 17px; font-weight: 400; letter-spacing: -0.1px; line-height: 1.5; }
-.t-callout    { font-size: 16px; font-weight: 400; letter-spacing: -0.1px; line-height: 1.5; }
-.t-subhead    { font-size: 15px; font-weight: 400; letter-spacing: -0.1px; line-height: 1.5; }
-.t-footnote   { font-size: 13px; font-weight: 400; letter-spacing: 0; line-height: 1.45; }
-.t-caption1   { font-size: 12px; font-weight: 400; letter-spacing: 0; line-height: 1.4; }
-.t-caption2   { font-size: 11px; font-weight: 400; letter-spacing: 0.1px; line-height: 1.35; }
+.t-largetitle { font-size: 34px; font-weight: 700; letter-spacing: -0.8px; line-height: 1.1; }
+.t-title1     { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.15; }
+.t-title2     { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; line-height: 1.2; }
+.t-title3     { font-size: 20px; font-weight: 600; letter-spacing: -0.2px; line-height: 1.25; }
+.t-headline   { font-size: 17px; font-weight: 600; letter-spacing: -0.1px; line-height: 1.3; }
+.t-body       { font-size: 17px; font-weight: 400; letter-spacing: -0.1px; line-height: 1.4; }
+.t-callout    { font-size: 16px; font-weight: 400; letter-spacing: -0.1px; line-height: 1.4; }
+.t-subhead    { font-size: 15px; font-weight: 400; letter-spacing: -0.05px; line-height: 1.4; }
+.t-footnote   { font-size: 13px; font-weight: 400; letter-spacing: 0; line-height: 1.4; }
+.t-caption1   { font-size: 12px; font-weight: 400; letter-spacing: 0; line-height: 1.3; }
+.t-caption2   { font-size: 11px; font-weight: 400; letter-spacing: 0.06px; line-height: 1.3; }
 
 /* ══════════════════════════════════════
    APPLE 颜色变量
 ══════════════════════════════════════ */
 :root {
   --blue:   #007AFF;
-  --purple: #5856D6;
-  --pink:   #FF2D55;
-  --orange: #FF9500;
-  --yellow: #FFCC00;
   --green:  #34C759;
-  --teal:   #5AC8FA;
+  --indigo: #5856D6;
+  --orange: #FF9500;
+  --pink:   #FF2D55;
+  --purple: #AF52DE;
   --red:    #FF3B30;
+  --teal:   #5AC8FA;
+  --yellow: #FFCC00;
   --gray:   #8E8E93;
   --gray2:  #AEAEB2;
   --gray3:  #C7C7CC;
   --gray4:  #D1D1D6;
   --gray5:  #E5E5EA;
   --gray6:  #F2F2F7;
-  --bg:     #F2F2F7;
-  --card:   #FFFFFF;
   --label:  #000000;
   --label2: rgba(60,60,67,0.6);
   --label3: rgba(60,60,67,0.3);
   --label4: rgba(60,60,67,0.18);
-  --sep:    rgba(60,60,67,0.12);
+  --fill:   rgba(120,120,128,0.2);
+  --fill2:  rgba(120,120,128,0.16);
+  --fill3:  rgba(118,118,128,0.12);
+  --fill4:  rgba(116,116,128,0.08);
+  --bg:     #F2F2F7;
+  --bg2:    #FFFFFF;
+  --bg3:    #F2F2F7;
+  --separator: rgba(60,60,67,0.29);
+  --separator-opaque: #C6C6C8;
 }
 
 /* ══════════════════════════════════════
-   深色模式
+   APPLE 列表/卡片
 ══════════════════════════════════════ */
-[data-theme="dark"] {
-  --bg:    #000000;
-  --card:  #1C1C1E;
-  --label: #FFFFFF;
-  --label2: rgba(235,235,245,0.6);
-  --label3: rgba(235,235,245,0.3);
-  --label4: rgba(235,235,245,0.18);
-  --sep:   rgba(84,84,88,0.6);
+.apple-card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
 }
-[data-theme="dark"] body { background: #000; }
-[data-theme="dark"] .bg-white { background-color: #1C1C1E !important; }
-[data-theme="dark"] .bg-gray-50 { background-color: #2C2C2E !important; }
-[data-theme="dark"] .bg-gray-100 { background-color: #3A3A3C !important; }
-[data-theme="dark"] .text-gray-900 { color: #FFF !important; }
-[data-theme="dark"] .text-gray-700 { color: rgba(235,235,245,0.8) !important; }
-[data-theme="dark"] .text-gray-600 { color: rgba(235,235,245,0.6) !important; }
-[data-theme="dark"] .text-gray-500 { color: rgba(235,235,245,0.45) !important; }
-[data-theme="dark"] .text-gray-400 { color: rgba(235,235,245,0.3) !important; }
-[data-theme="dark"] .border-gray-100 { border-color: rgba(84,84,88,0.5) !important; }
-[data-theme="dark"] .glass-nav { background: rgba(28,28,30,0.94); border-top-color: rgba(255,255,255,0.06); }
-[data-theme="dark"] .seg { background: rgba(118,118,128,0.24); }
-[data-theme="dark"] .seg-item.on { background: #3A3A3C; color: #FFF; }
-
-/* 护眼模式 */
-[data-theme="eye"] body { background: #EDE8DC; }
-[data-theme="eye"] .bg-white { background-color: #FDFAF4 !important; }
-[data-theme="eye"] .bg-gray-50 { background-color: #EDE8DC !important; }
-[data-theme="eye"] .bg-gray-100 { background-color: #E5DFD0 !important; }
-[data-theme="eye"] .text-gray-900 { color: #2C2416 !important; }
+.apple-list-item {
+  padding: 12px 16px;
+  border-bottom: 0.5px solid rgba(60,60,67,0.18);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.apple-list-item:last-child { border-bottom: none; }
 
 /* ══════════════════════════════════════
-   主题色
+   SCROLLBAR HIDE
 ══════════════════════════════════════ */
-[data-accent="blue"]   { --accent: #007AFF; --accent-l: #EBF5FF; --accent-d: #0055CC; }
-[data-accent="purple"] { --accent: #5856D6; --accent-l: #F0EFFE; --accent-d: #3634A3; }
-[data-accent="green"]  { --accent: #34C759; --accent-l: #EDFBF1; --accent-d: #248A3D; }
-[data-accent="orange"] { --accent: #FF9500; --accent-l: #FFF5E6; --accent-d: #C93400; }
-[data-accent="pink"]   { --accent: #FF2D55; --accent-l: #FFF0F3; --accent-d: #D70015; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* ══════════════════════════════════════
-   底部安全区
+   DARK MODE
 ══════════════════════════════════════ */
-.pb-safe { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
-
-/* ══════════════════════════════════════
-   tab-transition (保持兼容)
-══════════════════════════════════════ */
-.tab-transition { transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1); }
-
-/* ══════════════════════════════════════
-   旧类名兼容映射
-══════════════════════════════════════ */
-.apple-shadow    { box-shadow: 0 2px 8px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04); }
-.apple-shadow-sm { box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); }
-.apple-shadow-lg { box-shadow: 0 4px 16px rgba(0,0,0,0.09), 0 2px 6px rgba(0,0,0,0.05); }
-.apple-shadow-xl { box-shadow: 0 16px 48px rgba(0,0,0,0.16), 0 6px 18px rgba(0,0,0,0.08); }
-.haptic-press    { transition: transform 0.1s cubic-bezier(0.34,1.56,0.64,1), opacity 0.1s ease; -webkit-tap-highlight-color: transparent; }
-.haptic-press:active { transform: scale(0.94); opacity: 0.8; }
-.glass-card      { background: rgba(255,255,255,0.75); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); border: 0.5px solid rgba(255,255,255,0.6); }
-.apple-segmented { background: rgba(118,118,128,0.12); border-radius: 10px; padding: 2px; display: flex; }
-.apple-segmented-item { flex:1; padding:6px 8px; border-radius:8px; font-size:13px; font-weight:500; text-align:center; color:rgba(0,0,0,0.5); transition:all 0.2s cubic-bezier(0.34,1.56,0.64,1); cursor:pointer; }
-.apple-segmented-item.active { background:white; color:#000; box-shadow:0 2px 8px rgba(0,0,0,0.12); font-weight:600; }
-.animate-fade-in-up { animation: fadeUp 0.3s cubic-bezier(0.4,0,0.2,1) both; }
-.animate-fade-in    { animation: fadeIn 0.2s ease both; }
-.animate-slide-in-bottom { animation: sheetUp 0.38s cubic-bezier(0.34,1.56,0.64,1) both; }
-.animate-scale-in   { animation: springScale 0.35s cubic-bezier(0.34,1.56,0.64,1) both; }
-.animate-spring-in  { animation: cardSpring 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
-.animate-float      { animation: float 3s ease-in-out infinite; }
-.animate-spin-slow  { animation: spin 8s linear infinite; }
-.animate-pulse-dot  { animation: pulseDot 1.5s ease-in-out infinite; }
-.spring-transition  { transition: all 0.35s cubic-bezier(0.34,1.56,0.64,1); }
-.smooth-transition  { transition: all 0.25s cubic-bezier(0.4,0,0.2,1); }
-.apple-list-item    { padding:13px 16px; border-bottom:0.5px solid rgba(60,60,67,0.1); display:flex; align-items:center; transition:background 0.12s ease; }
-.apple-list-item:last-child { border-bottom:none; }
-.apple-list-item:active { background:rgba(0,0,0,0.04); }
-.apple-title        { font-size:22px; font-weight:700; letter-spacing:-0.35px; line-height:1.25; }
-.apple-headline     { font-size:17px; font-weight:600; letter-spacing:-0.2px; line-height:1.4; }
-.apple-body         { font-size:17px; font-weight:400; letter-spacing:-0.1px; line-height:1.5; }
-.apple-caption      { font-size:12px; font-weight:400; letter-spacing:0; line-height:1.4; color:rgba(0,0,0,0.45); }
-.apple-number       { font-variant-numeric:tabular-nums; font-feature-settings:'tnum'; }
-.apple-toast        { background:rgba(50,50,50,0.92); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-radius:14px; color:white; font-size:14px; font-weight:500; padding:11px 18px; box-shadow:0 8px 32px rgba(0,0,0,0.28); }
-.skeleton           { background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:8px; }
+[data-theme="dark"] .glass-nav { background: rgba(28,28,30,0.82); border-top-color: rgba(255,255,255,0.06); }
+[data-theme="dark"] .apple-card { background: #1C1C1E; }
