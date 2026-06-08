@@ -43,7 +43,7 @@ interface ScheduleItem {
 // ─── Constants ───────────────────────────────────────────
 const DEFAULT_ACCOUNTS: Account[] = [
   { id: '1', name: '老李面馆', emoji: '🍜', industry: '餐饮', positioning: '本地餐饮·老板IP流', targetAudience: '周边3km上班族', color: 'from-orange-400 to-amber-500', followers: '1.2万', likes: '8.6万', works: '47' },
-  { id: '2', name: '健身工作室', emoji: '💪', industry: '健身', positioning: '专业健身教练', targetAudience: '18-35岁健身爱好者', color: 'from-blue-500 to-cyan-400', followers: '3.4万', likes: '21万', works: '89' },
+  { id: '2', name: '健身工作室', emoji: '💪', industry: '健身', positioning: '专业健身教练', targetAudience: '18-35岁健身爱好者', color: 'from-indigo-500 to-violet-500', followers: '3.4万', likes: '21万', works: '89' },
 ]
 
 const HOTSPOTS = [
@@ -59,7 +59,7 @@ const COPY_STYLES = ['犀利观点', '温情故事', '干货教程', '幽默搞�
 // ─── Global AI Quick Panel ────────────────────────────────
 // 各模块的 AI 配置说明
 const MODULE_AI_CONFIG: Record<string, { label: string; icon: string; color: string; promptPlaceholder: string; promptTip: string }> = {
-  dashboard: { label: '工作台', icon: '🏠', color: 'from-blue-500 to-cyan-400', promptPlaceholder: '工作台 AI 助手提示词...', promptTip: '影响每日任务建议和快捷操作的 AI 行为' },
+  dashboard: { label: '工作台', icon: '🏠', color: 'from-indigo-500 to-violet-500', promptPlaceholder: '工作台 AI 助手提示词...', promptTip: '影响每日任务建议和快捷操作的 AI 行为' },
   topics: { label: '选题生成', icon: '💡', color: 'from-orange-400 to-amber-400', promptPlaceholder: '如：专注本地餐饮，选题要结合节假日热点，突出性价比...', promptTip: '影响 AI 生成选题的方向、风格和侧重点' },
   copy: { label: '文案生成', icon: '✍️', color: 'from-purple-500 to-pink-400', promptPlaceholder: '如：文案要口语化，多用疑问句开头，结尾加行动号召...', promptTip: '影响 AI 生成文案的语气、结构和风格' },
   video: { label: '视频脚本', icon: '🎬', color: 'from-red-400 to-rose-500', promptPlaceholder: '如：口播要简洁有力，每句不超过15字，节奏感强...', promptTip: '影响 AI 生成视频口播文案的节奏和风格' },
@@ -138,7 +138,7 @@ function AiQuickPanel({
               <div className="text-[10px] text-gray-400 mt-0.5">当前模型：{AI_MODELS_LIST.find(m => m.id === aiModel)?.short || aiModel}</div>
             </div>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 text-sm active:scale-90 transition-transform">✕</button>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100/80 flex items-center justify-center text-gray-400 text-sm active:scale-90 transition-transform">✕</button>
         </div>
 
         {/* 子 Tab */}
@@ -170,7 +170,7 @@ function AiQuickPanel({
                 <div className="text-xs font-bold text-blue-700 mb-1">💡 {cfg.label}专属提示词</div>
                 <div className="text-[11px] text-blue-500 leading-relaxed">{cfg.promptTip}</div>
               </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <label className="text-xs font-bold text-gray-500 mb-2 block">模块提示词</label>
                 <textarea
                   value={currentPrompt}
@@ -188,7 +188,7 @@ function AiQuickPanel({
                   )}
                 </div>
               </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <label className="text-xs font-bold text-gray-500 mb-2 block">全局系统提示词（所有模块共用）</label>
                 <div className="text-[10px] text-gray-400 mb-2">在个人中心 → AI 设置中配置</div>
                 <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
@@ -199,7 +199,7 @@ function AiQuickPanel({
                 </div>
               </div>
               {/* 快捷模板 */}
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <div className="text-xs font-bold text-gray-500 mb-2.5">⚡ 快捷模板</div>
                 <div className="space-y-2">
                   {(tplKey === 'topics' ? [
@@ -235,7 +235,7 @@ function AiQuickPanel({
           {/* ── 模型 Tab ── */}
           {panelTab === 'model' && (
             <>
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <div className="font-bold text-gray-900 text-sm mb-3">🤖 选择 AI 模型</div>
                 <div className="space-y-2">
                   {AI_MODELS_LIST.map(m => (
@@ -255,7 +255,7 @@ function AiQuickPanel({
                   ))}
                 </div>
               </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <div className="flex items-center justify-between mb-3">
                   <label className="text-xs font-bold text-gray-500">创意度（Temperature）</label>
                   <span className="text-sm font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-lg">{aiTemperature}</span>
@@ -276,7 +276,7 @@ function AiQuickPanel({
           {/* ── API Tab ── */}
           {panelTab === 'api' && (
             <>
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <div className="font-bold text-gray-900 text-sm mb-3">🔑 API 配置</div>
                 <div className="space-y-3">
                   <div>
@@ -316,7 +316,7 @@ function AiQuickPanel({
         <div className="px-5 pb-6 pt-2 flex-shrink-0 border-t border-gray-100">
           <button
             onClick={saveAll}
-            className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-black rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md"
+            className="w-full py-3.5 bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-black rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md"
           >
             💾 保存设置
           </button>
@@ -377,7 +377,7 @@ function EmptyState({ icon, title, desc, action, onAction }: { icon: string; tit
       <div className="font-bold text-gray-800 mb-1 text-sm">{title}</div>
       {desc && <div className="text-xs text-gray-400 mb-4 leading-relaxed">{desc}</div>}
       {action && onAction && (
-        <button onClick={onAction} className="px-5 py-2.5 bg-blue-500 text-white text-xs font-bold rounded-2xl active:scale-[0.97] transition-transform shadow-md shadow-blue-100">
+        <button onClick={onAction} className="px-5 py-2.5 bg-indigo-600 text-white text-xs font-bold rounded-2xl active:scale-[0.97] transition-transform shadow-md shadow-blue-100">
           {action}
         </button>
       )}
@@ -1975,7 +1975,7 @@ export default function ContentOSApp() {
     return (
       <div className="w-[390px] h-[844px] rounded-[50px] overflow-hidden bg-white flex flex-col shadow-[0_0_0_10px_#111,0_40px_100px_rgba(0,0,0,.7)] relative">
         <div className="flex-1 flex flex-col items-center justify-center px-8">
-          <div className="w-20 h-20 rounded-[28px] bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center mb-6 shadow-xl">
+          <div className="w-20 h-20 rounded-[28px] bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center mb-6 shadow-xl">
             <span className="text-4xl">🎬</span>
           </div>
           <h1 className="text-2xl font-black text-gray-900 mb-1 tracking-tight">ContentOS</h1>
@@ -2004,7 +2004,7 @@ export default function ContentOSApp() {
             <button
               onClick={authMode === 'login' ? handleLogin : handleRegister}
               disabled={authLoading}
-              className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm disabled:opacity-60 active:scale-[0.98] transition-all shadow-md"
+              className="w-full py-3.5 bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-bold rounded-2xl text-sm disabled:opacity-60 active:scale-[0.98] transition-all shadow-md"
             >
               {authLoading ? <span className="flex items-center justify-center gap-2"><Spinner />处理中...</span> : authMode === 'login' ? '登录' : '注册'}
             </button>
@@ -2041,7 +2041,7 @@ export default function ContentOSApp() {
       { id: 'positioning', label: '🎯 账号定位', api: '/api/generate-positioning' },
     ]
     return (
-      <div className="w-[390px] h-[844px] rounded-[50px] overflow-hidden bg-[#F5F6FA] flex flex-col shadow-[0_0_0_10px_#111,0_40px_100px_rgba(0,0,0,.7)] relative">
+      <div className="w-[390px] h-[844px] rounded-[50px] overflow-hidden bg-[#EEF0F8] flex flex-col shadow-[0_0_0_12px_#1a1a2e,0_0_0_14px_#2d2d4e,0_50px_120px_rgba(0,0,0,.8)] relative">
         {/* Header */}
         <div className="px-5 pt-12 pb-3 flex-shrink-0 flex items-center gap-3 bg-white border-b border-gray-100">
           <button onClick={() => setShowAiDebug(false)} className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-lg">←</button>
@@ -2070,7 +2070,7 @@ export default function ContentOSApp() {
           {/* ── 配置 Tab ── */}
           {aiDebugTab === 'config' && (
             <>
-              <div className="bg-white rounded-3xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <div className="font-black text-gray-900 text-sm mb-3">🤖 当前 AI 配置</div>
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between py-2 border-b border-gray-50">
@@ -2095,12 +2095,12 @@ export default function ContentOSApp() {
                   </div>
                 </div>
                 <button onClick={() => { setShowAiDebug(false); setTab('profile'); setProfileTab('ai') }}
-                  className="w-full mt-3 py-2.5 bg-blue-500 text-white text-xs font-bold rounded-2xl active:scale-[0.98]">
+                  className="w-full mt-3 py-2.5 bg-indigo-600 text-white text-xs font-bold rounded-2xl active:scale-[0.98]">
                   前往 AI 设置修改 →
                 </button>
               </div>
 
-              <div className="bg-white rounded-3xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <div className="font-black text-gray-900 text-sm mb-3">🛣️ 内容生成路径</div>
                 <div className="space-y-2">
                   {[
@@ -2125,7 +2125,7 @@ export default function ContentOSApp() {
           {/* ── 提示词 Tab ── */}
           {aiDebugTab === 'prompts' && (
             <>
-              <div className="bg-white rounded-3xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <div className="font-black text-gray-900 text-sm mb-1">📝 模块专属提示词</div>
                 <div className="text-xs text-gray-400 mb-3">这些提示词会在生成时自动注入，优先级高于全局提示词</div>
                 <div className="space-y-3">
@@ -2154,7 +2154,7 @@ export default function ContentOSApp() {
                   ))}
                 </div>
                 <button onClick={() => { saveToLocal('contentos_module_prompts', modulePrompts); showToast('✅ 提示词已保存') }}
-                  className="w-full mt-3 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white text-xs font-bold rounded-2xl active:scale-[0.98]">
+                  className="w-full mt-3 py-2.5 bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-xs font-bold rounded-2xl active:scale-[0.98]">
                   💾 保存所有提示词
                 </button>
               </div>
@@ -2174,7 +2174,7 @@ export default function ContentOSApp() {
           {/* ── 测试 Tab ── */}
           {aiDebugTab === 'test' && (
             <>
-              <div className="bg-white rounded-3xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <div className="font-black text-gray-900 text-sm mb-3">🧪 API 测试</div>
                 <div className="space-y-3">
                   <div>
@@ -2200,14 +2200,14 @@ export default function ContentOSApp() {
                     />
                   </div>
                   <button onClick={runAiDebugTest} disabled={aiDebugLoading}
-                    className="w-full py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white text-sm font-bold rounded-2xl disabled:opacity-50 active:scale-[0.98] flex items-center justify-center gap-2">
+                    className="w-full py-3 bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-sm font-bold rounded-2xl disabled:opacity-50 active:scale-[0.98] flex items-center justify-center gap-2">
                     {aiDebugLoading ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/><span>测试中...</span></> : <><span>🚀</span><span>发送测试请求</span></>}
                   </button>
                 </div>
               </div>
 
               {aiDebugOutput && (
-                <div className="bg-white rounded-3xl p-4 shadow-sm">
+                <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <div className="flex items-center justify-between mb-2">
                     <div className="font-black text-gray-900 text-sm">📤 返回结果</div>
                     <button onClick={() => setAiDebugOutput('')} className="text-xs text-gray-400">清除</button>
@@ -2229,7 +2229,7 @@ export default function ContentOSApp() {
   if (showPositioning) {
     const chatStepLabels = ['', '行业', '产品/服务', '目标客户', '城市', '优势', '准备生成']
     return (
-      <div className="w-[390px] h-[844px] rounded-[50px] overflow-hidden bg-[#F5F6FA] flex flex-col shadow-[0_0_0_10px_#111,0_40px_100px_rgba(0,0,0,.7)] relative">
+      <div className="w-[390px] h-[844px] rounded-[50px] overflow-hidden bg-[#EEF0F8] flex flex-col shadow-[0_0_0_12px_#1a1a2e,0_0_0_14px_#2d2d4e,0_50px_120px_rgba(0,0,0,.8)] relative">
         {/* Header */}
         <div className="px-5 pt-12 pb-3 flex-shrink-0 flex items-center gap-3 bg-white/80 backdrop-blur-xl border-b border-gray-100">
           <button onClick={() => {
@@ -2261,7 +2261,7 @@ export default function ContentOSApp() {
                     <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${curIdx > i ? 'bg-green-400 text-white' : curIdx === i ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
                       {curIdx > i ? '✓' : i + 1}
                     </div>
-                    <span className={`text-[10px] whitespace-nowrap ${curIdx === i ? 'text-blue-500 font-semibold' : 'text-gray-400'}`}>{s}</span>
+                    <span className={`text-[10px] whitespace-nowrap ${curIdx === i ? 'text-indigo-500 font-semibold' : 'text-gray-400'}`}>{s}</span>
                     {i < 3 && <div className={`flex-1 h-px ${curIdx > i ? 'bg-green-400' : 'bg-gray-200'}`} />}
                   </div>
                 )
@@ -2281,14 +2281,14 @@ export default function ContentOSApp() {
                     <div className="text-5xl mb-4">🎯</div>
                     <p className="text-sm font-bold text-gray-700 mb-2">AI 定位顾问</p>
                     <p className="text-xs text-gray-400 mb-6">通过对话帮你找准账号方向</p>
-                    <button onClick={startPosChat} className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-all">
+                    <button onClick={startPosChat} className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-bold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-all">
                       开始对话 →
                     </button>
                   </div>
                 )}
                 {posChatMessages.map((msg, i) => (
                   <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} gap-2`}>
-                    {msg.role === 'ai' && <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-sm flex-shrink-0 mt-0.5">🤖</div>}
+                    {msg.role === 'ai' && <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-sm flex-shrink-0 mt-0.5">🤖</div>}
                     <div className={`max-w-[78%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed whitespace-pre-line ${msg.role === 'ai' ? 'bg-white text-gray-800 shadow-sm rounded-tl-sm' : 'bg-blue-500 text-white rounded-tr-sm'}`}>
                       {msg.text.replace(/\*\*(.*?)\*\*/g, '$1')}
                     </div>
@@ -2310,7 +2310,7 @@ export default function ContentOSApp() {
                     <button
                       onClick={() => generateIndustryReport({ industry: posIndustry, product: posProduct, targetCustomer: posCustomer, city: posCity, advantage: posAdvantage })}
                       disabled={posReportLoading}
-                      className="w-full py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                      className="w-full py-3 bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-bold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-2"
                     >
                       {posReportLoading ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/><span>生成行业报告中...</span></> : '📊 生成行业全面报告'}
                     </button>
@@ -2319,7 +2319,7 @@ export default function ContentOSApp() {
               </div>
               {posChatStep > 0 && posChatStep < 6 && (
                 <div className="px-4 pb-4 flex-shrink-0">
-                  <div className="flex gap-2 bg-white rounded-2xl shadow-sm p-2">
+                  <div className="flex gap-2 bg-white rounded-3xl shadow-[0_2px_16px_rgba(79,70,229,0.06)] p-2">
                     <input
                       value={posChatInput}
                       onChange={e => setPosChatInput(e.target.value)}
@@ -2342,12 +2342,12 @@ export default function ContentOSApp() {
           {/* v18.0: 行业报告步骤 */}
           {posReportStep === 'report' && posIndustryReport && (
             <div className="space-y-3 px-5 pt-4">
-              <div className="bg-gradient-to-r from-blue-500 to-cyan-400 rounded-2xl p-4 text-white">
+              <div className="bg-gradient-to-r from-indigo-500 to-violet-500 rounded-2xl p-4 text-white">
                 <div className="font-black text-base mb-1">{posIndustryReport.title || `${posIndustry}行业内容全面报告`}</div>
                 <div className="text-white/80 text-xs leading-relaxed">{posIndustryReport.summary}</div>
               </div>
               {posIndustryReport.opportunities?.length > 0 && (
-                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <div className="font-bold text-gray-900 text-sm mb-2">🚀 市场机会</div>
                   <div className="space-y-2">
                     {posIndustryReport.opportunities.map((o: string, i: number) => (
@@ -2360,7 +2360,7 @@ export default function ContentOSApp() {
                 </div>
               )}
               {posIndustryReport.contentTrends?.length > 0 && (
-                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <div className="font-bold text-gray-900 text-sm mb-2">📈 内容趋势</div>
                   <div className="space-y-2">
                     {posIndustryReport.contentTrends.map((t: string, i: number) => (
@@ -2373,13 +2373,13 @@ export default function ContentOSApp() {
                 </div>
               )}
               {posIndustryReport.competition && (
-                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <div className="font-bold text-gray-900 text-sm mb-2">⚔️ 竞争格局</div>
                   <div className="text-xs text-gray-700 leading-relaxed">{posIndustryReport.competition}</div>
                 </div>
               )}
               {posIndustryReport.monetization && (
-                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <div className="font-bold text-gray-900 text-sm mb-2">💰 商业化路径</div>
                   <div className="text-xs text-gray-700 leading-relaxed">{posIndustryReport.monetization}</div>
                 </div>
@@ -2424,7 +2424,7 @@ export default function ContentOSApp() {
               {posSelectedPlan && (
                 <button
                   onClick={() => setPosReportStep('confirm')}
-                  className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-all"
+                  className="w-full py-3.5 bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-bold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-all"
                 >
                   ✅ 选择「{posSelectedPlan.name}」方案
                 </button>
@@ -2465,7 +2465,7 @@ export default function ContentOSApp() {
                 </div>
                 <button
                   onClick={() => { setPosShowPlanDetail(false); setPosReportStep('confirm') }}
-                  className="w-full mt-4 py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all"
+                  className="w-full mt-4 py-3 bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all"
                 >
                   ✅ 选择此方案
                 </button>
@@ -2481,7 +2481,7 @@ export default function ContentOSApp() {
                 <div className="font-black text-base">{posSelectedPlan.emoji} {posSelectedPlan.name}</div>
                 <div className="text-white/80 text-xs mt-1 leading-relaxed">{posSelectedPlan.positioning}</div>
               </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm space-y-2">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)] space-y-2">
                 <div className="font-bold text-gray-900 text-sm mb-2">方案摘要</div>
                 {posSelectedPlan.persona && <div className="text-xs text-gray-600"><span className="font-semibold text-gray-800">人设：</span>{posSelectedPlan.persona}</div>}
                 {posSelectedPlan.monetization && <div className="text-xs text-gray-600"><span className="font-semibold text-gray-800">变现：</span>{posSelectedPlan.monetization}</div>}
@@ -2512,7 +2512,7 @@ export default function ContentOSApp() {
           {posMode === 'form' && posStep === 1 && (
             <div className="space-y-3 px-5 pt-4">
               {/* 行业快速选择 */}
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <label className="text-xs font-bold text-gray-500 mb-2 block">行业 *</label>
                 <input value={posIndustry} onChange={e => setPosIndustry(e.target.value)} placeholder="如：餐饮、健身、美妆、教育..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none mb-2" />
                 <div className="flex flex-wrap gap-1.5">
@@ -2521,11 +2521,11 @@ export default function ContentOSApp() {
                   ))}
                 </div>
               </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <label className="text-xs font-bold text-gray-500 mb-2 block">产品/服务 *</label>
                 <input value={posProduct} onChange={e => setPosProduct(e.target.value)} placeholder="如：手工面条、私教课、护肤品..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none" />
               </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <label className="text-xs font-bold text-gray-500 mb-2 block">目标客户 *</label>
                 <input value={posCustomer} onChange={e => setPosCustomer(e.target.value)} placeholder="如：周边上班族、宝妈、大学生..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none mb-2" />
                 <div className="flex flex-wrap gap-1.5">
@@ -2534,7 +2534,7 @@ export default function ContentOSApp() {
                   ))}
                 </div>
               </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <label className="text-xs font-bold text-gray-500 mb-2 block">城市（可选）</label>
                 <input value={posCity} onChange={e => setPosCity(e.target.value)} placeholder="如：上海、成都、全国..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none mb-2" />
                 <div className="flex flex-wrap gap-1.5">
@@ -2543,18 +2543,18 @@ export default function ContentOSApp() {
                   ))}
                 </div>
               </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <label className="text-xs font-bold text-gray-500 mb-2 block">你的优势（可选）</label>
                 <textarea value={posAdvantage} onChange={e => setPosAdvantage(e.target.value)} placeholder="如：10年厨师经验、价格比同行低30%、独家配方..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-16" />
               </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <label className="text-xs font-bold text-gray-500 mb-1 block">竞品账号（可选）</label>
                 <p className="text-[10px] text-gray-400 mb-2">填写竞品账号名称，AI 将分析竞争格局，帮你找差异化空间</p>
                 <textarea value={posCompetitors} onChange={e => setPosCompetitors(e.target.value)} placeholder="如：@老王面馆、@张记牛肉面..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-14" />
               </div>
               <button
                 onClick={() => { if (!posIndustry || !posProduct || !posCustomer) { showToast('请填写必填项'); return }; setPosStep(2) }}
-                className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md"
+                className="w-full py-3.5 bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md"
               >
                 下一步，生成行业报告 →
               </button>
@@ -2564,7 +2564,7 @@ export default function ContentOSApp() {
           {/* Step 2: 确认 */}
           {posStep === 2 && (
             <div className="space-y-3 px-5 pt-4">
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <h3 className="font-bold text-gray-900 text-sm mb-3">📋 确认信息</h3>
                 {[
                   ['行业', posIndustry], ['产品/服务', posProduct],
@@ -2582,7 +2582,7 @@ export default function ContentOSApp() {
                 <p className="text-xs text-blue-600 leading-relaxed">✨ AI 将生成：定位一句话、内容方向、人群画像、差异化优势、账号名称建议、4周内容计划{posCompetitors ? '、竞品分析报告' : ''}。</p>
               </div>
               {posLoading && (
-                <div className="bg-white rounded-2xl p-6 text-center shadow-sm">
+                <div className="bg-white rounded-3xl p-6 text-center shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <Spinner size="md" />
                   <p className="text-sm text-gray-500 mt-3">AI 正在深度分析，请稍候...</p>
                   <p className="text-xs text-gray-400 mt-1">通常需要 10-20 秒</p>
@@ -2590,7 +2590,7 @@ export default function ContentOSApp() {
               )}
               <div className="flex gap-3">
                 <button onClick={() => { setPosStep(1); setPosMode('form') }} className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-2xl text-sm">← 返回修改</button>
-                <button onClick={generatePositioning} disabled={posLoading} className="flex-2 flex-1 py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm disabled:opacity-60">
+                <button onClick={generatePositioning} disabled={posLoading} className="flex-2 flex-1 py-3 bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-bold rounded-2xl text-sm disabled:opacity-60">
                   {posLoading ? '生成中...' : '✨ 生成定位报告'}
                 </button>
               </div>
@@ -2600,7 +2600,7 @@ export default function ContentOSApp() {
           {/* Step 3: 定位报告 */}
           {posStep === 3 && posResult && (
             <div className="space-y-3 px-5 pt-4">
-              <div className="bg-gradient-to-br from-blue-500 to-cyan-400 rounded-2xl p-5 text-white shadow-lg">
+              <div className="bg-gradient-to-br from-indigo-500 to-violet-500 rounded-2xl p-5 text-white shadow-lg">
                 <div className="text-xs font-bold text-white/70 mb-1">✨ 账号定位</div>
                 <div className="text-lg font-black leading-snug">{posResult.positioning}</div>
                 <div className="mt-3 flex flex-wrap gap-1.5">
@@ -2610,17 +2610,17 @@ export default function ContentOSApp() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <div className="bg-white rounded-2xl p-3.5 shadow-sm">
+                <div className="bg-white rounded-3xl p-3.5 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <div className="text-[10px] font-bold text-gray-400 mb-1.5">👥 目标人群</div>
                   <p className="text-xs text-gray-700 leading-relaxed">{posResult.audience}</p>
                 </div>
-                <div className="bg-white rounded-2xl p-3.5 shadow-sm">
+                <div className="bg-white rounded-3xl p-3.5 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <div className="text-[10px] font-bold text-gray-400 mb-1.5">⚡ 差异化优势</div>
                   <p className="text-xs text-gray-700 leading-relaxed">{posResult.advantage}</p>
                 </div>
               </div>
               {posResult.names && (
-                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <h3 className="font-bold text-gray-900 text-xs mb-2.5">💡 账号名称建议</h3>
                   <div className="flex flex-wrap gap-2">
                     {posResult.names.map((n: string, i: number) => (
@@ -2630,7 +2630,7 @@ export default function ContentOSApp() {
                 </div>
               )}
               {posResult.plan && (
-                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <h3 className="font-bold text-gray-900 text-xs mb-3">📅 4周内容计划</h3>
                   {posResult.plan.map((w: any, i: number) => (
                     <div key={i} className="mb-3 last:mb-0">
@@ -2642,7 +2642,7 @@ export default function ContentOSApp() {
                   ))}
                 </div>
               )}
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-bold text-gray-900 text-xs">🔍 竞品分析</h3>
                   {!posCompAnalysis && <span className="text-[10px] text-gray-400">可选填竞品账号</span>}
@@ -2687,7 +2687,7 @@ export default function ContentOSApp() {
                     industry: posIndustry,
                     positioning: posResult.positioning,
                     targetAudience: posResult.audience || posCustomer,
-                    color: 'from-blue-500 to-cyan-400',
+                    color: 'from-indigo-500 to-violet-500',
                     followers: '0', likes: '0', works: '0'
                   }
                   const updated = [...accounts, newAcc]
@@ -2698,7 +2698,7 @@ export default function ContentOSApp() {
                   setPosStep(1); setPosResult(null); setPosChatMessages([]); setPosChatStep(0)
                   showToast('✅ 定位已保存，账号已创建')
                 }}
-                className="w-full py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md"
+                className="w-full py-3 bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md"
               >
                 ✅ 保存定位，创建账号
               </button>
@@ -2720,11 +2720,11 @@ export default function ContentOSApp() {
                 <div className="text-xs font-bold text-white/70 mb-1">🔮 优化后定位</div>
                 <div className="text-base font-black leading-snug">{posOptResult.newPositioning}</div>
               </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <h3 className="font-bold text-gray-900 text-xs mb-2">📊 现状分析</h3>
                 <p className="text-xs text-gray-600 leading-relaxed">{posOptResult.currentAnalysis}</p>
               </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <h3 className="font-bold text-gray-900 text-xs mb-2.5">🚀 优化建议</h3>
                 <div className="space-y-2">
                   {posOptResult.suggestions?.map((s: string, i: number) => (
@@ -2736,7 +2736,7 @@ export default function ContentOSApp() {
                 </div>
               </div>
               {posOptResult.contentAdjustments && (
-                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <h3 className="font-bold text-gray-900 text-xs mb-2">🎬 内容调整方向</h3>
                   <p className="text-xs text-gray-600 leading-relaxed">{posOptResult.contentAdjustments}</p>
                 </div>
@@ -2777,7 +2777,7 @@ export default function ContentOSApp() {
   const createSubTab = (tab === 'content' || tab === 'create') ? 'content' : tab === 'video' ? 'video' : 'content'
 
   return (
-    <div className="w-[390px] h-[844px] rounded-[50px] overflow-hidden bg-[#F5F6FA] flex flex-col shadow-[0_0_0_10px_#111,0_40px_100px_rgba(0,0,0,.7)] relative">
+    <div className="w-[390px] h-[844px] rounded-[50px] overflow-hidden bg-[#EEF0F8] flex flex-col shadow-[0_0_0_12px_#1a1a2e,0_0_0_14px_#2d2d4e,0_50px_120px_rgba(0,0,0,.8)] relative">
       <Toast msg={toast} />
       <GlobalSearch
         show={showGlobalSearch}
@@ -2813,7 +2813,7 @@ export default function ContentOSApp() {
         {/* 账号切换遮罩 */}
         {accSwitching && (
           <div className="absolute inset-0 bg-white/90 z-50 flex flex-col items-center justify-center">
-            <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center mb-3 shadow-lg">
+            <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center mb-3 shadow-lg">
               <span className="text-3xl">{acc?.emoji || '🏪'}</span>
             </div>
             <div className="font-bold text-gray-900 text-sm mb-1">切换到「{acc?.name}」</div>
@@ -3052,7 +3052,7 @@ export default function ContentOSApp() {
         )}
       </div>
             
-                <div className="bg-white/98 backdrop-blur-2xl border-t border-gray-100/80 flex items-end flex-shrink-0 z-50 shadow-[0_-1px_20px_rgba(0,0,0,0.06)]" style={{paddingBottom:'max(16px, env(safe-area-inset-bottom, 16px))'}}>
+                <div className="bg-white/98 backdrop-blur-2xl border-t border-gray-100/60 flex items-end flex-shrink-0 z-50 shadow-[0_-4px_24px_rgba(79,70,229,0.08)]" style={{paddingBottom:'max(16px, env(safe-area-inset-bottom, 16px))'}}>
         {NAV_TABS.map((t, idx) => {
           const isActive = t.id === 'create' ? (tab === 'content' || tab === 'video') : tab === t.id
           const isCreate = t.id === 'create'
@@ -3060,17 +3060,17 @@ export default function ContentOSApp() {
             <button key={t.id} onClick={() => {
               if (t.id === 'create') { setTab('content') }
               else { setTab(t.id as Tab) }
-            }} className={`flex-1 flex flex-col items-center tab-transition ${isCreate ? 'relative -mt-5' : 'pt-2'}`}>
+            }} className={`flex-1 flex flex-col items-center tab-transition ${isCreate ? 'relative -mt-6' : 'pt-2.5'}`}>
               {isCreate ? (
-                <div className={`w-14 h-14 rounded-[22px] flex items-center justify-center shadow-lg transition-all duration-200 ${isActive ? 'bg-gradient-to-br from-blue-500 to-cyan-400 scale-105 shadow-blue-300/60' : 'bg-gradient-to-br from-blue-500 to-cyan-400 shadow-blue-200/50'}`}>
-                  <span className="text-[26px]">{t.icon}</span>
+                <div className={`w-16 h-16 rounded-[26px] flex items-center justify-center shadow-xl transition-all duration-300 ${isActive ? 'bg-gradient-to-br from-indigo-500 to-violet-500 scale-110 shadow-indigo-400/50' : 'bg-gradient-to-br from-indigo-500 to-violet-500 shadow-indigo-300/40'}`}>
+                  <span className="text-[28px]">{t.icon}</span>
                 </div>
               ) : (
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-200 ${isActive ? 'bg-blue-50 scale-105' : ''}`}>
-                  <span className={`text-[22px] transition-transform duration-200 ${isActive ? 'scale-110' : 'scale-100'}`}>{t.icon}</span>
+                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-200 ${isActive ? 'bg-indigo-50 scale-105' : ''}`}>
+                  <span className={`text-[24px] transition-transform duration-200 ${isActive ? 'scale-110' : 'scale-100'}`}>{t.icon}</span>
                 </div>
               )}
-              <span className={`text-[10px] font-medium transition-colors mt-0.5 ${isCreate ? 'mt-1' : ''} ${isActive ? (isCreate ? 'text-blue-500 font-bold' : 'text-blue-500 font-bold') : 'text-gray-400'}`}>{t.label}</span>
+              <span className={`text-[11px] font-semibold transition-colors ${isCreate ? 'mt-1.5' : 'mt-0.5'} ${isActive ? 'text-indigo-600 font-bold' : 'text-gray-400'}`}>{t.label}</span>
             </button>
           )
         })}
@@ -3211,7 +3211,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
       }, [showAccSettings, acc.id])
 
       return (
-        <div className="flex flex-col h-full bg-[#F5F6FA]">
+        <div className="flex flex-col h-full bg-[#EEF0F8]">
 
           {/* 账号设置弹窗 */}
           {showAccSettings && editAccData && (
@@ -3274,7 +3274,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                     <div className="flex gap-2 flex-wrap">
                       {[
                         'from-orange-400 to-amber-500',
-                        'from-blue-500 to-cyan-400',
+                        'from-indigo-500 to-violet-500',
                         'from-purple-500 to-pink-400',
                         'from-green-400 to-emerald-500',
                         'from-rose-400 to-red-500',
@@ -3314,7 +3314,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                       setShowAccSettings(false)
                       showToast('✅ 账号信息已更新')
                     }}
-                    className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-black rounded-2xl text-sm active:scale-[0.98] transition-all shadow-lg shadow-blue-200/50"
+                    className="w-full py-3.5 bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-black rounded-2xl text-sm active:scale-[0.98] transition-all shadow-lg shadow-blue-200/50"
                   >
                     保存修改
                   </button>
@@ -3337,7 +3337,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
               </div>
               <div className="flex items-center gap-1.5">
                 <button onClick={() => setShowGlobalSearch(true)} className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-sm active:scale-95 transition-all">🔍</button>
-                <button onClick={() => setShowAiDebug(true)} className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-sm active:scale-95 transition-all shadow-sm shadow-blue-200/60" title="AI 调试中心">🔧</button>
+                <button onClick={() => setShowAiDebug(true)} className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-sm active:scale-95 transition-all shadow-sm shadow-blue-200/60" title="AI 调试中心">🔧</button>
                 <button onClick={() => setShowAccSettings(true)} className="flex items-center gap-1 px-2.5 py-1.5 bg-gray-100 rounded-xl text-xs font-bold text-gray-600 active:scale-95 transition-all">⚙️</button>
               </div>
             </div>
@@ -3352,7 +3352,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                   <button
                     key={a.id}
                     onClick={() => { setAccountIdx(i); if (typeof navigator !== 'undefined') navigator.vibrate?.(10) }}
-                    className={`flex-shrink-0 flex flex-col items-start gap-0.5 px-3 py-2 rounded-2xl text-xs font-semibold transition-all active:scale-95 ${i === accountIdx ? 'bg-gradient-to-br from-blue-500 to-cyan-400 text-white shadow-md shadow-blue-200/60' : 'bg-gray-50 text-gray-600 border border-gray-100'}`}
+                    className={`flex-shrink-0 flex flex-col items-start gap-0.5 px-3 py-2 rounded-2xl text-xs font-semibold transition-all active:scale-95 ${i === accountIdx ? 'bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-md shadow-blue-200/60' : 'bg-gray-50 text-gray-600 border border-gray-100'}`}
                   >
                     <div className="flex items-center gap-1.5">
                       <span>{a.emoji || '🏪'}</span>
@@ -3378,7 +3378,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
           {/* v18.0: 全账号数据汇总 */}
           <div className="flex gap-2 px-4 py-2.5 border-t border-gray-100/80 bg-white">
             {[
-              { label: '总粉丝', value: (() => { try { return accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.fans) || 0) } return sum }, 0).toLocaleString() } catch { return '0' } })(), icon: '👥', color: 'text-blue-500', bg: 'bg-blue-50' },
+              { label: '总粉丝', value: (() => { try { return accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.fans) || 0) } return sum }, 0).toLocaleString() } catch { return '0' } })(), icon: '👥', color: 'text-indigo-600', bg: 'bg-indigo-50' },
               { label: '粉丝增量', value: (() => { try { return '+' + accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.fansGrowth) || 0) } return sum }, 0).toLocaleString() } catch { return '+0' } })(), icon: '📈', color: 'text-green-500', bg: 'bg-green-50' },
               { label: '总曝光', value: (() => { try { const total = accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.plays) || 0) } return sum }, 0); return total >= 10000 ? (total/10000).toFixed(1)+'万' : total.toLocaleString() } catch { return '0' } })(), icon: '👁️', color: 'text-purple-500', bg: 'bg-purple-50' },
             ].map((item, i) => (
@@ -3396,7 +3396,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 pb-24">
 
             {/* 日期 + 进度概览 */}
-            <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-500 rounded-3xl p-4 text-white shadow-lg shadow-blue-200/60">
+            <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-600 rounded-3xl p-4 text-white shadow-lg shadow-indigo-300/40">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-white/60 text-[10px] font-medium uppercase tracking-wider mb-0.5">TODAY</div>
@@ -3419,7 +3419,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                   <button
                     key={card.label}
                     onClick={() => { if (card.action === 'topics') { setTab('content') } else if (card.action === 'knowledge') { setTab('materials'); setMatTab('mine') } else setTab(card.action) }}
-                    className="bg-white rounded-2xl p-2.5 shadow-sm text-center active:scale-95 transition-transform"
+                    className="bg-white rounded-3xl p-2.5 shadow-[0_2px_16px_rgba(79,70,229,0.06)] text-center active:scale-95 transition-transform"
                   >
                     <div className={`w-8 h-8 rounded-xl ${colorMap[card.color] || 'bg-gray-50 text-gray-500'} flex items-center justify-center text-base mx-auto mb-1.5`}>{card.icon}</div>
                     <div className="text-sm font-black text-gray-900">{card.value}</div>
@@ -3436,7 +3436,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
               const isReal = !!realHotspots
               if (!displayHotspots?.length) return null
               return (
-                <div className="bg-white rounded-3xl p-4 shadow-sm">
+                <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <div className="flex items-center justify-between mb-2.5">
                     <div className="flex items-center gap-2">
                       <div className="font-black text-gray-900 text-sm">🔥 今日热点</div>
@@ -3445,7 +3445,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                         : <span className="text-[10px] bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full font-bold">示例</span>
                       }
                     </div>
-                    <button onClick={() => { setTab('materials'); setMatTab('trending') }} className="text-xs text-blue-500 font-medium">全部 →</button>
+                    <button onClick={() => { setTab('materials'); setMatTab('trending') }} className="text-xs text-indigo-500 font-medium">全部 →</button>
                   </div>
                   {!isReal && (
                     <div className="mb-2 px-2 py-1.5 bg-amber-50 rounded-xl flex items-center gap-1.5">
@@ -3474,14 +3474,14 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
             {/* 知识库 + 灵感搜集 并排 */}
             <div className="grid grid-cols-2 gap-2">
               {/* 知识库 */}
-              <div className="bg-white rounded-3xl p-3 shadow-sm">
+              <div className="bg-white rounded-3xl p-3 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5">
                     <span className="text-sm">🧠</span>
                     <span className="font-black text-gray-900 text-xs">知识库</span>
                     {knowledgeItems.length > 0 && <span className="text-[9px] bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded-full font-bold">{knowledgeItems.length}</span>}
                   </div>
-                  <button onClick={() => { setTab('materials'); setMatTab('mine') }} className="text-[10px] text-blue-500 font-medium">管理 →</button>
+                  <button onClick={() => { setTab('materials'); setMatTab('mine') }} className="text-[10px] text-indigo-500 font-medium">管理 →</button>
                 </div>
                 {knowledgeItems.length === 0 ? (
                   <button onClick={() => { setTab('materials'); setMatTab('mine') }} className="w-full py-3 border-2 border-dashed border-gray-200 rounded-2xl text-[10px] text-gray-400 text-center active:bg-gray-50">
@@ -3503,7 +3503,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
               </div>
 
               {/* 灵感搜集 */}
-              <div className="bg-white rounded-3xl p-3 shadow-sm">
+              <div className="bg-white rounded-3xl p-3 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5">
                     <span className="text-sm">💫</span>
@@ -3552,7 +3552,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
             </div>
 
             {/* 智能任务清单 - 紧凑版 */}
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="bg-white rounded-3xl shadow-[0_2px_16px_rgba(79,70,229,0.06)] overflow-hidden">
               <div className="flex items-center justify-between px-3 py-2 border-b border-gray-50">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[11px] font-bold text-gray-700">✅ 今日任务</span>
@@ -3598,10 +3598,10 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
             </div>
 
             {/* 今日 & 明日发布计划 */}
-            <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
+            <div className="bg-white rounded-3xl shadow-[0_2px_16px_rgba(79,70,229,0.06)] overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50/80">
                 <div className="font-black text-gray-900 text-sm">📅 发布计划</div>
-                <button onClick={() => setTab('operations')} className="text-xs text-blue-500 font-medium">管理 →</button>
+                <button onClick={() => setTab('operations')} className="text-xs text-indigo-500 font-medium">管理 →</button>
               </div>
               {/* 今日 */}
               <div className="px-4 pt-3 pb-1">
@@ -3661,26 +3661,26 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
             </div>
 
             {/* 快捷入口 */}
-            <div className="bg-white rounded-3xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="flex items-center justify-between mb-3">
                 <div className="font-black text-gray-900 text-sm">⚡ 快速开始</div>
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2.5">
                 {[
-                  { icon: '💡', label: '生成选题', action: () => { setTab('content') }, color: 'bg-purple-50 text-purple-600' },
-                  { icon: '✍️', label: '写文案', action: () => setTab('content'), color: 'bg-green-50 text-green-600' },
-                  { icon: '🎬', label: '做视频', action: () => setTab('video'), color: 'bg-orange-50 text-orange-600' },
-                  { icon: '📡', label: '情报雷达', action: () => { setTab('materials'); setMatTab('trending') }, color: 'bg-blue-50 text-blue-600' },
-                  { icon: '👥', label: '博主追踪', action: () => { setTab('materials'); setMatTab('creator') }, color: 'bg-cyan-50 text-cyan-600' },
-                  { icon: '📊', label: '运营数据', action: () => setTab('operations'), color: 'bg-red-50 text-red-600' },
+                  { icon: '💡', label: '生成选题', action: () => { setTab('content') }, bg: 'bg-violet-50', text: 'text-violet-600', shadow: 'shadow-violet-100' },
+                  { icon: '✍️', label: '写文案', action: () => setTab('content'), bg: 'bg-emerald-50', text: 'text-emerald-600', shadow: 'shadow-emerald-100' },
+                  { icon: '🎬', label: '做视频', action: () => setTab('video'), bg: 'bg-orange-50', text: 'text-orange-600', shadow: 'shadow-orange-100' },
+                  { icon: '📡', label: '情报雷达', action: () => { setTab('materials'); setMatTab('trending') }, bg: 'bg-indigo-50', text: 'text-indigo-600', shadow: 'shadow-indigo-100' },
+                  { icon: '👥', label: '博主追踪', action: () => { setTab('materials'); setMatTab('creator') }, bg: 'bg-sky-50', text: 'text-sky-600', shadow: 'shadow-sky-100' },
+                  { icon: '📊', label: '运营数据', action: () => setTab('operations'), bg: 'bg-rose-50', text: 'text-rose-600', shadow: 'shadow-rose-100' },
                 ].map((item: any, i: number) => (
                   <button
                     key={i}
                     onClick={item.action}
-                    className={`${item.color.split(' ')[0]} rounded-2xl p-2.5 flex flex-col items-center gap-1.5 active:scale-95 transition-transform text-center`}
+                    className={`${item.bg} rounded-3xl p-3 flex flex-col items-center gap-2 active:scale-95 transition-all shadow-sm ${item.shadow}`}
                   >
-                    <span className="text-xl">{item.icon}</span>
-                    <div className={`text-[10px] font-bold ${item.color.split(' ')[1]} leading-tight`}>{item.label}</div>
+                    <span className="text-2xl">{item.icon}</span>
+                    <div className={`text-[11px] font-bold ${item.text} leading-tight`}>{item.label}</div>
                   </button>
                 ))}
               </div>
@@ -3688,10 +3688,10 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
 
             {/* 最近文案 */}
             {savedContents.length > 0 && (
-              <div className="bg-white rounded-3xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <div className="flex items-center justify-between mb-3">
                   <div className="font-black text-gray-900 text-sm">💾 最近文案</div>
-                  <button onClick={() => setTab('content')} className="text-xs text-blue-500 font-medium">查看全部 →</button>
+                  <button onClick={() => setTab('content')} className="text-xs text-indigo-500 font-medium">查看全部 →</button>
                 </div>
                 {savedContents.slice(0, 2).map((c: any) => (
                   <div key={c.id} className="py-2.5 border-b border-gray-50 last:border-0">
@@ -3708,7 +3708,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
 
             {/* 账号定位 CTA */}
             {acc.positioning === '待完善' && (
-              <button onClick={onPositioning} className="w-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-2xl p-4 text-white text-left shadow-md active:scale-[0.98] transition-transform">
+              <button onClick={onPositioning} className="w-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-2xl p-4 text-white text-left shadow-md active:scale-[0.98] transition-transform">
                 <div className="font-bold text-sm mb-0.5">✨ 还没有账号定位？</div>
                 <div className="text-white/70 text-xs">AI 帮你分析行业，生成专属定位方案 →</div>
               </button>
@@ -3716,7 +3716,7 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
 
             {/* 添加账号弹层 */}
             {showAddAcc && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-blue-100">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)] border border-blue-100">
                 <div className="flex items-center justify-between mb-3">
                   <div className="font-bold text-gray-900 text-sm">➕ 添加账号</div>
                   <button onClick={() => setShowAddAcc(false)} className="text-gray-400 text-sm">✕</button>
@@ -3801,7 +3801,7 @@ function SingleVideoExtract({ showToast }: any) {
   }
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm">
+    <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
       <div className="font-bold text-gray-900 text-sm mb-3">🎙️ 单视频文案提取</div>
       <div className="flex gap-2">
         <input
@@ -3823,7 +3823,7 @@ function SingleVideoExtract({ showToast }: any) {
           <div className="flex items-center justify-between mb-2">
             <div className="text-xs font-bold text-gray-700">口播文案</div>
             <div className="flex gap-2">
-              <button onClick={() => { try { navigator.clipboard.writeText(result.transcript || result.script || '') } catch {} showToast('✅ 已复制') }} className="text-[10px] text-blue-500 font-semibold">复制</button>
+              <button onClick={() => { try { navigator.clipboard.writeText(result.transcript || result.script || '') } catch {} showToast('✅ 已复制') }} className="text-[10px] text-indigo-500 font-semibold">复制</button>
               <button onClick={() => setShowResult(false)} className="text-[10px] text-gray-400">关闭</button>
             </div>
           </div>
@@ -3917,10 +3917,10 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
     const _strategyStr = (recommendTopics as any)?.strategy || ''
     const strategyLines = _strategyStr ? _strategyStr.split('\n').filter((s: string) => s.trim()) : []
     return (
-      <div className="flex flex-col h-full bg-[#F5F6FA]">
+      <div className="flex flex-col h-full bg-[#EEF0F8]">
         <div className="px-5 pt-12 pb-0 flex-shrink-0">
           <div className="flex items-center gap-3 mb-3">
-            <button onClick={() => setShowRecommendPanel(false)} className="w-9 h-9 rounded-2xl bg-white shadow-sm flex items-center justify-center text-gray-500 active:scale-95 transition-transform">←</button>
+            <button onClick={() => setShowRecommendPanel(false)} className="w-9 h-9 rounded-2xl bg-white shadow-[0_2px_16px_rgba(79,70,229,0.06)] flex items-center justify-center text-gray-500 active:scale-95 transition-transform">←</button>
             <div className="flex-1">
               <h1 className="text-lg font-black text-gray-900">🧠 AI 个性化推荐</h1>
               <p className="text-xs text-gray-400">基于账号定位 · 热点 · 知识库 · 历史数据</p>
@@ -3955,7 +3955,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
               {/* 洞察 + 策略卡片 */}
               {/* 数据洞察卡片 */}
               {recommendAnalysis && (
-                <div className="bg-white rounded-2xl p-4 shadow-sm mb-3">
+                <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)] mb-3">
                   <div className="font-bold text-gray-900 text-sm mb-3">📊 账号数据洞察</div>
                   <div className="grid grid-cols-2 gap-2">
                     {recommendAnalysis.bestContentType && (
@@ -4008,7 +4008,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
 
               {/* 选题列表 */}
               {recommendTopics.map((topic: any, i: number) => (
-                <div key={i} className="bg-white rounded-2xl p-4 shadow-sm">
+                <div key={i} className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <div className="flex items-start gap-3 mb-2">
                     <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-violet-400 to-purple-500 text-white text-xs font-black flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</div>
                     <div className="flex-1 min-w-0">
@@ -4062,7 +4062,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#F5F6FA]">
+    <div className="flex flex-col h-full bg-[#EEF0F8]">
       <div className="px-4 pt-12 pb-0 flex-shrink-0 bg-white shadow-[0_1px_12px_rgba(0,0,0,0.06)]">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-black text-gray-900">素材中心</h1>
@@ -4083,8 +4083,8 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
         {matTab === 'trending' && (
           <div>
             <div className="flex gap-1.5 mb-3 mt-1 bg-gray-100/80 p-1 rounded-2xl">
-              <button onClick={() => setTrendingSubTab('radar')} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${trendingSubTab === 'radar' ? 'bg-white text-blue-500 shadow-sm' : 'text-gray-400'}`}>📡 热点雷达</button>
-              <button onClick={() => setTrendingSubTab('trending')} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${trendingSubTab === 'trending' ? 'bg-white text-orange-500 shadow-sm' : 'text-gray-400'}`}>💎 全网爆款</button>
+              <button onClick={() => setTrendingSubTab('radar')} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${trendingSubTab === 'radar' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-400'}`}>📡 热点雷达</button>
+              <button onClick={() => setTrendingSubTab('trending')} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${trendingSubTab === 'trending' ? 'bg-white text-orange-500 shadow-sm font-bold' : 'text-gray-400'}`}>💎 全网爆款</button>
             </div>
             {trendingSubTab === 'trending' && (
               <div>
@@ -4107,7 +4107,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                       { icon: '📈', label: '高互动形式', desc: '当前最高完播率' },
                       { icon: '💡', label: '可借势选题', desc: '热点+你的风格' },
                     ].map((tip, i) => (
-                      <div key={i} className="bg-white/15 rounded-2xl px-2.5 py-2">
+                      <div key={i} className="bg-white/15 rounded-3xl px-2.5 py-2">
                         <div className="text-sm mb-0.5">{tip.icon}</div>
                         <div className="text-[11px] font-bold leading-tight">{tip.label}</div>
                         <div className="text-[9px] text-orange-100 mt-0.5">{tip.desc}</div>
@@ -4148,7 +4148,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                       { platform: '抖音', category: '干货教程', title: `${acc?.industry || '行业'}干货：新手必看的3个核心技巧`, heat: 96, relevance: 92, angle: '可借鉴：用数字标题+干货结构', tags: ['干货', '新手', '技巧'] },
                       { platform: '小红书', category: '热点借势', title: `我用这个方法，${acc?.industry || '行业'}涨粉1000+`, heat: 88, relevance: 85, angle: '可借鉴：真实案例+数据背书', tags: ['涨粉', '经验', '分享'] },
                     ].map((item: any, i: number) => (
-                      <div key={i} className="bg-white rounded-2xl p-4 shadow-sm opacity-60 relative overflow-hidden">
+                      <div key={i} className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)] opacity-60 relative overflow-hidden">
                         <div className="absolute top-2 right-2 text-[9px] bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">示例</div>
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
                           <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">{item.platform}</span>
@@ -4173,7 +4173,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                       .filter(item => trendingCategory === '全部' || item.category === trendingCategory)
                       .sort((a, b) => trendingSort === 'heat' ? b.heat - a.heat : b.relevance - a.relevance)
                       .map((item: any) => (
-                        <div key={item.id} className="bg-white rounded-2xl p-4 shadow-sm">
+                        <div key={item.id} className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -4234,7 +4234,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                               </div>
                             )}
                             {borrowResult.scripts.map((s: any, i: number) => (
-                              <div key={i} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+                              <div key={i} className="bg-white border border-gray-100 rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                                 <div className="flex items-center gap-2 mb-2">
                                   <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-white text-xs font-black ${i===0?'bg-red-400':i===1?'bg-orange-400':'bg-amber-400'}`}>{i+1}</span>
                                   <span className="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">{s.angle}</span>
@@ -4298,7 +4298,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                           <>
                             {/* 机会矩阵 */}
                             {trendData.opportunityMatrix?.length > 0 && (
-                              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                                 <p className="text-sm font-black text-gray-900 mb-3">🎯 热点机会矩阵</p>
                                 <div className="space-y-2">
                                   {trendData.opportunityMatrix.map((item: any, i: number) => (
@@ -4348,7 +4348,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
 
                             {/* 行动方案 */}
                             {trendData.actionPlan?.length > 0 && (
-                              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                                 <p className="text-sm font-black text-gray-900 mb-3">⚡ 优先行动方案</p>
                                 <div className="space-y-2">
                                   {trendData.actionPlan.map((plan: any, i: number) => (
@@ -4370,7 +4370,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
 
                             {/* 内容策略 */}
                             {trendData.contentStrategy && (
-                              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                                 <p className="text-sm font-black text-gray-900 mb-3">🗺️ 内容策略建议</p>
                                 {trendData.contentStrategy.urgentTopics?.length > 0 && (
                                   <div className="mb-3">
@@ -4421,7 +4421,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                           </div>
                           <div className="space-y-2">
                             {[1,2,3].map(i => (
-                              <div key={i} className="bg-white/15 rounded-2xl px-4 py-3 animate-pulse">
+                              <div key={i} className="bg-white/15 rounded-3xl px-4 py-3 animate-pulse">
                                 <div className="h-3 bg-white/30 rounded-full w-3/4 mb-2" />
                                 <div className="h-2 bg-white/20 rounded-full w-1/2" />
                               </div>
@@ -4442,7 +4442,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                           <button
                             onClick={fetchRadar}
                             disabled={radarLoading}
-                            className="w-full py-3 bg-white text-blue-600 text-sm font-black rounded-2xl disabled:opacity-60 active:scale-[0.97] transition-transform shadow-sm flex items-center justify-center gap-2"
+                            className="w-full py-3 bg-white text-blue-600 text-sm font-black rounded-3xl disabled:opacity-60 active:scale-[0.97] transition-transform shadow-[0_2px_16px_rgba(79,70,229,0.06)] flex items-center justify-center gap-2"
                           >
                             <span>📡</span><span>获取今日热点推荐</span>
                           </button>
@@ -4482,7 +4482,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
 
                     {/* 平台数据统计 */}
                     {radarData._meta?.hasRealData && (
-                      <div className="bg-white rounded-2xl p-3 shadow-sm">
+                      <div className="bg-white rounded-3xl p-3 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                         <p className="text-xs font-bold text-gray-500 mb-2">📡 实时数据来源</p>
                         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
                           {[
@@ -4523,7 +4523,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                     {radarTab === 'hotspot' && (
                       <div className="space-y-2">
                         {radarData.hotspots?.map((h: any, i: number) => (
-                          <div key={i} className="bg-white rounded-2xl p-3.5 shadow-sm">
+                          <div key={i} className="bg-white rounded-3xl p-3.5 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                             <div className="flex items-start gap-3">
                               <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-white font-black text-xs flex-shrink-0 ${i < 3 ? 'bg-red-400' : i < 6 ? 'bg-orange-400' : 'bg-gray-300'}`}>
                                 {i + 1}
@@ -4598,7 +4598,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                     {radarTab === 'format' && (
                       <div className="space-y-2">
                         {radarData.formats?.map((f: any, i: number) => (
-                          <div key={i} className="bg-white rounded-2xl p-4 shadow-sm">
+                          <div key={i} className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-2">
                                 <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-white text-xs font-black flex-shrink-0 ${i === 0 ? 'bg-red-400' : i === 1 ? 'bg-orange-400' : i === 2 ? 'bg-amber-400' : 'bg-gray-300'}`}>{i + 1}</span>
@@ -4633,7 +4633,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                     {/* 关键词热度 */}
                     {radarTab === 'keyword' && (
                       <div className="space-y-2">
-                        <div className="bg-white rounded-2xl p-4 shadow-sm">
+                        <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                           <div className="font-bold text-gray-900 text-sm mb-3">🏷️ 关键词热度榜</div>
                           <div className="space-y-2">
                             {radarData.keywords?.map((kw: any, i: number) => (
@@ -4669,7 +4669,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                     {/* AI 洞察 */}
                     {radarTab === 'insight' && (
                       <div className="space-y-3">
-                        <div className="bg-white rounded-2xl p-4 shadow-sm">
+                        <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                           <div className="font-bold text-gray-900 text-sm mb-3">💡 今日创作洞察</div>
                           {radarData.insights?.map((insight: any, i: number) => (
                             <div key={i} className="flex gap-3 py-2.5 border-b border-gray-50 last:border-0">
@@ -4703,7 +4703,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                         )}
                         {/* 推荐选题 */}
                         {radarData.bestTopics && (
-                          <div className="bg-white rounded-2xl p-4 shadow-sm">
+                          <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                             <div className="font-bold text-gray-900 text-sm mb-3">🎯 今日推荐选题</div>
                             {radarData.bestTopics.map((t: any, i: number) => (
                               <div key={i} className="py-2.5 border-b border-gray-50 last:border-0">
@@ -4730,7 +4730,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                         {radarData.trendForecast?.length > 0 ? (
                           <div className="space-y-2">
                             {radarData.trendForecast.map((tf: any, i: number) => (
-                              <div key={i} className="bg-white rounded-2xl p-4 shadow-sm">
+                              <div key={i} className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                                 <div className="flex items-center justify-between mb-3">
                                   <p className="text-sm font-bold text-gray-900">{tf.topic}</p>
                                   <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${tf.lifecycle === '上升期' ? 'bg-green-100 text-green-600' : tf.lifecycle === '峰值期' ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}>{tf.lifecycle || '上升期'}</span>
@@ -4777,7 +4777,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                             ))}
                           </div>
                         ) : (
-                          <div className="bg-white rounded-2xl p-6 text-center shadow-sm">
+                          <div className="bg-white rounded-3xl p-6 text-center shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                             <p className="text-gray-400 text-sm mb-3">暂无趋势预测数据</p>
                             <button
                               onClick={fetchTrendAnalysis}
@@ -4814,7 +4814,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
             {/* v18.0: 单视频文案提取 */}
             <SingleVideoExtract showToast={showToast} />
             {/* 搜索框 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="font-bold text-gray-900 text-sm mb-3">🔍 追踪新博主</div>
               <input
                 value={creatorUrl}
@@ -4865,7 +4865,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
             {/* 博主追踪加载骨架屏 */}
             {creatorLoading && (
               <div className="space-y-3 animate-fade-in">
-                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <div className="skeleton h-4 w-1/2 rounded-lg mb-3" />
                   <div className="flex gap-3 mb-3">
                     {[1,2,3].map((i: number) => <div key={i} className="skeleton h-12 flex-1 rounded-xl" />)}
@@ -4874,7 +4874,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                   <div className="skeleton h-3 w-4/5 rounded-lg" />
                 </div>
                 {[1,2,3].map((i: number) => (
-                  <div key={i} className="bg-white rounded-2xl p-4 shadow-sm">
+                  <div key={i} className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                     <div className="flex gap-3">
                       <div className="skeleton w-12 h-12 rounded-2xl flex-shrink-0" />
                       <div className="flex-1">
@@ -4890,7 +4890,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
 
             {/* 已追踪博主列表 */}
             {trackedCreators.length > 0 && !creatorData && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <div className="font-bold text-gray-900 text-sm mb-3">📌 已追踪博主 ({trackedCreators.length})</div>
                 <div className="space-y-2">
                   {trackedCreators.map((c: any, i: number) => (
@@ -4909,7 +4909,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                         </div>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="text-xs text-blue-500 font-medium">查看</span>
+                        <span className="text-xs text-indigo-500 font-medium">查看</span>
                         <button
                           onClick={e => { e.stopPropagation(); removeTrackedCreator(c.url) }}
                           className="text-gray-300 text-sm w-6 h-6 flex items-center justify-center rounded-lg hover:bg-red-50 hover:text-red-400 transition-colors"
@@ -4962,7 +4962,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                 </div>
 
                 {/* 博主信息卡 */}
-                <div className="bg-gradient-to-br from-blue-500 to-cyan-400 rounded-3xl p-4 text-white shadow-lg">
+                <div className="bg-gradient-to-br from-indigo-500 to-violet-500 rounded-3xl p-4 text-white shadow-lg">
                   <div className="flex items-start gap-3 mb-3">
                     <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl flex-shrink-0">
                       {PLATFORM_ICONS[creatorData.creator?.platform] || '🎵'}
@@ -4997,7 +4997,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                 {/* 分析报告 */}
                 {/* 分析 Tab 切换 */}
                 {creatorData.analysis && (
-                  <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                  <div className="bg-white rounded-3xl shadow-[0_2px_16px_rgba(79,70,229,0.06)] overflow-hidden">
                     <div className="flex border-b border-gray-100">
                       {[
                         {id:'overview', label:'📊 概览'},
@@ -5050,7 +5050,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                           {/* 借鉴建议 */}
                           {creatorData.analysis.recommendation && (
                             <div className="bg-blue-50 rounded-xl p-3">
-                              <div className="text-xs text-blue-500 font-semibold mb-1">💡 借鉴建议</div>
+                              <div className="text-xs text-indigo-500 font-semibold mb-1">💡 借鉴建议</div>
                               <div className="text-xs text-blue-700 leading-relaxed">{creatorData.analysis.recommendation}</div>
                             </div>
                           )}
@@ -5174,7 +5174,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                 )}
 
                 {/* 视频列表 */}
-                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <div className="flex items-center justify-between mb-3">
                     <div className="font-bold text-gray-900 text-sm">🎬 视频列表</div>
                     <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{creatorData.videos?.length || 0} 条</span>
@@ -5251,7 +5251,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
 
             {/* 空状态 */}
             {!creatorData && trackedCreators.length === 0 && (
-              <div className="bg-white rounded-3xl p-8 text-center shadow-sm animate-fade-in-up">
+              <div className="bg-white rounded-3xl p-8 text-center shadow-[0_2px_16px_rgba(79,70,229,0.06)] animate-fade-in-up">
                 <div className="text-5xl mb-4 animate-float">🎯</div>
                 <div className="font-black text-gray-800 text-base mb-1">博主追踪</div>
                 <div className="text-xs text-gray-400 leading-relaxed mb-4">
@@ -5278,7 +5278,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                   <h3 className="font-black text-gray-900 text-sm">📝 口播文案详情</h3>
                   <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{selectedScript.title}</p>
                 </div>
-                <button onClick={() => setShowScriptDetail(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
+                <button onClick={() => setShowScriptDetail(false)} className="w-8 h-8 rounded-full bg-gray-100/80 flex items-center justify-center text-gray-500 active:scale-90 transition-transform">✕</button>
               </div>
               {/* 数据 */}
               <div className="flex gap-3 mb-3 flex-shrink-0">
@@ -5320,7 +5320,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                     setShowScriptDetail(false)
                     showToast('✅ 已导入，开始仿写')
                   }}
-                  className="py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-transform"
+                  className="py-3 bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-transform"
                 >✍️ 仿写文案</button>
               </div>
             </div>
@@ -5339,7 +5339,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                 </div>
                 <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
                   {selectedMaterials.map((m: any, i: number) => (
-                    <div key={i} className="flex-shrink-0 bg-white rounded-xl px-3 py-2 shadow-sm max-w-[160px]">
+                    <div key={i} className="flex-shrink-0 bg-white rounded-xl px-3 py-2 shadow-[0_2px_16px_rgba(79,70,229,0.06)] max-w-[160px]">
                       <div className="text-xs font-semibold text-gray-800 truncate">{m.title}</div>
                       <div className="text-[10px] text-orange-400 mt-0.5">{m.heat ? `🔥 ${m.heat}` : '💎 爆款'}</div>
                     </div>
@@ -5354,7 +5354,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
             {topicsSubTab === 'topics' && (
           <div className="space-y-3 mt-1">
             {/* 搜索栏 */}
-            <div className="bg-white rounded-2xl px-3 py-2.5 shadow-sm flex items-center gap-2">
+            <div className="bg-white rounded-3xl px-3 py-2.5 shadow-[0_2px_16px_rgba(79,70,229,0.06)] flex items-center gap-2">
               <span className="text-gray-400 text-sm">🔍</span>
               <input
                 value={topicSearch}
@@ -5380,7 +5380,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
 
             {/* 操作栏 */}
             <div className="flex items-center gap-2">
-              <div className="flex gap-1 bg-white rounded-xl p-1 shadow-sm flex-1">
+              <div className="flex gap-1 bg-white rounded-xl p-1 shadow-[0_2px_16px_rgba(79,70,229,0.06)] flex-1">
                 {[{id:'all',label:'全部'},{id:'ai',label:'AI生成'},{id:'saved',label:'已收藏'}].map((f: any) => (
                   <button
                     key={f.id}
@@ -5389,7 +5389,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                   >{f.label}</button>
                 ))}
               </div>
-              <div className="flex items-center gap-1 bg-white rounded-xl px-2 py-1.5 shadow-sm">
+              <div className="flex items-center gap-1 bg-white rounded-xl px-2 py-1.5 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <span className="text-xs text-gray-400">批量</span>
                 <select
                   value={batchCount}
@@ -5419,7 +5419,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
               <button
                 onClick={() => generateTopics(batchCount, selectedCategory)}
                 disabled={topicsLoading}
-                className="py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white text-sm font-bold rounded-2xl disabled:opacity-60 active:scale-[0.98] transition-transform shadow-md"
+                className="py-3 bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-sm font-bold rounded-2xl disabled:opacity-60 active:scale-[0.98] transition-transform shadow-md"
               >
                 {topicsLoading ? '🤔 生成中...' : '✨ AI 生成选题'}
               </button>
@@ -5435,7 +5435,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
             {topicsLoading && (
               <div className="space-y-3 animate-fade-in">
                 {[1,2,3].map(i => (
-                  <div key={i} className="bg-white rounded-2xl p-4 shadow-sm" style={{animationDelay: `${i*0.1}s`}}>
+                  <div key={i} className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]" style={{animationDelay: `${i*0.1}s`}}>
                     <div className="skeleton h-4 w-3/4 rounded-lg mb-3" />
                     <div className="skeleton h-3 w-full rounded-lg mb-2" />
                     <div className="skeleton h-3 w-2/3 rounded-lg" />
@@ -5446,7 +5446,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
 
             {/* 空状态 */}
             {!topicsLoading && aiTopics.length === 0 && savedTopics.length === 0 && (
-              <div className="bg-white rounded-3xl p-8 text-center shadow-sm animate-fade-in-up">
+              <div className="bg-white rounded-3xl p-8 text-center shadow-[0_2px_16px_rgba(79,70,229,0.06)] animate-fade-in-up">
                 <div className="text-5xl mb-3 animate-float">💡</div>
                 <div className="font-black text-gray-800 text-base mb-1">选题库空空如也</div>
                 <div className="text-xs text-gray-400 leading-relaxed mb-4">
@@ -5486,7 +5486,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                     const title = typeof t === 'string' ? t : (t.title || t)
                     const isSaved = savedTopics.some((s: any) => (typeof s === 'string' ? s : s.title) === title)
                     return (
-                      <div key={i} className="bg-white rounded-2xl shadow-sm animate-fade-in-up overflow-hidden" style={{animationDelay:`${i*30}ms`}}>
+                      <div key={i} className="bg-white rounded-3xl shadow-[0_2px_16px_rgba(79,70,229,0.06)] animate-fade-in-up overflow-hidden" style={{animationDelay:`${i*30}ms`}}>
                         {/* 标题行 - 点击展开/收起 */}
                         <div
                           className="flex items-center justify-between gap-2 p-3.5 cursor-pointer active:bg-gray-50 transition-colors"
@@ -5515,7 +5515,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                             <div className="flex gap-2 mt-2">
                               <button
                                 onClick={() => { useTopic(title); setTab('content'); showToast('✅ 已带入内容中心，开始写文案'); }}
-                                className="flex-1 py-1.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white text-xs font-bold rounded-xl active:scale-[0.97] transition-transform"
+                                className="flex-1 py-1.5 bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-xs font-bold rounded-xl active:scale-[0.97] transition-transform"
                               >✍️ 一键写文案</button>
                               <button
                                 onClick={() => {
@@ -5546,7 +5546,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
               <div className="space-y-3 mt-1">
                 {savedTopics && savedTopics.length > 0 ? (
                   savedTopics.map((topic: string, i: number) => (
-                    <div key={i} className="bg-white rounded-2xl p-3.5 shadow-sm flex items-center gap-3">
+                    <div key={i} className="bg-white rounded-3xl p-3.5 shadow-[0_2px_16px_rgba(79,70,229,0.06)] flex items-center gap-3">
                       <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center text-sm flex-shrink-0">⭐</div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-semibold text-gray-800 leading-snug">{topic}</div>
@@ -5580,7 +5580,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
           <div className="space-y-3 pb-4">
             {/* 顶部操作栏 */}
             <div className="flex items-center gap-2 mt-1">
-              <div className="flex-1 flex items-center gap-2 bg-white rounded-2xl px-3 py-2.5 shadow-sm">
+              <div className="flex-1 flex items-center gap-2 bg-white rounded-3xl px-3 py-2.5 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <span className="text-gray-400 text-sm">🔍</span>
                 <input
                   value={knowledgeSearch}
@@ -5591,7 +5591,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
               </div>
               <button
                 onClick={() => setShowAddKnowledge(true)}
-                className="flex-shrink-0 px-3 py-2.5 bg-blue-500 text-white text-xs font-bold rounded-2xl shadow-sm active:scale-95"
+                className="flex-shrink-0 px-3 py-2.5 bg-indigo-600 text-white text-xs font-bold rounded-2xl shadow-sm active:scale-95"
               >+ 添加</button>
             </div>
 
@@ -5642,7 +5642,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                 {knowledgeItems
                   .filter((k:any) => !knowledgeSearch || k.title.includes(knowledgeSearch) || k.content.includes(knowledgeSearch))
                   .map((item: any) => (
-                  <div key={item.id} className="bg-white rounded-2xl p-4 shadow-sm">
+                  <div key={item.id} className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
@@ -5732,7 +5732,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                     </div>
                     <button
                       onClick={addKnowledgeItem}
-                      className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] shadow-md"
+                      className="w-full py-3.5 bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-bold rounded-2xl text-sm active:scale-[0.98] shadow-md"
                     >✅ 保存到知识库</button>
                   </div>
                 </div>
@@ -5832,7 +5832,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                         <button onClick={() => setSuperGenResult([])} className="text-xs text-gray-400">重新生成</button>
                       </div>
                       {superGenResult.map((v: any, i: number) => (
-                        <div key={i} className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+                        <div key={i} className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                           <div className="bg-gradient-to-r from-purple-500 to-pink-400 px-4 py-2.5 flex items-center justify-between">
                             <span className="text-white font-black text-sm">版本 {i+1}</span>
                             <div className="flex gap-2">
@@ -5866,7 +5866,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
             )}
             {mineSubTab === 'style' && (
           <div className="mt-1 space-y-3">
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="font-bold text-gray-900 text-sm mb-3">🔮 分析文案风格</div>
               <input
                 value={styleUrl}
@@ -5895,7 +5895,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
               </button>
             </div>
             {styleTemplates.length === 0 ? (
-              <div className="bg-white rounded-3xl p-8 text-center shadow-sm">
+              <div className="bg-white rounded-3xl p-8 text-center shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <div className="text-4xl mb-2">🎨</div>
                 <div className="text-sm font-bold text-gray-700 mb-1">还没有风格模板</div>
                 <div className="text-xs text-gray-400">分析博主风格后自动保存，生成文案时可一键应用</div>
@@ -5903,11 +5903,11 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
             ) : (
               <div className="space-y-2">
                 {styleTemplates.map((t: any) => (
-                  <div key={t.id} className="bg-white rounded-2xl p-4 shadow-sm">
+                  <div key={t.id} className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                     <div className="flex items-start justify-between mb-2">
                       <div className="font-bold text-gray-900 text-sm">{t.name}</div>
                       <div className="flex gap-2">
-                        <button onClick={() => applyTemplate(t)} className="text-xs text-blue-500 font-semibold px-2 py-0.5 bg-blue-50 rounded-lg">应用</button>
+                        <button onClick={() => applyTemplate(t)} className="text-xs text-indigo-500 font-semibold px-2 py-0.5 bg-blue-50 rounded-lg">应用</button>
                         <button onClick={() => deleteTemplate(t.id)} className="text-xs text-red-400 px-2 py-0.5 bg-red-50 rounded-lg">删除</button>
                       </div>
                     </div>
@@ -5953,7 +5953,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
             </div>
 
             {/* 输入区 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <label className="text-xs font-bold text-gray-600 mb-2 block">📎 粘贴视频链接</label>
               <textarea
                 value={extractUrl}
@@ -5997,7 +5997,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
 
             {/* 提取结果 */}
             {extractResult && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 {extractResult.success ? (
                   <>
                     <div className="flex items-center justify-between mb-3">
@@ -6036,7 +6036,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
 
             {/* 历史记录 */}
             {extractHistory.length > 0 && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <div className="flex items-center justify-between mb-3">
                   <span className="font-bold text-gray-800 text-sm">📜 提取历史</span>
                   <button onClick={() => setExtractHistory([])} className="text-xs text-gray-400">清空</button>
@@ -6212,7 +6212,7 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
       </div>
 
       {/* 输入区域 */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm">
+      <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
         <div className="font-bold text-gray-900 text-sm mb-2">📝 输入内容方案</div>
         <textarea
           value={planInput}
@@ -6266,7 +6266,7 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
             </button>
             <button
               onClick={() => setTab && setTab('operations')}
-              className="px-4 py-2.5 bg-white border border-gray-200 text-gray-600 text-sm font-bold rounded-2xl active:scale-95"
+              className="px-4 py-2.5 bg-white border border-gray-200 text-gray-600 text-sm font-bold rounded-3xl active:scale-95"
             >
               查看日历 →
             </button>
@@ -6286,7 +6286,7 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
           </div>
 
           {/* Tab 切换 */}
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="bg-white rounded-3xl shadow-[0_2px_16px_rgba(79,70,229,0.06)] overflow-hidden">
             <div className="flex border-b border-gray-100">
               {[
                 { id: 'topics', label: `💡 选题矩阵 (${result.topics?.length || 0})` },
@@ -6379,7 +6379,7 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
                     </div>
                   )}
                   {result.publishStrategy && (
-                    <div className="bg-white border border-gray-100 rounded-2xl p-3">
+                    <div className="bg-white border border-gray-100 rounded-3xl p-3">
                       <div className="text-xs font-bold text-gray-700 mb-2">📊 发布策略</div>
                       <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{result.publishStrategy}</div>
                     </div>
@@ -6393,7 +6393,7 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
 
       {/* 历史方案 */}
       {planHistory.length > 0 && !result && (
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
           <div className="font-bold text-gray-900 text-sm mb-3">🕐 历史方案</div>
           <div className="space-y-2">
             {planHistory.map((h: any) => (
@@ -6680,7 +6680,7 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
       const allTemplates = [...BUILTIN_TEMPLATES, ...customTemplates]
 
       return (
-        <div className="flex flex-col h-full bg-[#F5F6FA]">
+        <div className="flex flex-col h-full bg-[#EEF0F8]">
           <div className="px-4 pt-12 pb-3 flex-shrink-0 bg-white shadow-[0_1px_12px_rgba(0,0,0,0.06)]">
             <div className="flex items-center justify-between mb-1">
               <h1 className="text-xl font-black text-gray-900">✍️ 内容中心</h1>
@@ -6714,7 +6714,7 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
                     <div className="w-7 h-7 rounded-xl bg-white/20 flex items-center justify-center text-white/80">›</div>
                   </div>
                 </div>
-                <div className="bg-white rounded-3xl p-4 shadow-sm">
+                <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <div className="flex items-center justify-between mb-2">
                     <div className="font-black text-gray-900 text-sm">💡 选题</div>
                     <button
@@ -6753,18 +6753,18 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
                     </div>
                   )}
                 </div>
-                    <div className="bg-white rounded-2xl p-4 shadow-sm">
+                    <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                       <div className="flex items-center justify-between mb-2">
                         <div className="font-bold text-gray-900 text-sm">💬 我的观点</div>
                         <span className="text-[10px] text-gray-400">选填，AI 会融入你的观点</span>
                       </div>
                       <textarea value={userOpinion} onChange={e => setUserOpinion(e.target.value)} placeholder="输入你对这个选题的独特看法、亲身经历或想表达的核心观点..." className="w-full px-3 py-2.5 rounded-xl bg-gray-100 text-sm outline-none resize-none h-16 leading-relaxed" />
                     </div>
-                    <div className="bg-white rounded-2xl p-4 shadow-sm">
+                    <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                       <div className="flex items-center justify-between mb-2">
                         <div className="font-bold text-gray-900 text-sm">🎨 文案风格</div>
                         <div className="flex items-center gap-2">
-                          <button onClick={() => setShowStyleAnalysis(true)} className="text-[11px] text-blue-500 font-semibold bg-blue-50 px-2 py-0.5 rounded-lg active:scale-95">+ 新增风格</button>
+                          <button onClick={() => setShowStyleAnalysis(true)} className="text-[11px] text-indigo-500 font-semibold bg-blue-50 px-2 py-0.5 rounded-lg active:scale-95">+ 新增风格</button>
                           <button onClick={() => setShowTemplates(true)} className="text-[11px] text-purple-500 font-semibold">更多模板 ›</button>
                         </div>
                       </div>
@@ -6777,7 +6777,7 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
                   </div>
                     </div>
                 {history.length > 0 && (
-                  <div className="bg-white rounded-2xl p-4 shadow-sm">
+                  <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                     <div className="font-bold text-gray-900 text-sm mb-2">🕐 最近生成</div>
                     <div className="space-y-2">
                       {history.slice(0, 3).map((h: any, i: number) => (
@@ -6856,7 +6856,7 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
                     </button>
                   </div>
                 )}
-                <button onClick={generateCopy} disabled={loading || !selectedTopic.trim()} className="w-full py-4 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-black rounded-3xl text-sm disabled:opacity-50 active:scale-[0.98] transition-all shadow-lg shadow-blue-200/60">
+                <button onClick={generateCopy} disabled={loading || !selectedTopic.trim()} className="w-full py-4 bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-black rounded-3xl text-sm disabled:opacity-50 active:scale-[0.98] transition-all shadow-lg shadow-blue-200/60">
                   {loading ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>AI 生成中...</span> : '✨ 生成 3 个版本文案'}
                 </button>
               </>
@@ -6882,7 +6882,7 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
                 </div>
                 <div className="space-y-3">
                   {versions.map((v: any, i: number) => (
-                    <div key={i} className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-50">
+                    <div key={i} className="bg-white rounded-3xl overflow-hidden shadow-[0_2px_16px_rgba(79,70,229,0.06)] border border-gray-50">
                       <div className="bg-gradient-to-r from-purple-500 to-pink-400 px-4 py-3 flex items-center justify-between">
                         <div className="flex items-center gap-2"><span className="text-white font-black text-sm">版本 {i + 1}</span><span className="text-white/80 text-xs">{v.style}</span></div>
                         <div className="flex gap-2">
@@ -6911,9 +6911,9 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
                       setScheduleTitle(versions[0]?.title || selectedTopic.slice(0,20) || '新视频')
                       setShowScheduleModal(true)
                     }}
-                    className="py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-sm flex items-center justify-center gap-1.5"
+                    className="py-3 bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-sm flex items-center justify-center gap-1.5"
                   >📅 加入排期</button>
-                  <button onClick={() => { setStep(1); setVersions([]) }} className="py-3 bg-white rounded-2xl text-sm font-bold text-gray-500 shadow-sm active:scale-[0.98]">🔄 重新生成</button>
+                  <button onClick={() => { setStep(1); setVersions([]) }} className="py-3 bg-white rounded-3xl text-sm font-bold text-gray-500 shadow-[0_2px_16px_rgba(79,70,229,0.06)] active:scale-[0.98]">🔄 重新生成</button>
                 </div>
               </>
             )}
@@ -6977,7 +6977,7 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
                         showToast('❌ 加入排期失败')
                       }
                     }}
-                    className="w-full mt-4 py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-black text-sm rounded-2xl active:scale-[0.98] transition-all"
+                    className="w-full mt-4 py-3.5 bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-black text-sm rounded-2xl active:scale-[0.98] transition-all"
                   >
                     ✅ 确认加入排期
                   </button>
@@ -7023,7 +7023,7 @@ function ContentPlanTab({ acc, showToast, hotspots, knowledgeItems, videoRecords
                     </>
                   )}
                   {showAddTemplate ? (
-                    <div className="bg-white rounded-2xl p-4 border-2 border-purple-200">
+                    <div className="bg-white rounded-3xl p-4 border-2 border-purple-200">
                       <div className="font-bold text-gray-900 text-sm mb-3">新建模板</div>
                       <input value={newTemplateName} onChange={e => setNewTemplateName(e.target.value)} placeholder="模板名称（如：专业干货）" className="w-full px-3 py-2 rounded-xl bg-gray-100 text-sm outline-none mb-2" />
                       <textarea value={newTemplatePrompt} onChange={e => setNewTemplatePrompt(e.target.value)} placeholder="描述这个风格的写作要求..." className="w-full px-3 py-2 rounded-xl bg-gray-100 text-sm outline-none resize-none h-20 mb-3" />
@@ -7303,12 +7303,12 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
   const currentVoice = [...VOICES, ...(clonedVoices || [])].find((v: any) => v.id === videoVoiceId)
 
   return (
-        <div className="flex flex-col h-full bg-[#F5F6FA]">
+        <div className="flex flex-col h-full bg-[#EEF0F8]">
           {/* 顶部标题栏 */}
           <div className="px-4 pt-12 pb-0 flex-shrink-0 bg-white shadow-[0_1px_8px_rgba(0,0,0,0.06)]">
             <div className="flex items-center justify-between mb-2">
               <div>
-                <h1 className="text-xl font-black text-gray-900">🎬 创作工作台</h1>
+                <h1 className="text-2xl font-black text-gray-900 tracking-tight">🎬 创作工作台</h1>
                 <div className="text-xs text-gray-400 mt-0.5">
                   {doneCount < 3 ? '先完成选题和文案' : doneCount < 5 ? '配置声音和形象' : '准备好了，可以生成！'}
                 </div>
@@ -7327,28 +7327,28 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
             <div className="px-4 py-4 space-y-3">
 
               {/* ── 大视频预览区 ── */}
-              <div className="bg-white rounded-3xl overflow-hidden shadow-sm">
+              <div className="bg-white rounded-3xl overflow-hidden shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 {/* 预览上方：选题 / 热点 / 文案 信息行（点击编辑） */}
                 <div className="px-4 pt-4 pb-3 space-y-2 border-b border-gray-50">
                   {/* 选题行 */}
                   <button onClick={() => setExpandedPanel(expandedPanel === 'topic' ? null : 'topic')}
-                    className="w-full flex items-center gap-2.5 py-2 px-3 rounded-2xl bg-gray-50 active:bg-gray-100 transition-colors text-left">
-                    <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${topic ? 'bg-green-100' : 'bg-gray-200'}`}>
+                    className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-2xl transition-all text-left active:scale-[0.98] ${expandedPanel === 'topic' ? 'bg-indigo-50 ring-1 ring-indigo-200' : topic ? 'bg-green-50' : 'bg-gray-50'}`}>
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${topic ? 'bg-green-500 text-white' : expandedPanel === 'topic' ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-500'}`}>
                       {topic ? '✓' : '💡'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[10px] text-gray-400 font-semibold">选题</div>
-                      <div className={`text-sm font-bold truncate ${topic ? 'text-gray-900' : 'text-gray-300'}`}>
+                      <div className={`text-[10px] font-bold ${expandedPanel === 'topic' ? 'text-indigo-500' : 'text-gray-400'}`}>选题</div>
+                      <div className={`text-sm font-bold truncate ${topic ? 'text-gray-900' : 'text-gray-400'}`}>
                         {topic || '点击填写或选择选题...'}
                       </div>
                     </div>
-                    <span className={`text-gray-400 text-xs transition-transform flex-shrink-0 ${expandedPanel === 'topic' ? 'rotate-180' : ''}`}>⌄</span>
+                    <span className={`text-gray-400 text-xs transition-transform flex-shrink-0 ${expandedPanel === 'topic' ? 'rotate-180 text-indigo-400' : ''}`}>⌄</span>
                   </button>
 
                   {/* 关联热点行 */}
                   <button onClick={() => setExpandedPanel(expandedPanel === 'hotspot' ? null : 'hotspot')}
-                    className="w-full flex items-center gap-2.5 py-2 px-3 rounded-2xl bg-gray-50 active:bg-gray-100 transition-colors text-left">
-                    <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${linkedHotspot ? 'bg-orange-100' : 'bg-gray-200'}`}>
+                    className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-2xl transition-all text-left active:scale-[0.98] ${expandedPanel === 'hotspot' ? 'bg-orange-50 ring-1 ring-orange-200' : linkedHotspot ? 'bg-orange-50/50' : 'bg-gray-50'}`}>
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${linkedHotspot ? 'bg-orange-400 text-white' : expandedPanel === 'hotspot' ? 'bg-orange-400 text-white' : 'bg-gray-200 text-gray-500'}`}>
                       {linkedHotspot ? '🔥' : '📡'}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -7362,7 +7362,7 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
 
                   {/* 文案行 */}
                   <button onClick={() => setExpandedPanel(expandedPanel === 'copy' ? null : 'copy')}
-                    className="w-full flex items-center gap-2.5 py-2 px-3 rounded-2xl bg-gray-50 active:bg-gray-100 transition-colors text-left">
+                    className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-2xl transition-all text-left active:scale-[0.98] ${expandedPanel === 'copy' ? 'bg-violet-50 ring-1 ring-violet-200' : copy ? 'bg-violet-50/50' : 'bg-gray-50'}`}>
                     <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${copy ? 'bg-blue-100' : 'bg-gray-200'}`}>
                       {copy ? '✓' : '✍️'}
                     </div>
@@ -7381,17 +7381,17 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
                   {/* 左侧：声音 / 形象 / 背景 竖排按钮 */}
                   <div className="flex flex-col gap-2 flex-shrink-0">
                     <button onClick={() => setExpandedPanel(expandedPanel === 'voice' ? null : 'voice')}
-                      className={`flex flex-col items-center gap-1 w-14 py-2.5 rounded-2xl transition-all active:scale-95 ${expandedPanel === 'voice' ? 'bg-blue-500 text-white shadow-md' : 'bg-gray-100 text-gray-600'}`}>
+                      className={`flex flex-col items-center gap-1 w-14 py-2.5 rounded-2xl transition-all active:scale-95 ${expandedPanel === 'voice' ? 'bg-indigo-500 text-white shadow-md shadow-indigo-200' : 'bg-gray-100 text-gray-600'}`}>
                       <span className="text-lg">{currentVoice?.emoji || '🎙️'}</span>
                       <span className="text-[9px] font-bold leading-tight text-center">{currentVoice?.label?.slice(0,3) || '声音'}</span>
                     </button>
                     <button onClick={() => setExpandedPanel(expandedPanel === 'avatar' ? null : 'avatar')}
-                      className={`flex flex-col items-center gap-1 w-14 py-2.5 rounded-2xl transition-all active:scale-95 ${expandedPanel === 'avatar' ? 'bg-purple-500 text-white shadow-md' : 'bg-gray-100 text-gray-600'}`}>
+                      className={`flex flex-col items-center gap-1 w-14 py-2.5 rounded-2xl transition-all active:scale-95 ${expandedPanel === 'avatar' ? 'bg-violet-500 text-white shadow-md shadow-violet-200' : 'bg-gray-100 text-gray-600'}`}>
                       <span className="text-lg">{AVATAR_PRESETS.find((a: any) => a.id === videoAvatarPreset)?.emoji || '🧑'}</span>
                       <span className="text-[9px] font-bold leading-tight text-center">形象</span>
                     </button>
                     <button onClick={() => setExpandedPanel(expandedPanel === 'background' ? null : 'background')}
-                      className={`flex flex-col items-center gap-1 w-14 py-2.5 rounded-2xl transition-all active:scale-95 ${expandedPanel === 'background' ? 'bg-pink-500 text-white shadow-md' : 'bg-gray-100 text-gray-600'}`}>
+                      className={`flex flex-col items-center gap-1 w-14 py-2.5 rounded-2xl transition-all active:scale-95 ${expandedPanel === 'background' ? 'bg-rose-500 text-white shadow-md shadow-rose-200' : 'bg-gray-100 text-gray-600'}`}>
                       <div className="w-6 h-6 rounded-lg" style={{ background: bgGradient }} />
                       <span className="text-[9px] font-bold leading-tight text-center text-current">背景</span>
                     </button>
@@ -7798,7 +7798,7 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
               )}
 
               {/* ── 生成模式 ── */}
-              <div className="bg-white rounded-3xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-base">⚙️</div>
                   <span className="font-black text-gray-900 text-sm">生成模式</span>
@@ -7834,7 +7834,7 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
 
               {/* 生成结果 */}
               {videoAudioB64 && (
-                <div className="bg-white rounded-3xl p-4 shadow-sm border border-green-100">
+                <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)] border border-green-100">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center text-xl">✅</div>
                     <div>
@@ -7845,7 +7845,7 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
                   <audio controls src={`data:audio/mp3;base64,${videoAudioB64}`} className="w-full mb-3" style={{ height: '40px' }} />
                   <div className="grid grid-cols-2 gap-2">
                     <button onClick={() => { const a = document.createElement('a'); a.href = `data:audio/mp3;base64,${videoAudioB64}`; a.download = `voice_${Date.now()}.mp3`; a.click() }}
-                      className="py-2.5 bg-blue-500 text-white text-xs font-bold rounded-xl active:scale-95 flex items-center justify-center gap-1">
+                      className="py-2.5 bg-indigo-600 text-white text-xs font-bold rounded-xl active:scale-95 flex items-center justify-center gap-1">
                       <span>⬇️</span><span>下载音频</span>
                     </button>
                     <button onClick={() => { try { localStorage.setItem('contentos_video_copy_transfer', copy) } catch {}; showToast('✅ 已保存到内容库') }}
@@ -7868,7 +7868,7 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
                     <div className="font-black text-gray-900">🎤 克隆我的声音</div>
                     <div className="text-xs text-gray-400 mt-0.5">上传 10-30 秒清晰录音，AI 自动克隆</div>
                   </div>
-                  <button onClick={() => setShowClonePanel(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
+                  <button onClick={() => setShowClonePanel(false)} className="w-8 h-8 rounded-full bg-gray-100/80 flex items-center justify-center text-gray-500 active:scale-90 transition-transform">✕</button>
                 </div>
                 <input value={cloneVoiceName} onChange={(e: any) => setCloneVoiceName(e.target.value)} placeholder="给声音起个名字..." className="w-full bg-gray-50 rounded-xl px-3 py-2.5 text-sm outline-none border border-gray-100 focus:border-green-300" />
                 <div className="bg-gray-50 rounded-2xl p-4 text-center">
@@ -7892,7 +7892,7 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
                     <div className="font-black text-gray-900">🎨 克隆博主风格</div>
                     <div className="text-xs text-gray-400 mt-0.5">输入博主主页链接，AI 分析其文案风格</div>
                   </div>
-                  <button onClick={() => setShowCloneStylePanel(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
+                  <button onClick={() => setShowCloneStylePanel(false)} className="w-8 h-8 rounded-full bg-gray-100/80 flex items-center justify-center text-gray-500 active:scale-90 transition-transform">✕</button>
                 </div>
                 <div className="flex gap-2">
                   <input value={cloneStyleUrl} onChange={(e: any) => setCloneStyleUrl(e.target.value)}
@@ -7923,7 +7923,7 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
                     <div className="font-black text-gray-900">🔗 从视频链接提取文案</div>
                     <div className="text-xs text-gray-400 mt-0.5">粘贴抖音/小红书视频链接，自动提取口播文案</div>
                   </div>
-                  <button onClick={() => setShowExtractPanel(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
+                  <button onClick={() => setShowExtractPanel(false)} className="w-8 h-8 rounded-full bg-gray-100/80 flex items-center justify-center text-gray-500 active:scale-90 transition-transform">✕</button>
                 </div>
                 <div className="flex gap-2">
                   <input ref={extractUrlRef} placeholder="粘贴视频链接..."
@@ -8316,7 +8316,7 @@ ${line}
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#F5F6FA]">
+    <div className="flex flex-col h-full bg-[#EEF0F8]">
       <div className="px-5 pt-12 pb-3 flex-shrink-0">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-black text-gray-900">视频生成</h1>
@@ -8367,7 +8367,7 @@ ${line}
         {step === 'input' && (
           <>
             {/* 🎬 场景模板选择器 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="flex items-center justify-between mb-3">
                 <div className="font-bold text-gray-900 text-sm">🎬 选择场景模板</div>
                 <button
@@ -8421,7 +8421,7 @@ ${line}
 
             {/* 从已保存文案选择 */}
             {savedContents.length > 0 && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <div className="font-bold text-gray-900 text-sm mb-2">📂 从已保存文案选择</div>
                 <div className="space-y-1.5 max-h-36 overflow-y-auto scrollbar-hide">
                   {savedContents.slice(0, 5).map((c: any) => (
@@ -8440,7 +8440,7 @@ ${line}
 
             {/* 文案输入框 */}
             {/* 文案输入卡片 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="flex items-center justify-between mb-2">
                 <div className="font-bold text-gray-900 text-sm">✍️ 口播文案</div>
                 <div className="flex items-center gap-2">
@@ -8504,7 +8504,7 @@ ${line}
             )}
 
             {/* 多段口播 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="flex items-center justify-between mb-3">
                 <div className="font-bold text-gray-900 text-sm">🎙️ 多段口播</div>
                 <div className="flex items-center gap-2">
@@ -8575,7 +8575,7 @@ ${line}
             </div>
 
             {/* 视频比例选择 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="font-bold text-gray-900 text-sm mb-3">📐 视频比例</div>
               <div className="grid grid-cols-3 gap-2">
                 {VIDEO_RATIOS.map(r => (
@@ -8593,7 +8593,7 @@ ${line}
             </div>
 
             {/* 字幕样式 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="font-bold text-gray-900 text-sm mb-3">💬 字幕样式</div>
               <div className="grid grid-cols-2 gap-2">
                 {SUBTITLE_STYLES.map(s => (
@@ -8612,7 +8612,7 @@ ${line}
 
             {/* 字幕字号 & 颜色 */}
             {subtitleStyle !== 'none' && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <div className="font-bold text-gray-900 text-sm mb-3">🎨 字幕样式细节</div>
                 <div className="mb-3">
                   <div className="text-xs text-gray-500 mb-2">字体大小</div>
@@ -8657,7 +8657,7 @@ ${line}
         {/* ── Step 2: 配置（声音+背景） ── */}
         {step === 'voice' && (
           <>
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="font-bold text-gray-900 text-sm mb-3">🎙️ 选择声音</div>
               <div className="space-y-2">
                 {VOICES.map(v => (
@@ -8678,7 +8678,7 @@ ${line}
             </div>
 
             {/* 克隆声音区域 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="flex items-center justify-between mb-3">
                 <div className="font-bold text-gray-900 text-sm">🧬 克隆声音</div>
                 <button
@@ -8814,7 +8814,7 @@ ${line}
             </div>
 
             {/* 语速调节 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="flex items-center justify-between mb-2">
                 <div className="font-bold text-gray-900 text-sm">⚡ 语速</div>
                 <span className="text-sm font-bold text-purple-500 bg-purple-50 px-2 py-0.5 rounded-lg">{speed}x</span>
@@ -8930,7 +8930,7 @@ ${line}
                 </button>
 
             {/* 背景颜色 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="flex items-center justify-between mb-3">
                 <div className="font-bold text-gray-900 text-sm">🎨 背景风格</div>
                 <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
@@ -8963,7 +8963,7 @@ ${line}
 
 
             {/* 我的形象 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="flex items-center justify-between mb-3">
                 <div className="font-bold text-gray-900 text-sm">🧑‍🎤 我的形象</div>
                 <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">克隆后可复用</span>
@@ -9075,7 +9075,7 @@ ${line}
         {step === 'preview' && (
           <>
             {/* 视频预览框 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="flex items-center justify-between mb-3">
                 <div className="font-bold text-gray-900 text-sm">🎬 视频预览</div>
                 <div className="flex items-center gap-1.5">
@@ -9174,7 +9174,7 @@ ${line}
             </div>
 
             {/* 字幕时间轴 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="flex items-center justify-between mb-3">
                 <div className="font-bold text-gray-900 text-sm">📝 字幕时间轴</div>
                 <button
@@ -9229,7 +9229,7 @@ ${line}
             </div>
 
             {/* 配置摘要 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="font-bold text-gray-900 text-sm mb-3">📋 配置摘要</div>
               <div className="space-y-2">
                 {[
@@ -9272,13 +9272,13 @@ ${line}
 
             {/* 字幕预览 & 导出 */}
             {subtitleStyle !== 'none' && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <div className="flex items-center justify-between mb-3">
                   <div className="font-bold text-gray-900 text-sm">💬 字幕预览</div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => generateSubtitleLines(videoCopy)}
-                      className="text-xs text-blue-500 font-semibold bg-blue-50 px-2.5 py-1 rounded-xl active:scale-95 transition-transform"
+                      className="text-xs text-indigo-500 font-semibold bg-blue-50 px-2.5 py-1 rounded-xl active:scale-95 transition-transform"
                     >▶ 预览</button>
                     <button
                       onClick={() => exportSRT(videoCopy)}
@@ -9329,7 +9329,7 @@ ${line}
             )}
 
             {/* 一键导出面板 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="font-bold text-gray-900 text-sm mb-3">📦 一键导出</div>
               <div className="grid grid-cols-2 gap-2">
                 {[
@@ -9369,7 +9369,7 @@ ${line}
             {/* MiniMax 视频生成 */}
             <VideoComposePanel videoCopy={videoCopy} audioB64={audioB64} showToast={showToast} videoRatio={videoRatio} subtitleStyle={subtitleStyle} subtitleFontSize={subtitleFontSize} subtitleColor={subtitleColor} clonedAvatars={clonedAvatars} setClonedAvatars={setClonedAvatars} />
             {/* 封面生成卡片 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="flex items-center justify-between mb-3">
                 <div className="font-bold text-gray-900 text-sm">🖼️ 封面生成</div>
                 {coverImageUrl && <span className="text-xs text-green-500 font-bold">✅ 已生成</span>}
@@ -9379,7 +9379,7 @@ ${line}
                   <img src={coverImageUrl} alt="封面" className="w-full rounded-xl object-cover aspect-[9/16] max-h-48 object-top" />
                   <div className="flex gap-2">
                     <button onClick={generateCover} disabled={coverLoading} className="flex-1 py-2 bg-gray-100 text-gray-600 text-xs font-bold rounded-xl active:scale-95 disabled:opacity-60">🔄 重新生成</button>
-                    <button onClick={() => { try { const a = document.createElement('a'); a.href = coverImageUrl; a.download = 'cover.svg'; a.click() } catch(err) {} showToast('✅ 封面下载中') }} className="flex-1 py-2 bg-blue-500 text-white text-xs font-bold rounded-xl active:scale-95">⬇️ 下载封面</button>
+                    <button onClick={() => { try { const a = document.createElement('a'); a.href = coverImageUrl; a.download = 'cover.svg'; a.click() } catch(err) {} showToast('✅ 封面下载中') }} className="flex-1 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl active:scale-95">⬇️ 下载封面</button>
                   </div>
                 </div>
               ) : (
@@ -9439,7 +9439,7 @@ ${line}
                   setVidScheduleTitle(videoCopy.slice(0, 25) || '新视频')
                   setShowVidScheduleModal(true)
                 }}
-                className="py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md flex items-center justify-center gap-1.5"
+                className="py-3.5 bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md flex items-center justify-center gap-1.5"
               >
                 📅 加入排期
               </button>
@@ -9486,7 +9486,7 @@ ${line}
                     setTimeout(() => showToast('💡 发布后记得在运营中心录入数据'), 3000)
                   } catch { showToast('❌ 加入排期失败') }
                 }}
-                className="w-full mt-4 py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-black text-sm rounded-2xl active:scale-[0.98] transition-all"
+                className="w-full mt-4 py-3.5 bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-black text-sm rounded-2xl active:scale-[0.98] transition-all"
               >✅ 确认加入排期</button>
             </div>
           </div>
@@ -9619,7 +9619,7 @@ ${line}
       React.useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current) }, [])
 
       return (
-        <div className="bg-white rounded-2xl p-4 shadow-sm space-y-4">
+        <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)] space-y-4">
           <div className="flex items-center justify-between">
             <div className="font-bold text-gray-900 text-sm">🎬 视频合成</div>
             {audioB64 && <span className="text-[10px] text-green-500 font-bold bg-green-50 px-2 py-0.5 rounded-full">✅ 音频就绪</span>}
@@ -9698,7 +9698,7 @@ ${line}
                   <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-blue-200 rounded-xl bg-blue-50 cursor-pointer active:bg-blue-100">
                     <input type="file" accept="image/*" className="hidden" onChange={handlePortraitUpload} />
                     <span className="text-2xl mb-1">🖼️</span>
-                    <span className="text-xs text-blue-500 font-medium">点击上传人像图片</span>
+                    <span className="text-xs text-indigo-500 font-medium">点击上传人像图片</span>
                     <span className="text-[10px] text-gray-400">JPG / PNG，建议正面照</span>
                   </label>
                 )}
@@ -9707,7 +9707,7 @@ ${line}
                     <input value={newAvatarName} onChange={e => setNewAvatarName(e.target.value)}
                       placeholder="给这个形象起个名字" className="flex-1 px-3 py-2 rounded-xl bg-gray-100 text-xs outline-none" />
                     <button onClick={saveAvatar} disabled={avatarSaving}
-                      className="px-3 py-2 bg-blue-500 text-white text-xs font-bold rounded-xl active:scale-95 disabled:opacity-60 flex-shrink-0">
+                      className="px-3 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl active:scale-95 disabled:opacity-60 flex-shrink-0">
                       {avatarSaving ? '保存中...' : '💾 保存'}
                     </button>
                   </div>
@@ -9916,7 +9916,7 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, s
   return (
     <div className="space-y-3">
       {/* 视频风格选择 */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm">
+      <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
         <div className="flex items-center justify-between mb-3">
           <div className="font-bold text-gray-900 text-sm">🎬 AI 视频合成</div>
           <span className="text-[10px] px-2 py-0.5 bg-purple-50 text-purple-500 rounded-full font-medium">MiniMax T2V</span>
@@ -9939,7 +9939,7 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, s
       </div>
 
       {/* 视频描述输入 */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm">
+      <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
         <div className="flex items-center justify-between mb-2">
           <div className="text-xs font-bold text-gray-500">📝 视频描述（Prompt）</div>
           <button
@@ -9976,7 +9976,7 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, s
       )}
 
       {(videoStatus === 'generating' || videoStatus === 'polling') && (
-        <div className="bg-white rounded-2xl p-5 shadow-sm">
+        <div className="bg-white rounded-3xl p-5 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
           {/* 阶段指示器 */}
           <div className="flex items-center justify-between mb-5">
             {[
@@ -10069,7 +10069,7 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, s
       )}
 
       {videoStatus === 'done' && (
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-xl bg-green-100 flex items-center justify-center text-base">✅</div>
             <div>
@@ -10272,7 +10272,7 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, s
           )}
 
           {/* 今日发布任务 */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <div className="font-bold text-gray-900 text-sm">📤 今日发布任务</div>
@@ -10354,7 +10354,7 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, s
 
           {/* 即将发布（未来3天） */}
           {upcoming.length > 0 && (
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="font-bold text-gray-900 text-sm mb-3">⏰ 即将发布（未来3天）</div>
               <div className="space-y-2">
                 {upcoming.map((item: any) => {
@@ -10431,7 +10431,7 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, s
       return (
         <div className="space-y-3">
           {/* 周期选择 + 分析按钮 */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
             <div className="flex items-center justify-between mb-3">
               <div className="font-bold text-gray-900 text-sm">🔍 数据复盘</div>
               <button
@@ -10461,7 +10461,7 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, s
           </div>
 
           {/* 本地数据概览（不依赖AI） */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
             <div className="font-bold text-gray-900 text-sm mb-3">📊 数据概览</div>
             <div className="grid grid-cols-3 gap-2 mb-3">
               {[
@@ -10498,7 +10498,7 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, s
 
           {/* 最佳视频 */}
           {topVideos.length > 0 && (
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="font-bold text-gray-900 text-sm mb-3">🏆 播放量 TOP3</div>
               <div className="space-y-2">
                 {topVideos.map((v: any, i: number) => (
@@ -10558,7 +10558,7 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, s
 
               {/* 内容分析 */}
               {reviewData.contentAnalysis && (
-                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <div className="font-bold text-gray-900 text-sm mb-3">📈 内容分析</div>
                   <div className="grid grid-cols-2 gap-2">
                     {[
@@ -10579,7 +10579,7 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, s
 
               {/* 改进建议 */}
               {reviewData.improvements?.length > 0 && (
-                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <div className="font-bold text-gray-900 text-sm mb-3">🎯 优化建议</div>
                   <div className="space-y-3">
                     {reviewData.improvements.map((imp: any, i: number) => (
@@ -10601,7 +10601,7 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, s
 
               {/* 下周计划 */}
               {reviewData.nextWeekPlan?.length > 0 && (
-                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <div className="font-bold text-gray-900 text-sm mb-3">📅 AI 推荐下周计划</div>
                   <div className="space-y-2">
                     {reviewData.nextWeekPlan.map((plan: any, i: number) => (
@@ -10625,7 +10625,7 @@ function VideoGeneratePanel({ videoCopy, showToast, videoRatio, subtitleStyle, s
 
               {/* AI 洞察 */}
               {reviewData.insights?.length > 0 && (
-                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <div className="font-bold text-gray-900 text-sm mb-3">💡 AI 洞察</div>
                   <div className="space-y-2">
                     {reviewData.insights.map((ins: any, i: number) => (
@@ -10709,7 +10709,7 @@ function ContentCalendar({ schedule, setSchedule, showToast, setShowAddSchedule,
   const selectedSchedule = selectedDay ? getDaySchedule(selectedDay) : []
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm overflow-hidden animate-fade-in-up">
+    <div className="bg-white rounded-3xl shadow-[0_2px_16px_rgba(79,70,229,0.06)] overflow-hidden animate-fade-in-up">
       {/* 日历头部 */}
       <div className="px-4 pt-4 pb-3">
         <div className="flex items-center justify-between mb-3">
@@ -10825,7 +10825,7 @@ function ContentCalendar({ schedule, setSchedule, showToast, setShowAddSchedule,
                         if (setQuickRecordData) setQuickRecordData({ title: s.title, platform: s.platform, publishDate: s.time })
                         if (setShowVideoRecord) setShowVideoRecord(true)
                       }}
-                      className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-500 font-semibold active:scale-95 transition-transform"
+                      className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-indigo-500 font-semibold active:scale-95 transition-transform"
                     >录入</button>
                   )}
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${s.status === '待发布' ? 'bg-orange-50 text-orange-500' : s.status === '已发布' ? 'bg-green-50 text-green-500' : 'bg-gray-100 text-gray-400'}`}>{s.status}</span>
@@ -10841,7 +10841,7 @@ function ContentCalendar({ schedule, setSchedule, showToast, setShowAddSchedule,
         <div className="border-t border-gray-50 px-4 py-3 animate-slide-bottom">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-gray-700">{viewMonth+1}月{selectedDay}日 的排期</span>
-            <button onClick={() => setShowAddSchedule(true)} className="text-[10px] text-blue-500 font-semibold">+ 添加</button>
+            <button onClick={() => setShowAddSchedule(true)} className="text-[10px] text-indigo-500 font-semibold">+ 添加</button>
           </div>
           {selectedSchedule.length === 0 ? (
             <div className="text-center py-3">
@@ -10939,7 +10939,7 @@ function BestTimePanel({ acc }: any) {
   const heatColors = ['bg-blue-50','bg-blue-100','bg-blue-200','bg-blue-300','bg-blue-400','bg-blue-500','bg-blue-600','bg-blue-700','bg-blue-800']
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm overflow-hidden animate-fade-in-up delay-100">
+    <div className="bg-white rounded-3xl shadow-[0_2px_16px_rgba(79,70,229,0.06)] overflow-hidden animate-fade-in-up delay-100">
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full px-4 py-3.5 flex items-center justify-between active:bg-gray-50 transition-colors"
@@ -11063,7 +11063,7 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
             <h3 className="font-black text-gray-900">📊 录入视频数据</h3>
             <p className="text-xs text-gray-400 mt-0.5">录入后自动更新运营图表</p>
           </div>
-          <button onClick={() => { setShowVideoRecord(false); setQuickRecordData(null) }} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
+          <button onClick={() => { setShowVideoRecord(false); setQuickRecordData(null) }} className="w-8 h-8 rounded-full bg-gray-100/80 flex items-center justify-center text-gray-500 active:scale-90 transition-transform">✕</button>
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-3">
@@ -11156,7 +11156,7 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
           <button
             onClick={handleSave}
             disabled={!title.trim()}
-            className="flex-1 py-3 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-transform disabled:opacity-50"
+            className="flex-1 py-3 bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-transform disabled:opacity-50"
           >💾 保存数据</button>
         </div>
       </div>
@@ -11264,7 +11264,7 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
                     <h3 className="font-black text-gray-900">数据绑定</h3>
                     <p className="text-xs text-gray-400 mt-0.5">手动录入或导入平台数据</p>
                   </div>
-                  <button onClick={() => setShowDataBind(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
+                  <button onClick={() => setShowDataBind(false)} className="w-8 h-8 rounded-full bg-gray-100/80 flex items-center justify-center text-gray-500 active:scale-90 transition-transform">✕</button>
                 </div>
                 <div className="flex gap-2 mb-4">
                   {[{id:'manual',label:'✏️ 手动录入'},{id:'import',label:'🤖 AI 生成'},{id:'records',label:'📊 视频记录'}].map((t: any) => (
@@ -11289,7 +11289,7 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
                       <div className="text-xs text-blue-600 font-semibold mb-1">📊 数据来源</div>
                       <div className="text-xs text-blue-500 leading-relaxed">从抖音/小红书创作者后台复制数据填入，系统将自动生成趋势图表</div>
                     </div>
-                    <button onClick={updateManualStats} className="w-full py-3 bg-blue-500 text-white text-sm font-bold rounded-2xl active:scale-[0.98] transition-transform">✅ 更新数据</button>
+                    <button onClick={updateManualStats} className="w-full py-3 bg-indigo-600 text-white text-sm font-bold rounded-2xl active:scale-[0.98] transition-transform">✅ 更新数据</button>
                   </div>
                 )}
                 {dataBindTab === 'import' && (
@@ -11351,7 +11351,7 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
                 <div className="flex-1">
                   <div className="font-bold text-gray-900 text-sm mb-1">录入你的账号数据</div>
                   <div className="text-xs text-gray-500 mb-3 leading-relaxed">手动录入粉丝数、播放量等数据，或让 AI 根据账号定位生成参考数据</div>
-                  <button onClick={() => setShowDataBind(true)} className="px-4 py-2 bg-blue-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-transform">
+                  <button onClick={() => setShowDataBind(true)} className="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl active:scale-95 transition-transform">
                     ✏️ 立即录入数据
                   </button>
                 </div>
@@ -11360,7 +11360,7 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
           )}
 
           {/* 平台选择 + 数据绑定按钮 */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-black text-gray-900">{platformStats.platform} 数据</span>
@@ -11369,7 +11369,7 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
               </div>
               <button
                 onClick={() => setShowDataBind(true)}
-                className="text-xs text-blue-500 font-semibold bg-blue-50 px-2.5 py-1 rounded-xl active:scale-95 transition-transform"
+                className="text-xs text-indigo-500 font-semibold bg-blue-50 px-2.5 py-1 rounded-xl active:scale-95 transition-transform"
               >
                 📊 录入数据
               </button>
@@ -11411,7 +11411,7 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
           </div>
 
           {/* 交互式图表 */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
             {/* 图表切换 Tab */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
@@ -11536,7 +11536,7 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
           </div>
 
           {/* 互动分布 */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
             <div className="font-bold text-gray-900 text-sm mb-3">💬 互动分布</div>
             <div className="space-y-3">
               {[
@@ -11581,7 +11581,7 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
 
           {/* 视频记录列表 */}
           {videoRecords.length > 0 && (
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="flex items-center justify-between mb-3">
                 <div className="font-bold text-gray-900 text-sm">🎬 视频数据记录</div>
                 <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{videoRecords.length} 条</span>
@@ -11674,7 +11674,7 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
       return (
         <>
           {/* 本周数据摘要 */}
-          <div className="bg-gradient-to-r from-blue-500 to-cyan-400 rounded-2xl p-4 text-white shadow-md">
+          <div className="bg-gradient-to-r from-indigo-500 to-violet-500 rounded-2xl p-4 text-white shadow-md">
             <div className="text-white/70 text-xs mb-2">本周运营概览</div>
             <div className="grid grid-cols-3 gap-3">
               {[
@@ -11692,7 +11692,7 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
           </div>
 
           {/* 目标进度卡片 */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
             <div className="flex items-center justify-between mb-4">
               <div className="font-bold text-gray-900 text-sm">🎯 本月目标追踪</div>
               <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
@@ -11769,7 +11769,7 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
           </div>
 
           {/* 成长阶段 */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
             <div className="flex items-center justify-between mb-3">
               <div className="font-bold text-gray-900 text-sm">📈 成长阶段</div>
               <span className="text-xs text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full font-semibold">
@@ -11838,7 +11838,7 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
           </div>
 
           {/* AI 运营诊断 */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
             <div className="font-bold text-gray-900 text-sm mb-3">🤖 AI 运营诊断</div>
             <div className="space-y-2">
               {[
@@ -11874,7 +11874,7 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
   const PLATFORMS = ['抖音', '小红书', 'B站', '视频号', '快手']
 
   return (
-    <div className="flex flex-col h-full bg-[#F5F6FA]">
+    <div className="flex flex-col h-full bg-[#EEF0F8]">
       {/* Add Schedule Modal */}
       {showAddSchedule && (
         <div className="absolute inset-0 bg-black/40 z-40 flex items-end rounded-[50px] overflow-hidden">
@@ -11944,7 +11944,7 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
               )}
               <div className="flex gap-2">
                 <button onClick={() => setShowAddSchedule(false)} className="flex-1 py-2.5 bg-gray-100 text-gray-600 font-bold rounded-xl text-sm">取消</button>
-                <button onClick={addScheduleItem} className="flex-1 py-2.5 bg-blue-500 text-white font-bold rounded-xl text-sm">添加</button>
+                <button onClick={addScheduleItem} className="flex-1 py-2.5 bg-indigo-600 text-white font-bold rounded-xl text-sm">添加</button>
               </div>
             </div>
           </div>
@@ -12065,7 +12065,7 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
 
           <div className="px-4 pt-12 pb-0 flex-shrink-0 bg-white shadow-[0_1px_12px_rgba(0,0,0,0.06)]">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-black text-gray-900">📊 运营中心</h1>
+          <h1 className="text-2xl font-black text-gray-900 tracking-tight">📊 运营中心</h1>
         </div>
         <div className="flex gap-1.5 pb-3">
           {TABS.map(t => (
@@ -12098,7 +12098,7 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
             <BestTimePanel acc={acc} />
 
             {/* AI 运营建议 */}
-            <div className="bg-white rounded-3xl p-4 shadow-sm animate-fade-in-up delay-200">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)] animate-fade-in-up delay-200">
               <div className="flex items-center justify-between mb-3">
                 <div className="font-black text-gray-900 text-sm">🤖 AI 运营建议</div>
                 <button
@@ -12133,7 +12133,7 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
                   <div className="text-3xl mb-2 animate-float">🤖</div>
                   <p className="text-sm font-semibold text-gray-700 mb-1">AI 运营诊断</p>
                   <p className="text-xs text-gray-400 mb-4">分析你的账号数据，给出个性化建议</p>
-                  <button onClick={fetchInsights} disabled={insightsLoading} className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white text-xs font-bold rounded-xl active:scale-95 transition-transform shadow-sm">
+                  <button onClick={fetchInsights} disabled={insightsLoading} className="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-transform shadow-sm">
                     {insightsLoading ? '分析中...' : '✨ 开始分析'}
                   </button>
                 </div>
@@ -12250,7 +12250,7 @@ function Profile({
 
   const ACCOUNT_COLORS = [
     'from-orange-400 to-amber-500',
-    'from-blue-500 to-cyan-400',
+    'from-indigo-500 to-violet-500',
     'from-purple-500 to-pink-400',
     'from-green-400 to-emerald-500',
     'from-rose-400 to-red-500',
@@ -12415,7 +12415,7 @@ function Profile({
   const isGuest = user?.id === 'guest'
 
   return (
-    <div className="flex flex-col h-full bg-[#F5F6FA]">
+    <div className="flex flex-col h-full bg-[#EEF0F8]">
       {/* Delete Confirm Modal */}
       {showDeleteConfirm && (
         <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center rounded-[50px] overflow-hidden px-8">
@@ -12491,12 +12491,12 @@ function Profile({
               </div>
             </div>
             <div className="flex flex-col items-end gap-2">
-              <div className="bg-white/25 rounded-2xl px-3 py-1.5 text-xs font-black flex items-center gap-1">💎 {credits}</div>
+              <div className="bg-white/25 rounded-3xl px-3 py-1.5 text-xs font-black flex items-center gap-1">💎 {credits}</div>
               {!isGuest && <button onClick={onLogout} className="text-white/55 text-[10px] font-medium">退出登录</button>}
             </div>
           </div>
           {isGuest && (
-            <button onClick={onLogout} className="w-full mt-3 py-2.5 bg-white/20 rounded-2xl text-xs font-bold text-white active:scale-[0.98] transition-transform">
+            <button onClick={onLogout} className="w-full mt-3 py-2.5 bg-white/20 rounded-3xl text-xs font-bold text-white active:scale-[0.98] transition-transform">
               🔑 立即登录 / 注册
             </button>
           )}
@@ -12515,7 +12515,7 @@ function Profile({
         {/* ── AI 设置 ── */}
         {profileTab === 'ai' && (
           <>
-            <div className="bg-white rounded-3xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="font-black text-gray-900 text-sm mb-3">🤖 AI 模型选择</div>
               <div className="space-y-2">
                 {AI_MODELS.map(m => (
@@ -12533,7 +12533,7 @@ function Profile({
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="font-bold text-gray-900 text-sm mb-3">🔑 AI 文案 API 配置</div>
               <div className="space-y-2.5">
                 <div>
@@ -12548,7 +12548,7 @@ function Profile({
             </div>
 
             {/* MiniMax 语音/视频 API 配置 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="flex items-center gap-2 mb-1">
                 <div className="font-bold text-gray-900 text-sm">🎙️ MiniMax API 配置</div>
                 <span className="text-[9px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-bold">语音克隆 · 视频合成</span>
@@ -12574,7 +12574,7 @@ function Profile({
             </div>
 
             {/* Replicate API 配置 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="flex items-center gap-2 mb-1">
                 <div className="font-bold text-gray-900 text-sm">🎭 Replicate API 配置</div>
                 <span className="text-[9px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-bold">LatentSync 换嘴型</span>
@@ -12614,7 +12614,7 @@ function Profile({
               </a>
             </div>
 
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="font-bold text-gray-900 text-sm mb-3">⚙️ 高级设置</div>
               <div className="space-y-3">
                 <div>
@@ -12644,7 +12644,7 @@ function Profile({
                 { key: 'operations', icon: '📊', label: '运营建议', placeholder: '如：结合数据给出具体可执行的发布时间和内容优化建议...' },
               ]
               return (
-                <div className="bg-white rounded-3xl p-4 shadow-sm">
+                <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <div className="font-black text-gray-900 text-sm mb-1">🧩 模块专属提示词</div>
                   <div className="text-xs text-gray-400 mb-3">为每个功能模块单独设置 AI 提示词，优先级高于全局系统提示词</div>
                   <div className="space-y-3">
@@ -12688,7 +12688,7 @@ function Profile({
               )
             })()}
 
-            <button onClick={saveAiSettings} className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md">
+            <button onClick={saveAiSettings} className="w-full py-3.5 bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-bold rounded-2xl text-sm active:scale-[0.98] transition-all shadow-md">
               💾 保存 AI 设置
             </button>
 
@@ -12713,7 +12713,7 @@ function Profile({
                 { label: '已发布视频', value: videoRecords.length, unit: '条', icon: '📹' },
                 { label: '待发排期', value: schedule.filter((s: any) => s.status !== '已发布').length, unit: '个', icon: '📅' },
               ].map((s, i) => (
-                <div key={i} className="bg-white rounded-2xl p-3 shadow-sm text-center">
+                <div key={i} className="bg-white rounded-3xl p-3 shadow-[0_2px_16px_rgba(79,70,229,0.06)] text-center">
                   <div className="text-lg mb-0.5">{s.icon}</div>
                   <div className="text-xl font-black text-gray-900">{s.value}<span className="text-xs font-medium text-gray-400 ml-0.5">{s.unit}</span></div>
                   <div className="text-[10px] text-gray-400 mt-0.5">{s.label}</div>
@@ -12721,7 +12721,7 @@ function Profile({
               ))}
             </div>
 
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="font-bold text-gray-900 text-sm mb-3">📱 我的账号</div>
               <div className="space-y-3">
                 {accounts.map((a: any, i: number) => (
@@ -12757,7 +12757,7 @@ function Profile({
                       <button onClick={() => { setAccountIdx(i); showToast(`✅ 已切换到「${a.name}」`) }} className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${i === accountIdx ? 'bg-blue-500 text-white' : 'bg-white text-gray-600 shadow-sm'}`}>
                         {i === accountIdx ? '✓ 使用中' : '🔄 切换'}
                       </button>
-                      <button onClick={() => setEditingAccount({ ...a })} className="flex-1 py-1.5 rounded-xl text-xs font-bold bg-white text-gray-600 shadow-sm">编辑</button>
+                      <button onClick={() => setEditingAccount({ ...a })} className="flex-1 py-1.5 rounded-xl text-xs font-bold bg-white text-gray-600 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">编辑</button>
                       <button onClick={() => setShowDeleteConfirm(a.id)} className="px-3 py-1.5 rounded-xl text-xs font-bold bg-red-50 text-red-400">删除</button>
                     </div>
                   </div>
@@ -12766,7 +12766,7 @@ function Profile({
             </div>
 
             {savedContents.length > 0 && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                 <div className="flex items-center justify-between mb-3">
                   <div className="font-bold text-gray-900 text-sm">💾 已保存文案</div>
                   <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{savedContents.length} 条</span>
@@ -12804,7 +12804,7 @@ function Profile({
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="font-bold text-gray-900 text-sm mb-3">💎 充值套餐</div>
               <div className="space-y-2">
                 {CREDIT_PACKAGES.map((pkg, i) => (
@@ -12825,7 +12825,7 @@ function Profile({
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="font-bold text-gray-900 text-sm mb-3">📋 消耗记录</div>
               {(creditLogs.length > 0 ? creditLogs : [
                 { action: '文案生成', cost: -20, time: '今天 08:32', desc: '犀利观点 · 3个版本' },
@@ -12973,7 +12973,7 @@ function Profile({
         {/* ── 关于 ── */}
         {profileTab === 'about' && (
           <>
-            <div className="bg-gradient-to-br from-blue-500 to-cyan-400 rounded-3xl p-5 shadow-xl shadow-blue-200/50 text-center text-white">
+            <div className="bg-gradient-to-br from-indigo-500 to-violet-500 rounded-3xl p-5 shadow-xl shadow-blue-200/50 text-center text-white">
               <div className="w-16 h-16 rounded-[22px] bg-white/20 flex items-center justify-center text-3xl mx-auto mb-3 shadow-lg">🎬</div>
               <div className="font-black text-white text-lg">ContentOS</div>
               <div className="text-white/70 text-xs mt-1">AI 内容增长工作台</div>
@@ -12981,7 +12981,7 @@ function Profile({
             </div>
 
             {/* 外观设置 */}
-            <div className="bg-white rounded-3xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="font-black text-gray-900 text-sm mb-3">🎨 外观设置</div>
               <div className="mb-4">
                 <div className="text-xs text-gray-500 mb-2 font-medium">界面模式</div>
@@ -13025,7 +13025,7 @@ function Profile({
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="font-bold text-gray-900 text-sm mb-3">🚀 功能列表</div>
               {[
                 { icon: '✍️', label: '文案生成', desc: 'AI 一键生成3版口播文案' },
@@ -13048,7 +13048,7 @@ function Profile({
               ))}
             </div>
 
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="font-bold text-gray-900 text-sm mb-3">🛠️ 技术栈</div>
               {[
                 ['前端框架', 'Next.js 14 + React 18'],
@@ -13065,7 +13065,7 @@ function Profile({
               ))}
             </div>
 
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
               <div className="font-bold text-gray-900 text-sm mb-3">📅 更新日志</div>
               {[
                 { version: 'v9.3', date: '2026-05-19', desc: '深色模式生效、主题色切换、底部安全区、空状态、确认弹窗、数据导出、PWA' },
@@ -13088,7 +13088,7 @@ function Profile({
             </div>
 
             {/* 数据管理 */}
-                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="bg-white rounded-3xl p-4 shadow-[0_2px_16px_rgba(79,70,229,0.06)]">
                   <div className="font-bold text-gray-900 text-sm mb-3">📦 数据管理</div>
                   <div className="space-y-2">
                     {/* 云端同步 */}
@@ -13101,7 +13101,7 @@ function Profile({
                         <button
                           onClick={syncToCloud}
                           disabled={syncLoading}
-                          className="flex-1 py-2 bg-blue-500 text-white text-xs font-bold rounded-xl disabled:opacity-60 flex items-center justify-center gap-1"
+                          className="flex-1 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl disabled:opacity-60 flex items-center justify-center gap-1"
                         >
                           {syncLoading ? <><span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />同步中</> : '⬆️ 同步到云端'}
                         </button>
@@ -13130,7 +13130,7 @@ function Profile({
                   </div>
                 </div>
 
-            <button onClick={onLogout} className="w-full py-3.5 bg-white rounded-2xl text-sm font-bold text-red-400 shadow-sm active:scale-[0.98] transition-transform">
+            <button onClick={onLogout} className="w-full py-3.5 bg-white rounded-3xl text-sm font-bold text-red-400 shadow-[0_2px_16px_rgba(79,70,229,0.06)] active:scale-[0.98] transition-transform">
               {isGuest ? '🔑 去登录 / 注册' : '🚪 退出登录'}
             </button>
           </>
