@@ -9,8 +9,11 @@
 }
 
 body {
-  font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif;
-  background: #1a1a1a;
+  font-family: -apple-system, 'PingFang SC', 'SF Pro Display', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  background: #0f0f14;
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -18,6 +21,12 @@ body {
 }
 
 @layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .font-display {
+    font-feature-settings: 'kern' 1, 'liga' 1;
+  }
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
