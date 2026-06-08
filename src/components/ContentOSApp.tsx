@@ -628,15 +628,15 @@ export default function ContentOSApp() {
   const [insightsLoading, setInsightsLoading] = useState(false)
   // 平台数据状态
   const [platformStats, setPlatformStats] = useState<any>({
-    fans: [1200, 1350, 1480, 1620, 1750, 1890, 2050],
-    plays: [3200, 5800, 4100, 8900, 6200, 11000, 7800],
-    likes: [180, 320, 240, 560, 380, 720, 450],
-    comments: [45, 88, 62, 145, 98, 210, 120],
-    collects: [92, 165, 118, 280, 195, 380, 240],
-    totalFans: 2050,
-    totalPlays: 47000,
-    avgEngagement: 8.4,
-    weeklyPosts: 3,
+    fans: [0, 0, 0, 0, 0, 0, 0],
+    plays: [0, 0, 0, 0, 0, 0, 0],
+    likes: [0, 0, 0, 0, 0, 0, 0],
+    comments: [0, 0, 0, 0, 0, 0, 0],
+    collects: [0, 0, 0, 0, 0, 0, 0],
+    totalFans: 0,
+    totalPlays: 0,
+    avgEngagement: 0,
+    weeklyPosts: 0,
     lastSync: null,
     platform: '抖音',
   })
@@ -3429,32 +3429,47 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
               })}
             </div>
 
-            {/* 每日推荐热点 - 移到顶部 */}
-            {hotspots && hotspots.length > 0 && (
-              <div className="bg-white rounded-3xl p-4 shadow-sm">
-                <div className="flex items-center justify-between mb-2.5">
-                  <div className="flex items-center gap-2">
-                    <div className="font-black text-gray-900 text-sm">🔥 今日热点</div>
-                    <span className="text-[10px] bg-red-50 text-red-400 px-2 py-0.5 rounded-full font-bold">实时</span>
-                  </div>
-                  <button onClick={() => { setTab('materials'); setMatTab('trending') }} className="text-xs text-blue-500 font-medium">全部 →</button>
-                </div>
-                <div className="space-y-2">
-                  {hotspots.slice(0, 3).map((h: any, i: number) => (
-                    <div key={i} className="flex items-center gap-2.5">
-                      <span className={`text-xs font-black w-4 text-center flex-shrink-0 ${i === 0 ? 'text-red-400' : i === 1 ? 'text-orange-400' : 'text-amber-400'}`}>{i + 1}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium text-gray-800 truncate">{h.title}</div>
-                      </div>
-                      <div className="flex gap-1 flex-shrink-0">
-                        {h.heat && <span className="text-[10px] text-red-400 font-bold">{h.heat}</span>}
-                        <button onClick={() => { try { localStorage.setItem('contentos_pending_topic', h.title) } catch {}; setTab('content'); showToast('✅ 已带入创作') }} className="text-[10px] text-white bg-purple-500 px-1.5 py-0.5 rounded-full font-bold active:scale-95">✍️</button>
-                      </div>
+            {/* 每日推荐热点 - 优先用radarData真实数据，兜底用HOTSPOTS */}
+            {(() => {
+              const realHotspots = radarData?.hotspots?.length ? radarData.hotspots : null
+              const displayHotspots = realHotspots || hotspots
+              const isReal = !!realHotspots
+              if (!displayHotspots?.length) return null
+              return (
+                <div className="bg-white rounded-3xl p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="font-black text-gray-900 text-sm">🔥 今日热点</div>
+                      {isReal
+                        ? <span className="text-[10px] bg-green-50 text-green-500 px-2 py-0.5 rounded-full font-bold">🌐 实时</span>
+                        : <span className="text-[10px] bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full font-bold">示例</span>
+                      }
                     </div>
-                  ))}
+                    <button onClick={() => { setTab('materials'); setMatTab('trending') }} className="text-xs text-blue-500 font-medium">全部 →</button>
+                  </div>
+                  {!isReal && (
+                    <div className="mb-2 px-2 py-1.5 bg-amber-50 rounded-xl flex items-center gap-1.5">
+                      <span className="text-[10px] text-amber-600">💡 点击「全部」→ 获取今日实时热点</span>
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    {displayHotspots.slice(0, 3).map((h: any, i: number) => (
+                      <div key={i} className="flex items-center gap-2.5">
+                        <span className={`text-xs font-black w-4 text-center flex-shrink-0 ${i === 0 ? 'text-red-400' : i === 1 ? 'text-orange-400' : 'text-amber-400'}`}>{i + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-medium text-gray-800 truncate">{h.title}</div>
+                          {h.tag && <div className="text-[9px] text-gray-400 mt-0.5">{h.tag}</div>}
+                        </div>
+                        <div className="flex gap-1 flex-shrink-0">
+                          {h.heat && <span className="text-[10px] text-red-400 font-bold">{h.heat}</span>}
+                          <button onClick={() => { try { localStorage.setItem('contentos_pending_topic', h.title) } catch {}; setTab('content'); showToast('✅ 已带入创作') }} className="text-[10px] text-white bg-purple-500 px-1.5 py-0.5 rounded-full font-bold active:scale-95">✍️</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )
+            })()}
 
             {/* 知识库 + 灵感搜集 并排 */}
             <div className="grid grid-cols-2 gap-2">
@@ -3652,11 +3667,12 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { icon: '💡', label: '生成选题', desc: '创作工作台', action: () => { setTab('content') }, color: 'bg-purple-50 text-purple-600' },
-                  { icon: '✍️', label: '写文案', desc: '一键生成', action: () => setTab('content'), color: 'bg-green-50 text-green-600' },
-                  { icon: '🎬', label: '做视频', desc: 'TTS合成', action: () => setTab('video'), color: 'bg-orange-50 text-orange-600' },
-                  { icon: '👥', label: '博主追踪', desc: '爆款分析', action: () => { setTab('materials'); setMatTab('creator') }, color: 'bg-cyan-50 text-cyan-600' },
-                  { icon: '📊', label: '运营数据', desc: '排期·复盘', action: () => setTab('operations'), color: 'bg-red-50 text-red-600' },
+                  { icon: '💡', label: '生成选题', action: () => { setTab('content') }, color: 'bg-purple-50 text-purple-600' },
+                  { icon: '✍️', label: '写文案', action: () => setTab('content'), color: 'bg-green-50 text-green-600' },
+                  { icon: '🎬', label: '做视频', action: () => setTab('video'), color: 'bg-orange-50 text-orange-600' },
+                  { icon: '📡', label: '情报雷达', action: () => { setTab('materials'); setMatTab('trending') }, color: 'bg-blue-50 text-blue-600' },
+                  { icon: '👥', label: '博主追踪', action: () => { setTab('materials'); setMatTab('creator') }, color: 'bg-cyan-50 text-cyan-600' },
+                  { icon: '📊', label: '运营数据', action: () => setTab('operations'), color: 'bg-red-50 text-red-600' },
                 ].map((item: any, i: number) => (
                   <button
                     key={i}
@@ -4115,10 +4131,41 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                 </div>
 
                 {trendingItems.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-10 text-center">
-                    <div className="text-4xl mb-3">💎</div>
-                    <p className="text-gray-500 font-semibold mb-1 text-sm">点击「一键抓取」获取爆款素材</p>
-                    <p className="text-xs text-gray-400">AI 自动分析全平台热门内容<br/>并根据你的账号定位评估相关性</p>
+                  <div className="space-y-3">
+                    {/* 空状态引导 */}
+                    <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-4 text-center border border-orange-100">
+                      <div className="text-3xl mb-2">💎</div>
+                      <p className="text-gray-700 font-bold text-sm mb-1">一键抓取全网爆款</p>
+                      <p className="text-xs text-gray-400 mb-3">AI 分析全平台热门内容，根据你的账号定位评估相关性</p>
+                      <div className="flex justify-center gap-3 text-xs text-gray-500">
+                        <span className="flex items-center gap-1"><span>🎯</span>相关性评分</span>
+                        <span className="flex items-center gap-1"><span>🔥</span>热度排行</span>
+                        <span className="flex items-center gap-1"><span>💡</span>借鉴角度</span>
+                      </div>
+                    </div>
+                    {/* 示例卡片 */}
+                    {[
+                      { platform: '抖音', category: '干货教程', title: `${acc?.industry || '行业'}干货：新手必看的3个核心技巧`, heat: 96, relevance: 92, angle: '可借鉴：用数字标题+干货结构', tags: ['干货', '新手', '技巧'] },
+                      { platform: '小红书', category: '热点借势', title: `我用这个方法，${acc?.industry || '行业'}涨粉1000+`, heat: 88, relevance: 85, angle: '可借鉴：真实案例+数据背书', tags: ['涨粉', '经验', '分享'] },
+                    ].map((item: any, i: number) => (
+                      <div key={i} className="bg-white rounded-2xl p-4 shadow-sm opacity-60 relative overflow-hidden">
+                        <div className="absolute top-2 right-2 text-[9px] bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">示例</div>
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">{item.platform}</span>
+                          <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full">{item.category}</span>
+                          <span className="text-xs px-2 py-0.5 bg-orange-50 text-orange-500 rounded-full font-bold">🎯 高相关</span>
+                        </div>
+                        <p className="text-sm font-bold text-gray-900 mb-2">{item.title}</p>
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="text-xs text-orange-500 font-bold">🔥{item.heat}</span>
+                          <span className="text-xs text-blue-500 font-bold">相关 {item.relevance}%</span>
+                        </div>
+                        <div className="bg-blue-50 rounded-xl px-3 py-2">
+                          <p className="text-xs text-blue-600">💡 {item.angle}</p>
+                        </div>
+                      </div>
+                    ))}
+                    <p className="text-center text-xs text-gray-400 py-2">↑ 点击上方「一键抓取」获取真实爆款数据</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -7063,7 +7110,7 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
   showClonePanel, setShowClonePanel, cloneVoiceName, setCloneVoiceName,
   setTab, setMatTab, setShowAiPanel, radarData
 }: any) {
-  const [expandedPanel, setExpandedPanel] = React.useState<string | null>('topic')
+  const [expandedPanel, setExpandedPanel] = React.useState<string | null>(null)
   const [topic, setTopic] = React.useState('')
   const [linkedHotspot, setLinkedHotspot] = React.useState<any>(null)
   const [copy, setCopy] = React.useState(videoCopy || '')
@@ -7270,7 +7317,7 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
             {/* 进度条 */}
             <div className="flex gap-1 pb-3">
               {PANELS.map(p => (
-                <div key={p.id} className={`flex-1 h-1 rounded-full transition-all ${(doneMap as any)[p.id] ? 'bg-green-400' : p.optional ? 'bg-gray-100' : 'bg-gray-200'}`} />
+                <div key={p.id} className={`flex-1 h-1 rounded-full transition-all ${(doneMap as any)[p.id] ? 'bg-green-400' : expandedPanel === p.id ? 'bg-blue-400' : p.optional ? 'bg-gray-100' : 'bg-gray-200'}`} />
               ))}
             </div>
           </div>
@@ -11296,12 +11343,29 @@ function VideoRecordModal({ quickRecordData, setShowVideoRecord, setQuickRecordD
             </div>
           )}
 
+          {/* 无数据时的引导提示 */}
+          {platformStats.totalFans === 0 && !platformStats.lastSync && (
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-100">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-500 flex items-center justify-center text-white text-lg flex-shrink-0">📊</div>
+                <div className="flex-1">
+                  <div className="font-bold text-gray-900 text-sm mb-1">录入你的账号数据</div>
+                  <div className="text-xs text-gray-500 mb-3 leading-relaxed">手动录入粉丝数、播放量等数据，或让 AI 根据账号定位生成参考数据</div>
+                  <button onClick={() => setShowDataBind(true)} className="px-4 py-2 bg-blue-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-transform">
+                    ✏️ 立即录入数据
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* 平台选择 + 数据绑定按钮 */}
           <div className="bg-white rounded-2xl p-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-black text-gray-900">{platformStats.platform} 数据</span>
                 {platformStats.lastSync && <span className="text-[10px] text-green-500 bg-green-50 px-2 py-0.5 rounded-full">已同步 {platformStats.lastSync}</span>}
+                {!platformStats.lastSync && platformStats.totalFans === 0 && <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">待录入</span>}
               </div>
               <button
                 onClick={() => setShowDataBind(true)}
@@ -11820,6 +11884,21 @@ function Operations({ acc, opsTab, setOpsTab, schedule, setSchedule, savedConten
               <button onClick={() => setShowAddSchedule(false)} className="text-gray-400 text-xl">✕</button>
             </div>
             <div className="space-y-3">
+              {/* 从已有文案快速选择 */}
+              {savedContents && savedContents.length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-1.5">从已有文案选择</p>
+                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                    {savedContents.slice(0, 5).map((c: any) => (
+                      <button
+                        key={c.id}
+                        onClick={() => setNewScheduleTitle(c.topic || c.content?.slice(0, 20) || '视频')}
+                        className="flex-shrink-0 px-3 py-1.5 bg-purple-50 text-purple-600 rounded-xl text-xs font-medium active:scale-95 transition-transform max-w-[120px] truncate"
+                      >{c.topic || c.content?.slice(0, 15) || '文案'}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <input
                 value={newScheduleTitle}
                 onChange={e => setNewScheduleTitle(e.target.value)}
