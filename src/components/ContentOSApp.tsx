@@ -3420,9 +3420,9 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
             {/* 数据概览 — 3列横排小卡片 */}
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}}>
               {[
-                { label:'总粉丝', value: (() => { try { return accounts.reduce((s:number,a:any)=>{const d=localStorage.getItem(`contentos_${a.id}_manual_stats`);if(d){const x=JSON.parse(d);return s+(parseInt(x.fans)||0)}return s},0).toLocaleString() } catch{return'0'} })(), icon:'👥', color:'#007AFF' },
+                { label:'总粉丝', value: (() => { try { return accounts.reduce((s:number,a:any)=>{const d=localStorage.getItem(`contentos_${a.id}_manual_stats`);if(d){const x=JSON.parse(d);return s+(parseInt(x.fans)||0)}return s},0).toLocaleString() } catch{return'0'} })(), icon:'👥', color:'#000' },
                 { label:'粉丝增量', value: (() => { try { const v=accounts.reduce((s:number,a:any)=>{const d=localStorage.getItem(`contentos_${a.id}_manual_stats`);if(d){const x=JSON.parse(d);return s+(parseInt(x.fansGrowth)||0)}return s},0); return (v>=0?'+':'')+v } catch{return'+0'} })(), icon:'📈', color:'#34C759' },
-                { label:'总曝光', value: (() => { try { const v=accounts.reduce((s:number,a:any)=>{const d=localStorage.getItem(`contentos_${a.id}_manual_stats`);if(d){const x=JSON.parse(d);return s+(parseInt(x.plays)||0)}return s},0); return v>=10000?(v/10000).toFixed(1)+'万':v.toLocaleString() } catch{return'0'} })(), icon:'👁️', color:'#5856D6' },
+                { label:'总曝光', value: (() => { try { const v=accounts.reduce((s:number,a:any)=>{const d=localStorage.getItem(`contentos_${a.id}_manual_stats`);if(d){const x=JSON.parse(d);return s+(parseInt(x.plays)||0)}return s},0); return v>=10000?(v/10000).toFixed(1)+'万':v.toLocaleString() } catch{return'0'} })(), icon:'👁️', color:'#000' },
               ].map((item,i)=>(
                 <div key={i} style={{background:'white',borderRadius:14,padding:'12px 12px 10px',boxShadow:'0 1px 3px rgba(0,0,0,0.06)'}}>
                   <div style={{fontSize:18,marginBottom:6}}>{item.icon}</div>
@@ -3437,12 +3437,12 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                   <div style={{fontSize:11,fontWeight:600,color:'#8E8E93',letterSpacing:0.5,marginBottom:14,paddingLeft:8,textTransform:'uppercase' as const}}>快速开始</div>
                   <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:0}}>
                     {[
-                      { icon:'💡', label:'生成选题', action:()=>setTab('content'), bg:'rgba(88,86,214,0.1)', shadow:'rgba(88,86,214,0.18)' },
-                      { icon:'✍️', label:'写文案',   action:()=>setTab('content'), bg:'rgba(0,122,255,0.1)', shadow:'rgba(0,122,255,0.18)' },
-                      { icon:'🎬', label:'做视频',   action:()=>setTab('video'),   bg:'rgba(255,149,0,0.1)', shadow:'rgba(255,149,0,0.18)' },
-                      { icon:'📡', label:'情报雷达', action:()=>{setTab('materials');setMatTab('trending')}, bg:'rgba(255,59,48,0.1)', shadow:'rgba(255,59,48,0.18)' },
-                      { icon:'👥', label:'博主追踪', action:()=>{setTab('materials');setMatTab('creator')}, bg:'rgba(52,199,89,0.1)', shadow:'rgba(52,199,89,0.18)' },
-                      { icon:'📊', label:'运营数据', action:()=>setTab('operations'), bg:'rgba(175,82,222,0.1)', shadow:'rgba(175,82,222,0.18)' },
+                      { icon:'💡', label:'生成选题', action:()=>setTab('content'), bg:'rgba(60,60,67,0.06)', shadow:'rgba(0,0,0,0.05)' },
+                      { icon:'✍️', label:'写文案',   action:()=>setTab('content'), bg:'rgba(60,60,67,0.06)', shadow:'rgba(0,0,0,0.05)' },
+                      { icon:'🎬', label:'做视频',   action:()=>setTab('video'),   bg:'rgba(60,60,67,0.06)', shadow:'rgba(0,0,0,0.05)' },
+                      { icon:'📡', label:'情报雷达', action:()=>{setTab('materials');setMatTab('trending')}, bg:'rgba(60,60,67,0.06)', shadow:'rgba(0,0,0,0.05)' },
+                      { icon:'👥', label:'博主追踪', action:()=>{setTab('materials');setMatTab('creator')}, bg:'rgba(60,60,67,0.06)', shadow:'rgba(0,0,0,0.05)' },
+                      { icon:'📊', label:'运营数据', action:()=>setTab('operations'), bg:'rgba(60,60,67,0.06)', shadow:'rgba(0,0,0,0.05)' },
                     ].map((item:any,i:number)=>(
                       <button key={i} onClick={item.action}
                         style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'8px 4px 10px',borderRadius:12,background:'transparent',border:'none',cursor:'pointer',gap:7}} className="press">
@@ -3946,12 +3946,12 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-bold text-gray-900">素材中心</h1>
         </div>
-        <div className="flex gap-1.5 pb-3">
+        <div className="flex gap-1 pb-3 bg-[rgba(60,60,67,0.06)] rounded-[12px] p-1">
           {TABS.map(t => (
             <button
               key={t.id}
               onClick={() => setMatTab(t.id)}
-              className={`flex-1 py-2.5 rounded-2xl text-[11px] font-bold transition-all ${matTab === t.id ? 'bg-[#007AFF] text-white shadow-md shadow-blue-200/50' : 'bg-gray-100/80 text-gray-400 hover:bg-gray-200/60'}`}
+              className={`flex-1 py-2 rounded-[10px] text-[11px] font-semibold transition-all ${matTab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
             >{t.label}</button>
           ))}
         </div>
@@ -3968,15 +3968,15 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
             {trendingSubTab === 'trending' && (
               <div>
                 {/* 账号定位相关推荐 Banner */}
-                <div className="bg-gradient-to-br from-orange-500 to-pink-500 rounded-[20px] p-4 mb-4 text-white shadow-md">
+                <div className="bg-white rounded-[20px] p-4 mb-4 shadow-[0_1px_8px_rgba(0,0,0,0.06)]">
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-base">🎯</div>
+                    <div className="w-8 h-8 rounded-xl bg-[rgba(60,60,67,0.06)] flex items-center justify-center text-base">🎯</div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-bold text-sm">为你推荐的爆款内容</div>
-                      <div className="text-[10px] text-orange-100 truncate">{acc?.name || '你的账号'} · {acc?.industry || '行业'} · {acc?.positioning ? acc.positioning.slice(0,12)+'...' : '账号定位'}</div>
+                      <div className="font-bold text-sm text-gray-900">为你推荐的爆款内容</div>
+                      <div className="text-[10px] text-gray-400 truncate">{acc?.name || '你的账号'} · {acc?.industry || '行业'} · {acc?.positioning ? acc.positioning.slice(0,12)+'...' : '账号定位'}</div>
                     </div>
                     <button onClick={fetchTrendingMaterials} disabled={trendingLoading}
-                      className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-white/20 text-white rounded-xl text-xs font-bold disabled:opacity-60 press border border-white/30">
+                      className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-[#007AFF] text-white rounded-xl text-xs font-bold disabled:opacity-60 press">
                       {trendingLoading ? <><span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin inline-block" /><span>抓取中</span></> : <><span>⚡</span><span>一键抓取</span></>}
                     </button>
                   </div>
@@ -3986,10 +3986,10 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                       { icon: '📈', label: '高互动形式', desc: '当前最高完播率' },
                       { icon: '💡', label: '可借势选题', desc: '热点+你的风格' },
                     ].map((tip, i) => (
-                      <div key={i} className="bg-white/15 rounded-[20px] px-2.5 py-2">
+                      <div key={i} className="bg-[rgba(60,60,67,0.04)] rounded-[14px] px-2.5 py-2">
                         <div className="text-sm mb-0.5">{tip.icon}</div>
-                        <div className="text-[11px] font-bold leading-tight">{tip.label}</div>
-                        <div className="text-[9px] text-orange-100 mt-0.5">{tip.desc}</div>
+                        <div className="text-[11px] font-bold leading-tight text-gray-700">{tip.label}</div>
+                        <div className="text-[9px] text-gray-400 mt-0.5">{tip.desc}</div>
                       </div>
                     ))}
                   </div>
@@ -4290,19 +4290,19 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                 {radarLoading && !radarData ? (
                       <div className="space-y-3">
                         {/* 加载骨架屏 */}
-                        <div className="bg-gradient-to-br from-[#007AFF] to-[#007AFF] rounded-[20px] p-5 text-white shadow-lg">
+                        <div className="bg-white rounded-[20px] p-5 shadow-[0_1px_8px_rgba(0,0,0,0.06)]">
                           <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center text-xl animate-pulse">📡</div>
+                            <div className="w-10 h-10 rounded-2xl bg-[rgba(60,60,67,0.06)] flex items-center justify-center text-xl animate-pulse">📡</div>
                             <div>
-                              <div className="font-bold text-base">正在为你分析热点...</div>
-                              <div className="text-xs text-blue-100 mt-0.5">{acc?.name || '你的账号'} · {acc?.industry || '行业'}</div>
+                              <div className="font-bold text-base text-gray-900">正在为你分析热点...</div>
+                              <div className="text-xs text-gray-400 mt-0.5">{acc?.name || '你的账号'} · {acc?.industry || '行业'}</div>
                             </div>
                           </div>
                           <div className="space-y-2">
                             {[1,2,3].map(i => (
-                              <div key={i} className="bg-white/15 rounded-[20px] px-4 py-3 animate-pulse">
-                                <div className="h-3 bg-white/30 rounded-full w-3/4 mb-2" />
-                                <div className="h-2 bg-white/20 rounded-full w-1/2" />
+                              <div key={i} className="bg-[rgba(60,60,67,0.04)] rounded-[16px] px-4 py-3 animate-pulse">
+                                <div className="h-3 bg-gray-200 rounded-full w-3/4 mb-2" />
+                                <div className="h-2 bg-gray-100 rounded-full w-1/2" />
                               </div>
                             ))}
                           </div>
@@ -4310,18 +4310,18 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                       </div>
                     ) : !radarData ? (
                       <div className="space-y-3">
-                        <div className="bg-gradient-to-br from-[#007AFF] to-[#007AFF] rounded-[20px] p-5 text-white shadow-lg">
-                          <div className="flex items-center gap-3 mb-3">
-                            <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center text-xl">📡</div>
+                        <div className="bg-white rounded-[20px] p-5 shadow-[0_1px_8px_rgba(0,0,0,0.06)]">
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-2xl bg-[rgba(60,60,67,0.06)] flex items-center justify-center text-xl">📡</div>
                             <div>
-                              <div className="font-bold text-base">为你定制的热点推荐</div>
-                              <div className="text-xs text-blue-100 mt-0.5">{acc?.name || '你的账号'} · {acc?.industry || '行业'}</div>
+                              <div className="font-bold text-base text-gray-900">为你定制的热点推荐</div>
+                              <div className="text-xs text-gray-400 mt-0.5">{acc?.name || '你的账号'} · {acc?.industry || '行业'}</div>
                             </div>
                           </div>
                           <button
                             onClick={fetchRadar}
                             disabled={radarLoading}
-                            className="w-full py-3 bg-white text-[#007AFF] text-sm font-bold rounded-[20px] disabled:opacity-60 active:scale-[0.97] transition-transform s2 flex items-center justify-center gap-2"
+                            className="w-full py-3 bg-[#007AFF] text-white text-sm font-bold rounded-[16px] disabled:opacity-60 active:scale-[0.97] transition-transform s2 flex items-center justify-center gap-2"
                           >
                             <span>📡</span><span>获取今日热点推荐</span>
                           </button>
@@ -4735,7 +4735,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
               <button
                 onClick={() => scrapeCreator(creatorSort, creatorCount)}
                 disabled={creatorLoading}
-                className="w-full py-2.5 bg-gradient-to-r from-green-400 to-emerald-500 text-white text-sm font-bold rounded-xl disabled:opacity-60 active:scale-[0.98] transition-transform shadow-md"
+                className="w-full py-2.5 bg-[#007AFF] text-white text-sm font-bold rounded-xl disabled:opacity-60 active:scale-[0.98] transition-transform"
               >
                 {creatorLoading ? '🔍 分析中...' : '🎯 开始追踪分析'}
               </button>
@@ -4778,7 +4778,7 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                       className="flex items-center gap-3 py-2.5 border-b border-gray-50/80/80 last:border-0 cursor-pointer active:bg-gray-50 rounded-xl px-1 transition-colors"
                       onClick={() => { setCreatorData({ creator: c, videos: c.videos, analysis: c.analysis, summary: c.summary }); setSelectedCreator(c) }}
                     >
-                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center text-white text-base font-bold flex-shrink-0">
+                      <div className="w-10 h-10 rounded-2xl bg-[rgba(60,60,67,0.06)] flex items-center justify-center text-base font-bold flex-shrink-0">
                         {PLATFORM_ICONS[c.platform] || '🎵'}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -4841,18 +4841,18 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                 </div>
 
                 {/* 博主信息卡 */}
-                <div className="bg-gradient-to-br from-[#007AFF] to-[#5856D6] rounded-[22px] p-4 text-white shadow-lg">
+                <div className="bg-white rounded-[22px] p-4 shadow-[0_1px_8px_rgba(0,0,0,0.06)]">
                   <div className="flex items-start gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl flex-shrink-0">
+                    <div className="w-12 h-12 rounded-2xl bg-[rgba(60,60,67,0.06)] flex items-center justify-center text-2xl flex-shrink-0">
                       {PLATFORM_ICONS[creatorData.creator?.platform] || '🎵'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-bold text-base">{creatorData.creator?.name}</div>
-                      <div className="text-white/70 text-xs mt-0.5">{creatorData.creator?.positioning}</div>
+                      <div className="font-bold text-base text-gray-900">{creatorData.creator?.name}</div>
+                      <div className="text-gray-400 text-xs mt-0.5">{creatorData.creator?.positioning}</div>
                       <div className="flex gap-2 mt-1">
-                        <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">{creatorData.creator?.industry}</span>
+                        <span className="text-[10px] bg-[rgba(60,60,67,0.06)] text-gray-500 px-2 py-0.5 rounded-full">{creatorData.creator?.industry}</span>
                         {creatorData.creator?.tags?.slice(0, 2).map((tag: string, i: number) => (
-                          <span key={i} className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">{tag}</span>
+                          <span key={i} className="text-[10px] bg-[rgba(60,60,67,0.06)] text-gray-500 px-2 py-0.5 rounded-full">{tag}</span>
                         ))}
                       </div>
                     </div>
@@ -4865,9 +4865,9 @@ function Materials({ acc, matTab, setMatTab, hotspots, aiTopics, topicsLoading, 
                       { label: '均点赞', value: creatorData.creator?.avgLikes?.toLocaleString() },
                       { label: '更新', value: creatorData.creator?.updateFreq?.replace('每周', '') || '稳定' },
                     ].map((s, i) => (
-                      <div key={i} className="bg-white/20 rounded-xl p-2 text-center">
-                        <div className="text-xs font-bold">{s.value}</div>
-                        <div className="text-[10px] text-white/60 mt-0.5">{s.label}</div>
+                      <div key={i} className="bg-[rgba(60,60,67,0.04)] rounded-xl p-2 text-center">
+                        <div className="text-xs font-bold text-gray-900">{s.value}</div>
+                        <div className="text-[10px] text-gray-400 mt-0.5">{s.label}</div>
                       </div>
                     ))}
                   </div>
@@ -7207,116 +7207,109 @@ function CreativeStudio({ acc, showToast, savedTopics, savedContents, setSavedCo
 
               {/* ── 大视频预览区 ── */}
               <div className="bg-white rounded-[18px] overflow-hidden s2 press">
-                {/* 预览上方：选题 / 热点 / 文案 信息行（点击编辑） */}
-                <div className="px-4 pt-4 pb-3 space-y-2 border-b border-gray-50/80">
-                  {/* 选题行 */}
-                  <button onClick={() => setExpandedPanel(expandedPanel === 'topic' ? null : 'topic')}
-                    className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-2xl transition-all text-left active:scale-[0.98] ${expandedPanel === 'topic' ? 'bg-[#007AFF]/8 ring-1 ring-indigo-200' : topic ? 'bg-[#34C759]/8' : 'bg-gray-50'}`}>
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${topic ? 'bg-[#34C759] text-white' : expandedPanel === 'topic' ? 'bg-[#007AFF] text-white' : 'bg-gray-200 text-gray-500'}`}>
-                      {topic ? '✓' : '💡'}
+                {/* 输入区 — 选题 / 热点 / 文案 */}
+                    <div style={{padding:'12px 14px 10px',display:'flex',flexDirection:'column',gap:5,borderBottom:'0.5px solid rgba(60,60,67,0.08)'}}>
+                      {[
+                        { id:'topic', label:'选题', value: topic, placeholder:'点击填写或选择选题...', color:'#007AFF', optional:false },
+                        { id:'hotspot', label:'关联热点', value: linkedHotspot?.title, placeholder:'选择热点借势...', color:'#FF9500', optional:true },
+                        { id:'copy', label:'文案', value: copy ? copy.slice(0,32)+(copy.length>32?'...':'') : null, placeholder:'点击填写或 AI 生成文案...', color:'#007AFF', optional:false },
+                      ].map((row:any)=>{
+                        const isActive = expandedPanel === row.id
+                        const isDone = !!row.value
+                        return (
+                          <button key={row.id}
+                            onClick={()=>setExpandedPanel(expandedPanel===row.id?null:row.id)}
+                            style={{width:'100%',display:'flex',alignItems:'center',gap:10,padding:'9px 12px',borderRadius:10,background: isActive ? `${row.color}0D` : 'rgba(60,60,67,0.05)',border: isActive ? `1px solid ${row.color}33` : '1px solid transparent',cursor:'pointer',textAlign:'left' as const,transition:'all 0.15s ease',WebkitTapHighlightColor:'transparent'}}>
+                            <div style={{width:26,height:26,borderRadius:7,background: isDone ? row.color : 'rgba(60,60,67,0.1)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'background 0.2s'}}>
+                              {isDone
+                                ? <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                : <span style={{fontSize:12,color:'#AEAEB2'}}>{row.id==='topic'?'💡':row.id==='hotspot'?'🔥':'✍️'}</span>
+                              }
+                            </div>
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{fontSize:10,fontWeight:600,color:'#AEAEB2',letterSpacing:0.2,marginBottom:1}}>
+                                {row.label}{row.optional && <span style={{fontWeight:400,marginLeft:4}}>可选</span>}
+                              </div>
+                              <div style={{fontSize:13,fontWeight: isDone?500:400,color: isDone ? '#000' : '#C7C7CC',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' as const,letterSpacing:-0.1}}>
+                                {row.value || row.placeholder}
+                              </div>
+                            </div>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#C7C7CC" strokeWidth="2.5" strokeLinecap="round" style={{flexShrink:0,transform: isActive?'rotate(180deg)':'none',transition:'transform 0.2s'}}><path d="M6 9l6 6 6-6"/></svg>
+                          </button>
+                        )
+                      })}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className={`text-[10px] font-bold ${expandedPanel === 'topic' ? 'text-[#007AFF]' : 'text-gray-400'}`}>选题</div>
-                      <div className={`text-sm font-bold truncate ${topic ? 'text-gray-900' : 'text-gray-400'}`}>
-                        {topic || '点击填写或选择选题...'}
-                      </div>
-                    </div>
-                    <span className={`text-gray-400 text-xs transition-transform flex-shrink-0 ${expandedPanel === 'topic' ? 'rotate-180 text-[#007AFF]/70' : ''}`}>⌄</span>
-                  </button>
 
-                  {/* 关联热点行 */}
-                  <button onClick={() => setExpandedPanel(expandedPanel === 'hotspot' ? null : 'hotspot')}
-                    className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-2xl transition-all text-left active:scale-[0.98] ${expandedPanel === 'hotspot' ? 'bg-[#FF9500]/8 ring-1 ring-orange-200' : linkedHotspot ? 'bg-[#FF9500]/8/50' : 'bg-gray-50'}`}>
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${linkedHotspot ? 'bg-orange-400 text-white' : expandedPanel === 'hotspot' ? 'bg-orange-400 text-white' : 'bg-gray-200 text-gray-500'}`}>
-                      {linkedHotspot ? '🔥' : '📡'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[10px] text-gray-400 font-semibold">关联热点 <span className="text-gray-300">可选</span></div>
-                      <div className={`text-sm font-bold truncate ${linkedHotspot ? 'text-orange-600' : 'text-gray-300'}`}>
-                        {linkedHotspot ? linkedHotspot.title : '点击选择热点借势...'}
-                      </div>
-                    </div>
-                    <span className={`text-gray-400 text-xs transition-transform flex-shrink-0 ${expandedPanel === 'hotspot' ? 'rotate-180' : ''}`}>⌄</span>
-                  </button>
-
-                  {/* 文案行 */}
-                  <button onClick={() => setExpandedPanel(expandedPanel === 'copy' ? null : 'copy')}
-                    className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-2xl transition-all text-left active:scale-[0.98] ${expandedPanel === 'copy' ? 'bg-[#5856D6]/8 ring-1 ring-violet-200' : copy ? 'bg-[#5856D6]/8/50' : 'bg-gray-50'}`}>
-                    <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${copy ? 'bg-blue-100' : 'bg-gray-200'}`}>
-                      {copy ? '✓' : '✍️'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[10px] text-gray-400 font-semibold">文案</div>
-                      <div className={`text-sm font-bold truncate ${copy ? 'text-gray-900' : 'text-gray-300'}`}>
-                        {copy ? copy.slice(0, 30) + (copy.length > 30 ? '...' : '') : '点击填写或 AI 生成文案...'}
-                      </div>
-                    </div>
-                    <span className={`text-gray-400 text-xs transition-transform flex-shrink-0 ${expandedPanel === 'copy' ? 'rotate-180' : ''}`}>⌄</span>
-                  </button>
-                </div>
-
-                {/* 预览主体：左侧控制 + 中间大预览 */}
-                <div className="flex gap-3 px-4 py-4 items-end">
-                  {/* 左侧：声音 / 形象 / 背景 竖排按钮 */}
-                  <div className="flex flex-col gap-2 flex-shrink-0">
-                    <button onClick={() => setExpandedPanel(expandedPanel === 'voice' ? null : 'voice')}
-                      className={`flex flex-col items-center gap-1 w-14 py-2.5 rounded-2xl transition-all active:scale-95 ${expandedPanel === 'voice' ? 'bg-[#007AFF] text-white shadow-md shadow-indigo-200' : 'bg-gray-100 text-gray-600'}`}>
-                      <span className="text-lg">{currentVoice?.emoji || '🎙️'}</span>
-                      <span className="text-[9px] font-bold leading-tight text-center">{currentVoice?.label?.slice(0,3) || '声音'}</span>
-                    </button>
-                    <button onClick={() => setExpandedPanel(expandedPanel === 'avatar' ? null : 'avatar')}
-                      className={`flex flex-col items-center gap-1 w-14 py-2.5 rounded-2xl transition-all active:scale-95 ${expandedPanel === 'avatar' ? 'bg-[#5856D6] text-white shadow-md shadow-violet-200' : 'bg-gray-100 text-gray-600'}`}>
-                      <span className="text-lg">{AVATAR_PRESETS.find((a: any) => a.id === videoAvatarPreset)?.emoji || '🧑'}</span>
-                      <span className="text-[9px] font-bold leading-tight text-center">形象</span>
-                    </button>
-                    <button onClick={() => setExpandedPanel(expandedPanel === 'background' ? null : 'background')}
-                      className={`flex flex-col items-center gap-1 w-14 py-2.5 rounded-2xl transition-all active:scale-95 ${expandedPanel === 'background' ? 'bg-rose-500 text-white shadow-md shadow-rose-200' : 'bg-gray-100 text-gray-600'}`}>
-                      <div className="w-6 h-6 rounded-lg" style={{ background: bgGradient }} />
-                      <span className="text-[9px] font-bold leading-tight text-center text-current">背景</span>
-                    </button>
-                    <div className="flex flex-col gap-1 mt-1">
-                      {(['9:16', '16:9', '1:1'] as const).map(r => (
-                        <button key={r} onClick={() => setVideoRatio(r)}
-                          className={`w-14 py-1 rounded-lg text-[9px] font-bold transition-all ${videoRatio === r ? 'bg-[#5856D6] text-white' : 'bg-gray-100 text-gray-500'}`}>{r}</button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* 中间：大视频预览 */}
-                  <div className="flex-1 flex justify-center">
-                    <div className="relative rounded-[20px] overflow-hidden shadow-xl"
-                      style={{
-                        background: bgGradient,
-                        width: videoRatio === '16:9' ? '200px' : videoRatio === '1:1' ? '180px' : '140px',
-                        height: videoRatio === '16:9' ? '112px' : videoRatio === '1:1' ? '180px' : '248px',
-                      }}>
-                      <div className="absolute inset-0 opacity-20">
-                        <div className="absolute top-4 right-4 w-16 h-16 rounded-full bg-white/30" />
-                        <div className="absolute bottom-8 left-4 w-10 h-10 rounded-full bg-white/20" />
-                      </div>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <div className="text-5xl mb-2 drop-shadow-lg">{AVATAR_PRESETS.find((a: any) => a.id === videoAvatarPreset)?.emoji || '🧑'}</div>
-                        {copy && (
-                          <div className="text-white text-[9px] text-center leading-tight px-3 opacity-90 font-medium">
-                            {copy.slice(0, 40)}
-                          </div>
-                        )}
-                        {!copy && (
-                          <div className="text-white/40 text-[9px] text-center">文案预览</div>
-                        )}
-                      </div>
-                      {subtitleStyle !== 'none' && copy && (
-                        <div className="absolute bottom-2 left-2 right-2 bg-black/60 rounded-lg px-2 py-1 text-center">
-                          <span className="text-white text-[8px] font-medium">{copy.slice(0, 12)}</span>
+                                    {/* 预览主体：左侧控制 + 中间大预览 */}
+                    <div style={{display:'flex',gap:12,padding:'12px 14px 16px',alignItems:'flex-end'}}>
+                      {/* 左侧控制 */}
+                      <div style={{display:'flex',flexDirection:'column',gap:5,flexShrink:0}}>
+                        {[
+                          { id:'voice', icon: currentVoice?.emoji||'🎙️', label: currentVoice?.label?.slice(0,2)||'声音' },
+                          { id:'avatar', icon: AVATAR_PRESETS.find((a:any)=>a.id===videoAvatarPreset)?.emoji||'🧑', label:'形象' },
+                          { id:'background', icon: null, label:'背景' },
+                        ].map((btn:any)=>{
+                          const isActive = expandedPanel === btn.id
+                          return (
+                            <button key={btn.id} onClick={()=>setExpandedPanel(expandedPanel===btn.id?null:btn.id)}
+                              style={{width:46,display:'flex',flexDirection:'column',alignItems:'center',gap:3,padding:'8px 4px',borderRadius:11,background: isActive ? '#007AFF' : 'rgba(60,60,67,0.07)',border:'none',cursor:'pointer',transition:'all 0.18s ease'}} className="press">
+                              {btn.id === 'background'
+                                ? <div style={{width:20,height:20,borderRadius:5,background: isActive ? 'rgba(255,255,255,0.3)' : bgGradient}} />
+                                : <span style={{fontSize:17,lineHeight:1}}>{btn.icon}</span>
+                              }
+                              <span style={{fontSize:9,fontWeight:600,color: isActive ? 'white' : '#8E8E93',letterSpacing:0.1}}>{btn.label}</span>
+                            </button>
+                          )
+                        })}
+                        <div style={{display:'flex',flexDirection:'column',gap:3,marginTop:2}}>
+                          {(['9:16','16:9','1:1'] as const).map(r=>(
+                            <button key={r} onClick={()=>setVideoRatio(r)}
+                              style={{width:46,padding:'4px 0',borderRadius:7,fontSize:9,fontWeight:600,border:'none',cursor:'pointer',background: videoRatio===r ? '#1C1C1E' : 'rgba(60,60,67,0.07)',color: videoRatio===r ? 'white' : '#8E8E93',transition:'all 0.15s ease'}}>{r}</button>
+                          ))}
                         </div>
-                      )}
-                      <div className="absolute top-2 left-2 bg-black/40 rounded-md px-1.5 py-0.5 text-[8px] text-white font-bold">{videoRatio}</div>
-                      <div className="absolute top-2 right-2 bg-black/40 rounded-md px-1.5 py-0.5 text-[8px] text-white">
-                        {currentVoice?.emoji || '🎙️'}
+                      </div>
+
+                      {/* 视频预览 */}
+                      <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:10}}>
+                        <div style={{
+                          width: videoRatio==='16:9' ? '100%' : videoRatio==='1:1' ? 150 : 110,
+                          aspectRatio: videoRatio==='9:16' ? '9/16' : videoRatio==='16:9' ? '16/9' : '1/1',
+                          borderRadius:12,
+                          background: bgGradient || 'linear-gradient(160deg,#1a1a2e 0%,#16213e 100%)',
+                          display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+                          position:'relative',overflow:'hidden',
+                          boxShadow:'0 6px 20px rgba(0,0,0,0.22)',
+                          maxHeight:200,
+                        }}>
+                          <div style={{position:'absolute',top:7,left:8,right:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                            <span style={{fontSize:8,color:'rgba(255,255,255,0.4)',fontWeight:500}}>{videoRatio}</span>
+                            <div style={{width:6,height:6,borderRadius:3,background:'#FF9500'}} />
+                          </div>
+                          <div style={{width:48,height:48,borderRadius:24,background:'rgba(255,255,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,marginBottom:6}}>
+                            {AVATAR_PRESETS.find((a:any)=>a.id===videoAvatarPreset)?.emoji||'🧑'}
+                          </div>
+                          <div style={{fontSize:9,color:'rgba(255,255,255,0.6)',textAlign:'center' as const,padding:'0 10px',lineHeight:1.4,maxWidth:'100%',overflow:'hidden'}}>
+                            {copy ? copy.slice(0,24)+'...' : '文案预览'}
+                          </div>
+                          <div style={{position:'absolute',bottom:6,right:6,background:'rgba(0,0,0,0.45)',borderRadius:5,padding:'2px 5px',fontSize:8,color:'rgba(255,255,255,0.65)'}}>
+                            {currentVoice?.emoji||'🎙️'}
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={()=>{ if(!copy){showToast('⚠️ 请先填写文案');return} setExpandedPanel('genmode') }}
+                          style={{
+                            width:'100%',padding:'11px 0',borderRadius:11,
+                            background: copy ? '#007AFF' : 'rgba(60,60,67,0.1)',
+                            color: copy ? 'white' : '#8E8E93',
+                            fontSize:14,fontWeight:600,border:'none',cursor:'pointer',letterSpacing:-0.2,
+                            boxShadow: copy ? '0 3px 12px rgba(0,122,255,0.3)' : 'none',
+                            transition:'all 0.2s ease',
+                          }} className="press">
+                          {copy ? '生成视频 →' : '先填写文案'}
+                        </button>
                       </div>
                     </div>
-                  </div>
-                </div>
               </div>
 
               {/* ── 展开的编辑面板（底部浮层）── */}
