@@ -3065,55 +3065,49 @@ export default function ContentOSApp() {
         )}
       </div>
             
-                <div className="glass-nav flex items-end z-50" style={{position:'absolute',bottom:0,left:0,right:0,paddingBottom:'max(20px, env(safe-area-inset-bottom, 20px))'}}>
-        {NAV_TABS.map((t, idx) => {
-          const isActive = t.id === 'create' ? (tab === 'content' || tab === 'video') : tab === t.id
-          const isCreate = t.id === 'create'
-          return (
-            <button key={t.id} onClick={() => {
-                  if (t.id === 'create') { setTab('content') }
-                  else { setTab(t.id as Tab) }
-                }}
-              style={{WebkitTapHighlightColor:'transparent',outline:'none',border:'none',background:'none',cursor:'pointer',flex:1,display:'flex',flexDirection:'column',alignItems:'center',paddingBottom:2,paddingTop: isCreate ? 0 : 8,position:'relative'}}>
-              {isCreate ? (
-                /* 创作按钮 — 凸起圆角方块 */
-                <div style={{
-                  marginTop:-22,
-                  width:52, height:52, borderRadius:16,
-                  background: isActive
-                    ? 'linear-gradient(145deg,#007AFF 0%,#5856D6 100%)'
-                    : 'linear-gradient(145deg,#007AFF 0%,#5856D6 100%)',
-                  boxShadow: isActive
-                    ? '0 6px 20px rgba(0,122,255,0.5), 0 2px 8px rgba(0,122,255,0.3)'
-                    : '0 4px 14px rgba(0,122,255,0.4)',
-                  display:'flex', alignItems:'center', justifyContent:'center',
-                  transform: isActive ? 'scale(1.06)' : 'scale(1)',
-                  transition:'all 0.25s cubic-bezier(0.34,1.56,0.64,1)'
-                }}>
-                  <span style={{fontSize:22}}>{t.icon}</span>
-                </div>
-              ) : (
-                /* 普通Tab图标 */
-                <div style={{
-                  width:44, height:32, borderRadius:10,
-                  display:'flex', alignItems:'center', justifyContent:'center',
-                  background: isActive ? 'rgba(0,122,255,0.1)' : 'transparent',
-                  transform: isActive ? 'scale(1.08)' : 'scale(1)',
-                  transition:'all 0.22s cubic-bezier(0.34,1.56,0.64,1)'
-                }}>
-                  <span style={{fontSize:20}}>{t.icon}</span>
-                </div>
-              )}
-              <span style={{
-                fontSize:10, lineHeight:1.2, marginTop: isCreate ? 5 : 2,
-                fontWeight: isActive ? 600 : 400,
-                color: isActive ? '#007AFF' : '#8E8E93',
-                letterSpacing: 0.1,
-                transition:'color 0.18s ease'
-              }}>{t.label}</span>
-            </button>
-          )
-        })}      </div>
+                <div className="glass-nav flex items-end z-50" style={{position:'absolute',bottom:0,left:0,right:0,paddingBottom:'max(16px, env(safe-area-inset-bottom, 16px))',paddingTop:8}}>
+            {NAV_TABS.map((t, idx) => {
+              const isActive = t.id === 'create' ? (tab === 'content' || tab === 'video') : tab === t.id
+              const isCreate = t.id === 'create'
+              return (
+                <button key={t.id} onClick={() => {
+                      if (t.id === 'create') { setTab('content') }
+                      else { setTab(t.id as Tab) }
+                    }}
+                  style={{WebkitTapHighlightColor:'transparent',outline:'none',border:'none',background:'none',cursor:'pointer',flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:3,paddingTop: isCreate ? 0 : 4,position:'relative'}}>
+                  {isCreate ? (
+                    <div style={{
+                      marginTop:-18,
+                      width:48, height:48, borderRadius:14,
+                      background:'linear-gradient(145deg,#007AFF 0%,#5856D6 100%)',
+                      boxShadow:'0 4px 16px rgba(0,122,255,0.45)',
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                      transform: isActive ? 'scale(1.04)' : 'scale(1)',
+                      transition:'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)'
+                    }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 5v14M5 12h14"/>
+                      </svg>
+                    </div>
+                  ) : (
+                    <div style={{
+                      width:28, height:28,
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                      transition:'transform 0.18s cubic-bezier(0.34,1.56,0.64,1)',
+                      transform: isActive ? 'scale(1.1)' : 'scale(1)',
+                    }}>
+                      <span style={{fontSize:22, filter: isActive ? 'none' : 'grayscale(0.3) opacity(0.6)'}}>{t.icon}</span>
+                    </div>
+                  )}
+                  <span style={{
+                    fontSize:10, lineHeight:1, letterSpacing:0.1,
+                    fontWeight: isActive ? 600 : 400,
+                    color: isActive ? '#007AFF' : '#8E8E93',
+                    transition:'color 0.18s ease'
+                  }}>{t.label}</span>
+                </button>
+              )
+            })}      </div>
     </div>
   )
 }
@@ -3362,157 +3356,156 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
             </div>
           )}
 
-          {/* 顶部 Header — iOS 大标题风格 */}
-          <div style={{background:'#F2F2F7',paddingTop:50,paddingBottom:0}}>
-            {/* 大标题行 */}
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 20px 10px'}}>
-              <div style={{display:'flex',alignItems:'center',gap:12}}>
-                <div className={`bg-gradient-to-br ${acc.color || 'from-blue-400 to-cyan-400'}`} style={{width:44,height:44,borderRadius:14,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,boxShadow:'0 3px 10px rgba(0,0,0,0.18)'}}>
-                  {acc.emoji || '🏪'}
+          {/* ── Header ── */}
+          <div style={{background:'#F2F2F7', paddingTop:50}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 20px 12px'}}>
+              <div style={{display:'flex',alignItems:'center',gap:11}}>
+                <div className={`bg-gradient-to-br ${acc.color||'from-orange-400 to-amber-500'}`}
+                  style={{width:42,height:42,borderRadius:13,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0,boxShadow:'0 2px 8px rgba(0,0,0,0.15)'}}>
+                  {acc.emoji||'🏪'}
                 </div>
                 <div>
-                  <div style={{fontSize:20,fontWeight:700,color:'#000',letterSpacing:-0.5,lineHeight:1.15}}>{acc.name}</div>
+                  <div style={{fontSize:19,fontWeight:700,color:'#000',letterSpacing:-0.4,lineHeight:1.2}}>{acc.name}</div>
                   <div style={{fontSize:12,color:'#8E8E93',marginTop:1,letterSpacing:-0.1}}>
-                    {acc.industry}
-                    {acc.positioning === '待完善'
-                      ? <span style={{color:'#FF9500',fontWeight:600}}> · 定位待完善</span>
-                      : acc.positioning ? <span style={{color:'#8E8E93'}}> · {acc.positioning?.slice(0,10)}</span> : null}
+                    {acc.industry}{acc.positioning && acc.positioning !== '待完善' ? ` · ${acc.positioning.slice(0,12)}` : <span style={{color:'#FF9500'}}> · 定位待完善</span>}
                   </div>
                 </div>
               </div>
-              <div style={{display:'flex',alignItems:'center',gap:6}}>
-                <button onClick={() => setShowGlobalSearch(true)} style={{width:36,height:36,borderRadius:18,background:'rgba(118,118,128,0.12)',border:'none',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,cursor:'pointer'}} className="press">🔍</button>
-                <button onClick={() => setShowAccSettings(true)} style={{width:36,height:36,borderRadius:18,background:'rgba(118,118,128,0.12)',border:'none',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,cursor:'pointer'}} className="press">⚙️</button>
+              <div style={{display:'flex',gap:8}}>
+                <button onClick={()=>setShowGlobalSearch(true)} style={{width:34,height:34,borderRadius:17,background:'rgba(118,118,128,0.12)',border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}} className="press">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3C3C43" strokeWidth="2.2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+                </button>
+                <button onClick={()=>setShowAccSettings(true)} style={{width:34,height:34,borderRadius:17,background:'rgba(118,118,128,0.12)',border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}} className="press">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3C3C43" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                </button>
               </div>
             </div>
 
-            {/* 账号切换 — iOS 横向胶囊 */}
-            <div style={{display:'flex',gap:6,overflowX:'auto',padding:'0 20px 14px',scrollbarWidth:'none'}}>
+            {/* 账号切换 */}
+            <div style={{display:'flex',gap:8,overflowX:'auto',padding:'0 16px 14px',scrollbarWidth:'none'}} className="scrollbar-hide">
               {accounts.map((a: any, i: number) => {
-                const accVR = (() => { try { const k = `contentos_${a.id}_video_records`; const d = localStorage.getItem(k); return d ? JSON.parse(d).length : 0 } catch { return 0 } })()
-                const accSch = (() => { try { const k = `contentos_${a.id}_schedule`; const d = localStorage.getItem(k); return d ? JSON.parse(d).filter((s: any) => s.status !== '已发布').length : 0 } catch { return 0 } })()
                 const isActive = i === accountIdx
+                const accVR = (a.videoRecords||[]).length
+                const accSch = (a.schedule||[]).length
                 return (
-                  <button key={a.id}
-                    onClick={() => { setAccountIdx(i); if (typeof navigator !== 'undefined') navigator.vibrate?.(10) }}
+                  <button key={a.id} onClick={()=>setAccountIdx(i)}
                     style={{
-                      flexShrink:0, display:'flex', alignItems:'center', gap:7,
-                      padding:'7px 12px 7px 8px', borderRadius:22, border:'none', cursor:'pointer',
+                      flexShrink:0, display:'flex', alignItems:'center', gap:8,
+                      padding:'8px 14px', borderRadius:22,
                       background: isActive ? '#007AFF' : 'white',
-                      boxShadow: isActive ? '0 3px 12px rgba(0,122,255,0.38)' : '0 1px 4px rgba(0,0,0,0.08)',
+                      border: isActive ? 'none' : '1px solid rgba(60,60,67,0.12)',
+                      cursor:'pointer',
+                      boxShadow: isActive ? '0 2px 10px rgba(0,122,255,0.3)' : '0 1px 3px rgba(0,0,0,0.06)',
+                      transition:'all 0.2s ease',
                     }} className="press">
-                    <div style={{width:26,height:26,borderRadius:8,background:isActive?'rgba(255,255,255,0.25)':'rgba(0,122,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,flexShrink:0}}>
-                      {a.emoji || '🏪'}
-                    </div>
+                    <span style={{fontSize:15}}>{a.emoji||'🏪'}</span>
                     <div style={{textAlign:'left'}}>
                       <div style={{fontSize:13,fontWeight:600,color:isActive?'white':'#000',letterSpacing:-0.2,whiteSpace:'nowrap'}}>{a.name}</div>
-                      <div style={{fontSize:10,color:isActive?'rgba(255,255,255,0.65)':'#8E8E93',marginTop:0.5}}>{accVR}视频 · {accSch}排期</div>
+                      <div style={{fontSize:10,color:isActive?'rgba(255,255,255,0.6)':'#8E8E93',marginTop:0.5}}>{accVR}视频 · {accSch}排期</div>
                     </div>
-                    {isActive && accSwitching && <div style={{width:10,height:10,border:'2px solid rgba(255,255,255,0.5)',borderTopColor:'transparent',borderRadius:'50%',flexShrink:0}} className="animate-spin" />}
                   </button>
                 )
               })}
-              <button onClick={() => onPositioning()}
-                style={{flexShrink:0,display:'flex',alignItems:'center',gap:5,padding:'7px 14px',borderRadius:22,border:'1.5px dashed rgba(0,0,0,0.12)',background:'transparent',cursor:'pointer'}} className="press">
-                <span style={{fontSize:16,color:'#8E8E93'}}>＋</span>
-                <span style={{fontSize:12,color:'#8E8E93',fontWeight:500}}>新账号</span>
+              <button onClick={()=>onPositioning()}
+                style={{flexShrink:0,display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:22,border:'1.5px dashed rgba(60,60,67,0.2)',background:'transparent',cursor:'pointer'}} className="press">
+                <span style={{fontSize:16,color:'#8E8E93',lineHeight:1}}>+</span>
+                <span style={{fontSize:13,color:'#8E8E93',fontWeight:500,whiteSpace:'nowrap'}}>新账号</span>
               </button>
             </div>
           </div>
 
-          {/* 数据概览 — iOS 分组列表风格 */}
-          <div style={{margin:'0 16px 0',background:'white',borderRadius:16,overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>
-            {[
-              { label: '总粉丝', value: (() => { try { return accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.fans) || 0) } return sum }, 0).toLocaleString() } catch { return '0' } })(), icon: '👥', color: '#007AFF', bg: 'rgba(0,122,255,0.1)' },
-              { label: '粉丝增量', value: (() => { try { return '+' + accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.fansGrowth) || 0) } return sum }, 0).toLocaleString() } catch { return '+0' } })(), icon: '📈', color: '#34C759', bg: 'rgba(52,199,89,0.1)' },
-              { label: '总曝光', value: (() => { try { const total = accounts.reduce((sum: number, a: any) => { const d = localStorage.getItem(`contentos_${a.id}_manual_stats`); if (d) { const s = JSON.parse(d); return sum + (parseInt(s.plays) || 0) } return sum }, 0); return total >= 10000 ? (total/10000).toFixed(1)+'万' : total.toLocaleString() } catch { return '0' } })(), icon: '👁️', color: '#5856D6', bg: 'rgba(88,86,214,0.1)' },
-            ].map((item, i, arr) => (
-              <div key={i} style={{display:'flex',alignItems:'center',padding:'13px 16px',borderBottom: i < arr.length-1 ? '0.5px solid rgba(60,60,67,0.12)' : 'none'}}>
-                <div style={{width:34,height:34,borderRadius:10,background:item.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0,marginRight:12}}>{item.icon}</div>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:15,fontWeight:600,color:'#000',letterSpacing:-0.2}}>{item.label}</div>
-                </div>
-                <div style={{fontSize:17,fontWeight:600,color:item.color,letterSpacing:-0.3}}>{item.value}</div>
-              </div>
-            ))}
-          </div>
+          {/* ── 主内容区 ── */}
+          <div className="flex-1 overflow-y-auto scrollbar-hide" style={{padding:'12px 16px 110px',display:'flex',flexDirection:'column',gap:10}}>
 
-          {/* 主内容区 */}
-          <div className="flex-1 overflow-y-auto scrollbar-hide" style={{padding:"16px 16px 110px",display:"flex",flexDirection:"column",gap:12}}>
-
-                        {/* 日期卡片 — iOS 大渐变卡片 */}
-            <div style={{
-              background:'linear-gradient(150deg,#007AFF 0%,#0A84FF 40%,#5856D6 100%)',
-              borderRadius:20,
-              padding:'20px 20px 18px',
-              color:'white',
-              boxShadow:'0 8px 28px rgba(0,122,255,0.38)',
-              position:'relative',
-              overflow:'hidden'
-            }}>
-              {/* 背景装饰圆 */}
-              <div style={{position:'absolute',top:-30,right:-20,width:120,height:120,borderRadius:'50%',background:'rgba(255,255,255,0.07)',pointerEvents:'none'}} />
-              <div style={{position:'absolute',bottom:-40,right:30,width:90,height:90,borderRadius:'50%',background:'rgba(255,255,255,0.05)',pointerEvents:'none'}} />
-              
-              <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',position:'relative'}}>
-                <div>
-                  <div style={{fontSize:11,fontWeight:500,color:'rgba(255,255,255,0.6)',letterSpacing:1.2,textTransform:'uppercase',marginBottom:4}}>TODAY</div>
-                  <div style={{fontSize:24,fontWeight:700,letterSpacing:-0.6,lineHeight:1.1}}>{dateStr}</div>
+            {/* 数据概览 — 3列横排小卡片 */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}}>
+              {[
+                { label:'总粉丝', value: (() => { try { return accounts.reduce((s:number,a:any)=>{const d=localStorage.getItem(`contentos_${a.id}_manual_stats`);if(d){const x=JSON.parse(d);return s+(parseInt(x.fans)||0)}return s},0).toLocaleString() } catch{return'0'} })(), icon:'👥', color:'#007AFF' },
+                { label:'粉丝增量', value: (() => { try { const v=accounts.reduce((s:number,a:any)=>{const d=localStorage.getItem(`contentos_${a.id}_manual_stats`);if(d){const x=JSON.parse(d);return s+(parseInt(x.fansGrowth)||0)}return s},0); return (v>=0?'+':'')+v } catch{return'+0'} })(), icon:'📈', color:'#34C759' },
+                { label:'总曝光', value: (() => { try { const v=accounts.reduce((s:number,a:any)=>{const d=localStorage.getItem(`contentos_${a.id}_manual_stats`);if(d){const x=JSON.parse(d);return s+(parseInt(x.plays)||0)}return s},0); return v>=10000?(v/10000).toFixed(1)+'万':v.toLocaleString() } catch{return'0'} })(), icon:'👁️', color:'#5856D6' },
+              ].map((item,i)=>(
+                <div key={i} style={{background:'white',borderRadius:14,padding:'12px 12px 10px',boxShadow:'0 1px 3px rgba(0,0,0,0.06)'}}>
+                  <div style={{fontSize:18,marginBottom:6}}>{item.icon}</div>
+                  <div style={{fontSize:20,fontWeight:700,color:item.color,letterSpacing:-0.5,lineHeight:1}}>{item.value}</div>
+                  <div style={{fontSize:11,color:'#8E8E93',marginTop:4,letterSpacing:-0.1}}>{item.label}</div>
                 </div>
-                <div style={{textAlign:'right'}}>
-                  <div style={{fontSize:11,color:'rgba(255,255,255,0.6)',marginBottom:2}}>任务完成</div>
-                  <div style={{fontSize:22,fontWeight:700,letterSpacing:-0.5}}>
-                    {completedCount}<span style={{fontSize:14,fontWeight:400,opacity:0.6}}>/{totalCount}</span>
-                  </div>
-                </div>
-              </div>
-              
-              {totalCount > 0 && (
-                <div style={{marginTop:14,position:'relative'}}>
-                  <div style={{height:4,background:'rgba(255,255,255,0.2)',borderRadius:100,overflow:'hidden'}}>
-                    <div style={{height:'100%',background:'rgba(255,255,255,0.9)',borderRadius:100,width:`${Math.round(completedCount/totalCount*100)}%`,transition:'width 0.6s cubic-bezier(0.34,1.56,0.64,1)'}} />
-                  </div>
-                  <div style={{fontSize:11,color:'rgba(255,255,255,0.5)',marginTop:6,textAlign:'right'}}>{Math.round(completedCount/totalCount*100)}% 完成</div>
-                </div>
-              )}
+              ))}
             </div>
 
-            {/* 数据概览 — iOS Widget 2x2 */}
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-              {statsCards.map((card: any) => {
-                const colorMap: any = {
-                  blue:   { bg:'rgba(0,122,255,0.1)',   color:'#007AFF',  icon_bg:'rgba(0,122,255,0.15)' },
-                  purple: { bg:'rgba(88,86,214,0.1)',   color:'#5856D6',  icon_bg:'rgba(88,86,214,0.15)' },
-                  indigo: { bg:'rgba(0,122,255,0.1)',   color:'#007AFF',  icon_bg:'rgba(0,122,255,0.15)' },
-                  green:  { bg:'rgba(52,199,89,0.1)',   color:'#34C759',  icon_bg:'rgba(52,199,89,0.15)' },
-                }
-                const c = colorMap[card.color] || { bg:'rgba(120,120,128,0.1)', color:'#8E8E93', icon_bg:'rgba(120,120,128,0.12)' }
-                return (
-                  <button key={card.label}
-                    onClick={() => { if (card.action === 'topics') { setTab('content') } else if (card.action === 'knowledge') { setTab('materials'); setMatTab('mine') } else setTab(card.action) }}
-                    style={{
-                      background:'white', borderRadius:16, padding:'14px 14px 12px',
-                      textAlign:'left', border:'none', cursor:'pointer',
-                      boxShadow:'0 1px 4px rgba(0,0,0,0.07)',
-                      WebkitTapHighlightColor:'transparent',
-                    }} className="press">
-                    <div style={{width:36,height:36,borderRadius:11,background:c.icon_bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,marginBottom:10}}>{card.icon}</div>
-                    <div style={{fontSize:22,fontWeight:700,color:'#000',letterSpacing:-0.5,lineHeight:1}}>{card.value}</div>
-                    <div style={{fontSize:12,color:'#8E8E93',marginTop:4,letterSpacing:-0.1}}>{card.label}</div>
+            {/* 快速入口 — 2行3列图标网格 */}
+            <div style={{background:'white',borderRadius:16,padding:'14px 12px 10px',boxShadow:'0 1px 3px rgba(0,0,0,0.06)'}}>
+              <div style={{fontSize:13,fontWeight:600,color:'#8E8E93',letterSpacing:-0.1,marginBottom:12,paddingLeft:4}}>快速开始</div>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:4}}>
+                {[
+                  { icon:'💡', label:'生成选题', action:()=>setTab('content'), bg:'rgba(88,86,214,0.08)' },
+                  { icon:'✍️', label:'写文案',   action:()=>setTab('content'), bg:'rgba(0,122,255,0.08)' },
+                  { icon:'🎬', label:'做视频',   action:()=>setTab('video'),   bg:'rgba(255,149,0,0.08)' },
+                  { icon:'📡', label:'情报雷达', action:()=>{setTab('materials');setMatTab('trending')}, bg:'rgba(255,59,48,0.08)' },
+                  { icon:'👥', label:'博主追踪', action:()=>{setTab('materials');setMatTab('creator')}, bg:'rgba(52,199,89,0.08)' },
+                  { icon:'📊', label:'运营数据', action:()=>setTab('operations'), bg:'rgba(175,82,222,0.08)' },
+                ].map((item,i)=>(
+                  <button key={i} onClick={item.action}
+                    style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'12px 4px 10px',borderRadius:12,background:'transparent',border:'none',cursor:'pointer',gap:6}} className="press">
+                    <div style={{width:44,height:44,borderRadius:12,background:item.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}}>
+                      {item.icon}
+                    </div>
+                    <span style={{fontSize:11,fontWeight:500,color:'#3C3C43',letterSpacing:-0.1}}>{item.label}</span>
                   </button>
-                )
-              })}
+                ))}
+              </div>
             </div>
 
-            {/* 热点卡片 — iOS 分组列表 */}
+            {/* 今日任务 */}
+            {(() => {
+              const totalCount = todaySchedule.length + 3
+              const completedCount = completedTasks.size
+              return (
+                <div style={{background:'white',borderRadius:16,overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,0.06)'}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 16px 10px'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <div style={{width:28,height:28,borderRadius:8,background:'rgba(0,122,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14}}>📋</div>
+                      <span style={{fontSize:15,fontWeight:600,color:'#000',letterSpacing:-0.2}}>今日任务</span>
+                    </div>
+                    <div style={{display:'flex',alignItems:'center',gap:6}}>
+                      <div style={{height:4,width:60,background:'rgba(60,60,67,0.1)',borderRadius:100,overflow:'hidden'}}>
+                        <div style={{height:'100%',background:'#007AFF',borderRadius:100,width:`${totalCount>0?Math.round(completedCount/totalCount*100):0}%`,transition:'width 0.5s ease'}} />
+                      </div>
+                      <span style={{fontSize:12,color:'#8E8E93'}}>{completedCount}/{totalCount}</span>
+                    </div>
+                  </div>
+                  {[
+                    { id:'radar', icon:'📡', label:'查看今日热点', sub:'情报雷达', action:()=>{setTab('materials');setMatTab('trending')} },
+                    { id:'topic', icon:'💡', label:'确认今日选题', sub:'创作中心', action:()=>setTab('content') },
+                    { id:'content', icon:'✍️', label:'生成视频文案', sub:'AI 文案', action:()=>setTab('content') },
+                    ...(todaySchedule.length>0 ? [{ id:'publish', icon:'📤', label:`发布「${todaySchedule[0].title}」`, sub:todaySchedule[0].time, action:()=>setTab('operations') }] : []),
+                  ].map((task:any)=>{
+                    const done = completedTasks.has(task.id)
+                    return (
+                      <div key={task.id} style={{display:'flex',alignItems:'center',padding:'11px 16px',borderTop:'0.5px solid rgba(60,60,67,0.08)',gap:12}}>
+                        <button onClick={()=>toggleTask(task.id)}
+                          style={{width:22,height:22,borderRadius:11,border:done?'none':'1.5px solid rgba(60,60,67,0.25)',background:done?'#007AFF':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,cursor:'pointer',transition:'all 0.2s ease'}}>
+                          {done && <svg width="11" height="8" viewBox="0 0 11 8" fill="none"><path d="M1 4L4 7L10 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </button>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:14,fontWeight:500,color:done?'#8E8E93':'#000',letterSpacing:-0.2,textDecoration:done?'line-through':'none',transition:'all 0.2s'}}>{task.label}</div>
+                          <div style={{fontSize:11,color:'#8E8E93',marginTop:1}}>{task.sub}</div>
+                        </div>
+                        <button onClick={task.action} style={{fontSize:12,color:'#007AFF',background:'none',border:'none',cursor:'pointer',fontWeight:500,flexShrink:0}}>开始 →</button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })()}
+
+            {/* 今日热点 */}
             {(() => {
               const realHotspots = radarData?.hotspots?.length ? radarData.hotspots : null
               const displayHotspots = realHotspots || hotspots
               const isReal = !!realHotspots
               if (!displayHotspots?.length) return null
               return (
-                <div style={{background:'white',borderRadius:16,overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,0.07)'}}>
-                  {/* 卡片标题 */}
+                <div style={{background:'white',borderRadius:16,overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,0.06)'}}>
                   <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 16px 10px'}}>
                     <div style={{display:'flex',alignItems:'center',gap:8}}>
                       <div style={{width:28,height:28,borderRadius:8,background:'rgba(255,59,48,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14}}>🔥</div>
@@ -3522,220 +3515,130 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
                         : <span style={{fontSize:10,background:'rgba(120,120,128,0.1)',color:'#8E8E93',padding:'2px 7px',borderRadius:20}}>示例</span>
                       }
                     </div>
-                    <button onClick={() => { setTab('materials'); setMatTab('trending') }} style={{fontSize:13,color:'#007AFF',background:'none',border:'none',cursor:'pointer',fontWeight:500}}>全部</button>
+                    <button onClick={()=>{setTab('materials');setMatTab('trending')}} style={{fontSize:13,color:'#007AFF',background:'none',border:'none',cursor:'pointer',fontWeight:500}}>全部</button>
                   </div>
-                  {!isReal && (
-                    <div style={{margin:'0 16px 10px',padding:'8px 12px',background:'rgba(255,149,0,0.08)',borderRadius:10}}>
-                      <span style={{fontSize:11,color:'#C93400'}}>💡 点击「全部」获取今日实时热点</span>
-                    </div>
-                  )}
-                  {/* 列表 */}
-                  {displayHotspots.slice(0, 3).map((h: any, i: number) => (
-                    <div key={i} style={{display:'flex',alignItems:'center',padding:'11px 16px',borderTop:'0.5px solid rgba(60,60,67,0.1)'}}>
-                      <div style={{width:22,height:22,borderRadius:7,background:i===0?'rgba(255,59,48,0.1)':i===1?'rgba(255,149,0,0.1)':'rgba(255,204,0,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:i===0?'#FF3B30':i===1?'#FF9500':'#FFCC00',flexShrink:0,marginRight:10}}>{i+1}</div>
+                  {displayHotspots.slice(0,3).map((h:any,i:number)=>(
+                    <div key={i} style={{display:'flex',alignItems:'center',padding:'11px 16px',borderTop:'0.5px solid rgba(60,60,67,0.08)',gap:10}}>
+                      <div style={{width:20,height:20,borderRadius:6,background:i===0?'rgba(255,59,48,0.1)':i===1?'rgba(255,149,0,0.1)':'rgba(255,204,0,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,color:i===0?'#FF3B30':i===1?'#FF9500':'#FFCC00',flexShrink:0}}>{i+1}</div>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:14,fontWeight:500,color:'#000',letterSpacing:-0.2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h.title}</div>
                         {h.tag && <div style={{fontSize:11,color:'#8E8E93',marginTop:1}}>{h.tag}</div>}
                       </div>
-                      <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0,marginLeft:8}}>
-                        {h.heat && <span style={{fontSize:11,color:'#FF3B30',fontWeight:600}}>{h.heat}</span>}
-                        <button onClick={() => { try { localStorage.setItem('contentos_pending_topic', h.title) } catch {}; setTab('content'); showToast('✅ 已带入创作') }}
-                          style={{fontSize:11,color:'white',background:'#007AFF',padding:'4px 10px',borderRadius:20,border:'none',cursor:'pointer',fontWeight:600}} className="press">用</button>
-                      </div>
+                      <button onClick={()=>{try{localStorage.setItem('contentos_pending_topic',h.title)}catch(e){};setTab('content');showToast('✅ 已带入创作')}}
+                        style={{fontSize:11,color:'#007AFF',background:'rgba(0,122,255,0.08)',padding:'5px 11px',borderRadius:20,border:'none',cursor:'pointer',fontWeight:600,flexShrink:0}} className="press">用</button>
                     </div>
                   ))}
                 </div>
               )
             })()}
 
-{/* 知识库 + 灵感搜集 并排 */}
-            <div className="grid grid-cols-2 gap-3">
-              {/* 知识库 */}
-              <div className="bg-white rounded-[20px] p-3 s2">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm">🧠</span>
-                    <span className="font-semibold text-gray-900 text-[13px]">知识库</span>
-                    {knowledgeItems.length > 0 && <span className="text-[10px] bg-[#007AFF]/10 text-[#007AFF] px-2 py-0.5 rounded-full font-semibold">{knowledgeItems.length}</span>}
+            {/* 数据统计 4格 */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+              {statsCards.map((card:any)=>{
+                const colorMap:any = { blue:'#007AFF', purple:'#5856D6', indigo:'#007AFF', green:'#34C759' }
+                const bgMap:any = { blue:'rgba(0,122,255,0.08)', purple:'rgba(88,86,214,0.08)', indigo:'rgba(0,122,255,0.08)', green:'rgba(52,199,89,0.08)' }
+                const c = colorMap[card.color]||'#8E8E93'
+                const bg = bgMap[card.color]||'rgba(120,120,128,0.08)'
+                return (
+                  <button key={card.label}
+                    onClick={()=>{if(card.action==='topics'){setTab('content')}else if(card.action==='knowledge'){setTab('materials');setMatTab('mine')}else setTab(card.action)}}
+                    style={{background:'white',borderRadius:14,padding:'14px 14px 12px',textAlign:'left',border:'none',cursor:'pointer',boxShadow:'0 1px 3px rgba(0,0,0,0.06)',WebkitTapHighlightColor:'transparent'}} className="press">
+                    <div style={{width:32,height:32,borderRadius:9,background:bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,marginBottom:10}}>{card.icon}</div>
+                    <div style={{fontSize:26,fontWeight:700,color:'#000',letterSpacing:-0.8,lineHeight:1}}>{card.value}</div>
+                    <div style={{fontSize:12,color:'#8E8E93',marginTop:5,letterSpacing:-0.1}}>{card.label}</div>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* 知识库 + 灵感 */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+              <div style={{background:'white',borderRadius:14,padding:'12px 12px 10px',boxShadow:'0 1px 3px rgba(0,0,0,0.06)'}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                  <div style={{display:'flex',alignItems:'center',gap:6}}>
+                    <span style={{fontSize:14}}>🧠</span>
+                    <span style={{fontSize:13,fontWeight:600,color:'#000',letterSpacing:-0.2}}>知识库</span>
+                    {knowledgeItems.length>0 && <span style={{fontSize:10,background:'rgba(0,122,255,0.1)',color:'#007AFF',padding:'1px 6px',borderRadius:10,fontWeight:600}}>{knowledgeItems.length}</span>}
                   </div>
-                  <button onClick={() => { setTab('materials'); setMatTab('mine') }} className="text-[10px] text-[#007AFF] font-medium">管理 →</button>
+                  <button onClick={()=>{setTab('materials');setMatTab('mine')}} style={{fontSize:11,color:'#007AFF',background:'none',border:'none',cursor:'pointer',fontWeight:500}}>管理</button>
                 </div>
-                {knowledgeItems.length === 0 ? (
-                  <button onClick={() => { setTab('materials'); setMatTab('mine') }} className="w-full py-3 border border-dashed border-gray-200 rounded-2xl text-[10px] text-gray-400 text-center active:bg-gray-50">
-                    + 添加专业知识<br/>让 AI 更懂你
+                {knowledgeItems.length===0 ? (
+                  <button onClick={()=>{setTab('materials');setMatTab('mine')}} style={{width:'100%',padding:'10px 0',border:'1.5px dashed rgba(60,60,67,0.15)',borderRadius:10,fontSize:11,color:'#8E8E93',background:'transparent',cursor:'pointer',textAlign:'center' as const}}>
+                    + 添加知识<br/>让 AI 更懂你
                   </button>
                 ) : (
-                  <div className="space-y-1.5">
-                    {knowledgeItems.slice(0, 2).map((k: any) => (
-                      <div key={k.id} className="bg-[#007AFF]/6 rounded-xl px-2.5 py-1.5">
-                        <div className="text-[10px] font-bold text-[#0055CC] truncate">{k.title}</div>
-                        <div className="text-[9px] text-[#007AFF]/70 truncate mt-0.5">{k.content?.slice(0, 30)}...</div>
+                  <div style={{display:'flex',flexDirection:'column',gap:4}}>
+                    {knowledgeItems.slice(0,2).map((k:any)=>(
+                      <div key={k.id} style={{background:'rgba(0,122,255,0.06)',borderRadius:8,padding:'6px 8px'}}>
+                        <div style={{fontSize:11,fontWeight:600,color:'#0055CC',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{k.title}</div>
                       </div>
                     ))}
-                    {knowledgeItems.length > 2 && (
-                      <button onClick={() => { setTab('materials'); setMatTab('mine') }} className="w-full text-[9px] text-gray-400 text-center py-1">还有 {knowledgeItems.length - 2} 条 →</button>
-                    )}
                   </div>
                 )}
               </div>
 
-              {/* 灵感搜集 */}
-              <div className="bg-white rounded-[20px] p-3 s2">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm">💫</span>
-                    <span className="font-semibold text-gray-900 text-[13px]">灵感</span>
-                    {inspirations.length > 0 && <span className="text-[9px] bg-amber-50 text-amber-500 px-1.5 py-0.5 rounded-full font-bold">{inspirations.length}</span>}
+              <div style={{background:'white',borderRadius:14,padding:'12px 12px 10px',boxShadow:'0 1px 3px rgba(0,0,0,0.06)'}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                  <div style={{display:'flex',alignItems:'center',gap:6}}>
+                    <span style={{fontSize:14}}>💫</span>
+                    <span style={{fontSize:13,fontWeight:600,color:'#000',letterSpacing:-0.2}}>灵感</span>
+                    {inspirations.length>0 && <span style={{fontSize:10,background:'rgba(255,204,0,0.15)',color:'#B8860B',padding:'1px 6px',borderRadius:10,fontWeight:600}}>{inspirations.length}</span>}
                   </div>
-                  <button onClick={() => setShowInspirationInput(!showInspirationInput)} className="w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center text-white text-xs font-bold active:scale-95">+</button>
+                  <button onClick={()=>setShowInspirationInput(!showInspirationInput)} style={{width:22,height:22,borderRadius:11,background:'#FFCC00',border:'none',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,color:'white',cursor:'pointer',fontWeight:700,lineHeight:1}}>+</button>
                 </div>
                 {showInspirationInput && (
-                  <div className="mb-2">
-                    <textarea
-                      value={inspirationInput}
-                      onChange={e => setInspirationInput(e.target.value)}
-                      placeholder="记录灵感..."
-                      className="w-full px-2.5 py-2 rounded-xl bg-amber-50 text-[11px] outline-none resize-none h-14 text-gray-700"
-                      autoFocus
-                    />
-                    <div className="flex gap-1.5 mt-1">
-                      {['灵感', '选题', '文案', '热点'].map(tag => (
-                        <button key={tag} onClick={() => addInspiration(inspirationInput, tag)} className="flex-1 py-1 bg-amber-400 text-white text-[9px] font-bold rounded-lg active:scale-95">{tag}</button>
-                      ))}
-                    </div>
+                  <div style={{marginBottom:8}}>
+                    <textarea value={inspirationInput} onChange={(e:any)=>setInspirationInput(e.target.value)}
+                      placeholder="记录灵感..." autoFocus
+                      style={{width:'100%',padding:'7px 8px',borderRadius:8,background:'rgba(255,204,0,0.08)',border:'none',outline:'none',fontSize:11,resize:'none',height:52,color:'#3C3C43',fontFamily:'inherit'}} />
+                    <button onClick={()=>{addInspiration();setShowInspirationInput(false)}}
+                      style={{width:'100%',padding:'6px',background:'#FFCC00',borderRadius:8,border:'none',fontSize:11,fontWeight:600,color:'#3C3C43',cursor:'pointer',marginTop:4}}>保存</button>
                   </div>
                 )}
-                {inspirations.length === 0 && !showInspirationInput ? (
-                  <button onClick={() => setShowInspirationInput(true)} className="w-full py-3 border border-dashed border-gray-200 rounded-2xl text-[10px] text-gray-400 text-center active:bg-gray-50">
-                    + 记录今日灵感<br/>随时捕捉创意
-                  </button>
+                {inspirations.length===0 && !showInspirationInput ? (
+                  <div style={{fontSize:11,color:'#8E8E93',textAlign:'center' as const,padding:'8px 0'}}>随时记录创意灵感</div>
                 ) : (
-                  <div className="space-y-1.5">
-                    {inspirations.slice(0, 2).map((insp: any) => (
-                      <div key={insp.id} className="bg-amber-50 rounded-xl px-2.5 py-1.5 flex items-start gap-1.5">
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[10px] text-amber-700 leading-snug line-clamp-2">{insp.text}</div>
-                          <div className="text-[9px] text-amber-400 mt-0.5">{insp.tag} · {insp.time}</div>
-                        </div>
-                        <button onClick={() => useInspirationAsTopic(insp.text)} className="text-[9px] text-white bg-purple-400 px-1.5 py-0.5 rounded-full flex-shrink-0 active:scale-95">✍️</button>
+                  <div style={{display:'flex',flexDirection:'column',gap:4}}>
+                    {inspirations.slice(0,2).map((ins:any,idx:number)=>(
+                      <div key={idx} style={{background:'rgba(255,204,0,0.08)',borderRadius:8,padding:'6px 8px'}}>
+                        <div style={{fontSize:11,color:'#3C3C43',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{typeof ins==='string'?ins:ins.text}</div>
                       </div>
                     ))}
-                    {inspirations.length > 2 && (
-                      <div className="text-[9px] text-gray-400 text-center py-0.5">还有 {inspirations.length - 2} 条灵感</div>
-                    )}
                   </div>
                 )}
               </div>
             </div>
 
-            {/* 智能任务清单 - 紧凑版 */}
-            <div className="bg-white rounded-[20px] s2 overflow-hidden divide-y divide-gray-50">
-              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-50/80">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[13px] font-semibold text-gray-800">✅ 今日任务</span>
-                  <span className="text-[9px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">{completedCount}/{totalCount}</span>
-                  {completedCount === totalCount && totalCount > 0 && (
-                    <span className="text-[9px] text-[#34C759] bg-[#34C759]/8 px-1.5 py-0.5 rounded-full font-bold">全完成🎉</span>
-                  )}
+            {/* 最近文案 */}
+            {savedContents.length>0 && (
+              <div style={{background:'white',borderRadius:16,overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,0.06)'}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 16px 10px'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <div style={{width:28,height:28,borderRadius:8,background:'rgba(0,122,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14}}>💾</div>
+                    <span style={{fontSize:15,fontWeight:600,color:'#000',letterSpacing:-0.2}}>最近文案</span>
+                  </div>
+                  <button onClick={()=>setTab('content')} style={{fontSize:13,color:'#007AFF',background:'none',border:'none',cursor:'pointer',fontWeight:500}}>全部</button>
                 </div>
+                {savedContents.slice(0,2).map((sc:any)=>(
+                  <div key={sc.id} style={{padding:'10px 16px',borderTop:'0.5px solid rgba(60,60,67,0.08)'}}>
+                    <div style={{fontSize:13,fontWeight:500,color:'#000',letterSpacing:-0.2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{sc.topic}</div>
+                    <div style={{fontSize:11,color:'#8E8E93',marginTop:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{sc.content?.slice(0,40)}...</div>
+                  </div>
+                ))}
               </div>
-              <div className="divide-y divide-gray-50">
-                {todayTasks.map((task: any) => {
-                  const cfg = priorityConfig[task.priority]
-                  const done = completedTasks.has(task.id)
-                  return (
-                    <div
-                      key={task.id}
-                      className={`flex items-center gap-2 px-3 py-2 transition-all ${done ? 'opacity-40' : ''}`}
-                    >
-                      <button
-                        onClick={() => toggleTask(task.id)}
-                        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${done ? 'bg-green-400 border-green-400' : `border-gray-200`}`}
-                      >
-                        {done && <span className="text-white text-[8px] font-bold">✓</span>}
-                      </button>
-                      <button
-                        onClick={() => handleTaskAction(task.action)}
-                        className="flex-1 flex items-center gap-2 text-left min-w-0"
-                      >
-                        <span className="text-sm flex-shrink-0">{task.icon}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className={`text-[11px] font-semibold ${done ? 'line-through text-gray-400' : 'text-gray-800'}`}>{task.label}</div>
-                          <div className="text-[10px] text-gray-400 mt-0.5 truncate">{task.desc}</div>
-                        </div>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${cfg.tagBg}`}>{task.tag}</span>
-                          {!done && <span className="text-gray-300 text-xs">→</span>}
-                        </div>
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
+            )}
 
-            {/* 今日 & 明日发布计划 */}
-            <div className="bg-white rounded-[20px] s2 overflow-hidden divide-y divide-gray-50">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50/80/80">
-                <div className="font-semibold text-gray-900 text-[15px]">📅 发布计划</div>
-                <button onClick={() => setTab('operations')} className="text-xs text-[#007AFF] font-medium">管理 →</button>
-              </div>
-              {/* 今日 */}
-              <div className="px-4 pt-3 pb-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">今日</span>
-                  {todaySchedule.length > 0 && <span className="text-[10px] text-blue-400 bg-[#007AFF]/8 px-1.5 py-0.5 rounded-full">{todaySchedule.length} 条</span>}
+            {/* 账号定位 CTA */}
+            {(!acc.positioning || acc.positioning==='待完善') && (
+              <button onClick={()=>onPositioning()}
+                style={{background:'linear-gradient(135deg,#007AFF 0%,#5856D6 100%)',borderRadius:16,padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',border:'none',cursor:'pointer',boxShadow:'0 4px 16px rgba(0,122,255,0.3)',width:'100%'}} className="press">
+                <div style={{textAlign:'left' as const}}>
+                  <div style={{fontSize:15,fontWeight:600,color:'white',letterSpacing:-0.2}}>完善账号定位</div>
+                  <div style={{fontSize:12,color:'rgba(255,255,255,0.7)',marginTop:2}}>AI 帮你分析目标受众和内容方向</div>
                 </div>
-                {todaySchedule.length === 0 ? (
-                  <div className="flex items-center gap-2 py-2 mb-2">
-                    <span className="text-gray-300 text-sm">📭</span>
-                    <span className="text-xs text-gray-400">今日暂无排期</span>
-                    <button onClick={() => setTab('operations')} className="text-xs text-blue-400 font-medium ml-auto">+ 添加</button>
-                  </div>
-                ) : (
-                  <div className="space-y-2 mb-2">
-                    {todaySchedule.map((s: any) => (
-                      <div key={s.id} className="flex items-center gap-3 py-1.5">
-                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${s.status === '待发布' ? 'bg-orange-400' : s.status === '已发布' ? 'bg-green-400' : 'bg-gray-300'}`} />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs font-medium text-gray-800 truncate">{s.title}</div>
-                          <div className="text-[10px] text-gray-400">{s.time} · {s.platform}</div>
-                        </div>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${s.status === '待发布' ? 'bg-[#FF9500]/8 text-[#FF9500]' : s.status === '已发布' ? 'bg-[#34C759]/8 text-[#34C759]' : 'bg-gray-100 text-gray-400'}`}>{s.status}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {/* 明日 */}
-              <div className="px-4 pb-3 border-t border-gray-50 pt-2">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">明日</span>
-                  {tomorrowSchedule.length > 0 && <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">{tomorrowSchedule.length} 条</span>}
-                </div>
-                {tomorrowSchedule.length === 0 ? (
-                  <div className="flex items-center gap-2 py-1">
-                    <span className="text-gray-300 text-sm">📭</span>
-                    <span className="text-xs text-gray-400">明日暂无排期</span>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {tomorrowSchedule.map((s: any) => (
-                      <div key={s.id} className="flex items-center gap-3 py-1">
-                        <div className="w-2 h-2 rounded-full flex-shrink-0 bg-gray-200" />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs font-medium text-gray-600 truncate">{s.title}</div>
-                          <div className="text-[10px] text-gray-400">{s.time} · {s.platform}</div>
-                        </div>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-400 flex-shrink-0">{s.status}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+                <div style={{width:36,height:36,borderRadius:18,background:'rgba(255,255,255,0.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>→</div>
+              </button>
+            )}
 
             {/* 快捷入口 */}
             <div style={{background:"white",borderRadius:20,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.07)"}}>

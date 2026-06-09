@@ -2,40 +2,67 @@
 @tailwind components;
 @tailwind utilities;
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+/* ═══════════════════════════════════════════════
+   ContentOS — Apple Design System v3
+   ═══════════════════════════════════════════════ */
 
-/* ── Apple SF Pro 字体 ── */
+:root {
+  --blue:   #007AFF;
+  --green:  #34C759;
+  --red:    #FF3B30;
+  --orange: #FF9500;
+  --yellow: #FFCC00;
+  --purple: #AF52DE;
+  --indigo: #5856D6;
+  --gray1:  #8E8E93;
+  --gray2:  #AEAEB2;
+  --gray3:  #C7C7CC;
+  --gray4:  #D1D1D6;
+  --gray5:  #E5E5EA;
+  --gray6:  #F2F2F7;
+  --label:  #000000;
+  --label2: rgba(60,60,67,0.6);
+  --label3: rgba(60,60,67,0.3);
+  --bg:     #F2F2F7;
+}
+
+* { -webkit-font-smoothing: antialiased; box-sizing: border-box; }
+
 body {
-  font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', 'PingFang SC', 'Helvetica Neue', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
   background: #1C1C1E;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  overscroll-behavior: none;
 }
 
-/* ══════════════════════════════════════
-   APPLE 动效系统
-══════════════════════════════════════ */
-@keyframes pageSlideUp {
-  from { opacity: 0; transform: translateY(16px) scale(0.99); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Glass ── */
+.glass {
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: saturate(180%) blur(40px);
+  -webkit-backdrop-filter: saturate(180%) blur(40px);
 }
-@keyframes cardSpring {
-  0%   { opacity: 0; transform: scale(0.94) translateY(10px); }
-  60%  { opacity: 1; transform: scale(1.01) translateY(-1px); }
-  100% { transform: scale(1) translateY(0); }
+.glass-nav {
+  background: rgba(249,249,249,0.94);
+  backdrop-filter: saturate(180%) blur(40px);
+  -webkit-backdrop-filter: saturate(180%) blur(40px);
+  border-top: 0.5px solid rgba(60,60,67,0.12);
 }
+
+/* ── Shadows ── */
+.s1 { box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); }
+.s2 { box-shadow: 0 2px 8px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04); }
+.s3 { box-shadow: 0 4px 16px rgba(0,0,0,0.10), 0 2px 4px rgba(0,0,0,0.06); }
+
+/* ── Press Feedback ── */
+.press { transition: transform 0.12s cubic-bezier(0.34,1.56,0.64,1), opacity 0.12s ease; }
+.press:active { transform: scale(0.95); opacity: 0.85; }
+
+/* ── Animations ── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
 }
 @keyframes sheetUp {
   from { transform: translateY(100%); }
@@ -45,165 +72,63 @@ body {
   to { transform: rotate(360deg); }
 }
 
-.page-enter  { animation: pageSlideUp 0.32s cubic-bezier(0.25,0.46,0.45,0.94) both; }
-.card-spring { animation: cardSpring 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
-.fade-up     { animation: fadeUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both; }
-.fade-in     { animation: fadeIn 0.2s ease both; }
-.sheet-up    { animation: sheetUp 0.36s cubic-bezier(0.32,0.72,0,1) both; }
-.animate-spin { animation: spin 0.8s linear infinite; }
+.fade-up  { animation: fadeUp  0.32s cubic-bezier(0.22,1,0.36,1) both; }
+.sheet-up { animation: sheetUp 0.38s cubic-bezier(0.22,1,0.36,1) both; }
+.spin     { animation: spin 0.8s linear infinite; }
 
-/* ══════════════════════════════════════
-   APPLE 触感反馈
-══════════════════════════════════════ */
-.press {
-  -webkit-tap-highlight-color: transparent;
-  transition: transform 0.12s cubic-bezier(0.34,1.56,0.64,1), opacity 0.12s ease;
-  cursor: pointer;
-}
-.press:active { transform: scale(0.94); opacity: 0.85; }
-
-/* ══════════════════════════════════════
-   APPLE 毛玻璃
-══════════════════════════════════════ */
-.glass {
-  background: rgba(255,255,255,0.72);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 0.5px solid rgba(255,255,255,0.6);
-}
-.glass-dark {
-  background: rgba(28,28,30,0.82);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 0.5px solid rgba(255,255,255,0.08);
-}
-.glass-nav {
-  background: rgba(249,249,251,0.62);
-  backdrop-filter: blur(40px) saturate(180%) brightness(1.04);
-  -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(1.04);
-  border-top: 0.5px solid rgba(255,255,255,0.9);
-  box-shadow: 0 -0.5px 0 rgba(0,0,0,0.1);
-}
-
-/* ══════════════════════════════════════
-   APPLE 阴影系统
-══════════════════════════════════════ */
-.s1 { box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); }
-.s2 { box-shadow: 0 2px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04); }
-.s3 { box-shadow: 0 4px 20px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.05); }
-.s4 { box-shadow: 0 8px 32px rgba(0,0,0,0.13), 0 3px 10px rgba(0,0,0,0.06); }
-.s5 { box-shadow: 0 16px 48px rgba(0,0,0,0.18), 0 6px 18px rgba(0,0,0,0.08); }
-
-.s-blue   { box-shadow: 0 8px 28px rgba(0,122,255,0.32), 0 3px 10px rgba(0,122,255,0.18); }
-.s-purple { box-shadow: 0 8px 28px rgba(88,86,214,0.32), 0 3px 10px rgba(88,86,214,0.18); }
-.s-green  { box-shadow: 0 8px 28px rgba(52,199,89,0.28), 0 3px 10px rgba(52,199,89,0.14); }
-.s-orange { box-shadow: 0 8px 28px rgba(255,149,0,0.28), 0 3px 10px rgba(255,149,0,0.14); }
-
-/* ══════════════════════════════════════
-   APPLE 分段控制器
-══════════════════════════════════════ */
+/* ── Segment Control ── */
 .seg {
   display: flex;
   background: rgba(118,118,128,0.12);
-  border-radius: 10px;
+  border-radius: 9px;
   padding: 2px;
-  gap: 0;
 }
 .seg-item {
   flex: 1;
   padding: 6px 12px;
-  border-radius: 8px;
+  border-radius: 7px;
   font-size: 13px;
   font-weight: 500;
-  color: #3C3C43;
+  color: var(--label2);
   text-align: center;
   cursor: pointer;
   transition: all 0.2s ease;
   border: none;
   background: transparent;
-  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
 }
 .seg-item.active {
   background: white;
-  color: #000;
+  color: var(--label);
   font-weight: 600;
   box-shadow: 0 1px 4px rgba(0,0,0,0.12), 0 0.5px 1px rgba(0,0,0,0.08);
 }
 
-/* ══════════════════════════════════════
-   APPLE 字体层级
-══════════════════════════════════════ */
-.t-largetitle { font-size: 34px; font-weight: 700; letter-spacing: -0.8px; line-height: 1.1; }
-.t-title1     { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.15; }
-.t-title2     { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; line-height: 1.2; }
-.t-title3     { font-size: 20px; font-weight: 600; letter-spacing: -0.2px; line-height: 1.25; }
-.t-headline   { font-size: 17px; font-weight: 600; letter-spacing: -0.1px; line-height: 1.3; }
-.t-body       { font-size: 17px; font-weight: 400; letter-spacing: -0.1px; line-height: 1.4; }
-.t-callout    { font-size: 16px; font-weight: 400; letter-spacing: -0.1px; line-height: 1.4; }
-.t-subhead    { font-size: 15px; font-weight: 400; letter-spacing: -0.05px; line-height: 1.4; }
-.t-footnote   { font-size: 13px; font-weight: 400; letter-spacing: 0; line-height: 1.4; }
-.t-caption1   { font-size: 12px; font-weight: 400; letter-spacing: 0; line-height: 1.3; }
-.t-caption2   { font-size: 11px; font-weight: 400; letter-spacing: 0.06px; line-height: 1.3; }
-
-/* ══════════════════════════════════════
-   APPLE 颜色变量
-══════════════════════════════════════ */
-:root {
-  --blue:   #007AFF;
-  --green:  #34C759;
-  --indigo: #5856D6;
-  --orange: #FF9500;
-  --pink:   #FF2D55;
-  --purple: #AF52DE;
-  --red:    #FF3B30;
-  --teal:   #5AC8FA;
-  --yellow: #FFCC00;
-  --gray:   #8E8E93;
-  --gray2:  #AEAEB2;
-  --gray3:  #C7C7CC;
-  --gray4:  #D1D1D6;
-  --gray5:  #E5E5EA;
-  --gray6:  #F2F2F7;
-  --label:  #000000;
-  --label2: rgba(60,60,67,0.6);
-  --label3: rgba(60,60,67,0.3);
-  --label4: rgba(60,60,67,0.18);
-  --fill:   rgba(120,120,128,0.2);
-  --fill2:  rgba(120,120,128,0.16);
-  --fill3:  rgba(118,118,128,0.12);
-  --fill4:  rgba(116,116,128,0.08);
-  --bg:     #F2F2F7;
-  --bg2:    #FFFFFF;
-  --bg3:    #F2F2F7;
-  --separator: rgba(60,60,67,0.29);
-  --separator-opaque: #C6C6C8;
+/* ── iOS Input ── */
+.ios-input {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: rgba(118,118,128,0.12);
+  border: none;
+  outline: none;
+  font-size: 15px;
+  color: #000;
+  font-family: inherit;
 }
+.ios-input::placeholder { color: rgba(60,60,67,0.3); }
 
-/* ══════════════════════════════════════
-   APPLE 列表/卡片
-══════════════════════════════════════ */
-.apple-card {
-  background: white;
-  border-radius: 16px;
-  overflow: hidden;
+/* ── iOS Button ── */
+.ios-btn {
+  padding: 13px 20px;
+  border-radius: 12px;
+  background: var(--blue);
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.12s ease, transform 0.12s ease;
 }
-.apple-list-item {
-  padding: 12px 16px;
-  border-bottom: 0.5px solid rgba(60,60,67,0.18);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.apple-list-item:last-child { border-bottom: none; }
-
-/* ══════════════════════════════════════
-   SCROLLBAR HIDE
-══════════════════════════════════════ */
-.scrollbar-hide::-webkit-scrollbar { display: none; }
-.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-/* ══════════════════════════════════════
-   DARK MODE
-══════════════════════════════════════ */
-[data-theme="dark"] .glass-nav { background: rgba(28,28,30,0.82); border-top-color: rgba(255,255,255,0.06); }
-[data-theme="dark"] .apple-card { background: #1C1C1E; }
+.ios-btn:active { opacity: 0.8; transform: scale(0.97); }
+.ios-btn:disabled { opacity: 0.4; }
