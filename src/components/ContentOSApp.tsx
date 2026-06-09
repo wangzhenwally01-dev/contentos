@@ -3433,29 +3433,29 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
             </div>
 
             {/* 快速入口 — 2行3列图标网格 */}
-            <div style={{background:'white',borderRadius:16,padding:'14px 12px 10px',boxShadow:'0 1px 3px rgba(0,0,0,0.06)'}}>
-              <div style={{fontSize:13,fontWeight:600,color:'#8E8E93',letterSpacing:-0.1,marginBottom:12,paddingLeft:4}}>快速开始</div>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:4}}>
-                {[
-                  { icon:'💡', label:'生成选题', action:()=>setTab('content'), bg:'rgba(88,86,214,0.08)' },
-                  { icon:'✍️', label:'写文案',   action:()=>setTab('content'), bg:'rgba(0,122,255,0.08)' },
-                  { icon:'🎬', label:'做视频',   action:()=>setTab('video'),   bg:'rgba(255,149,0,0.08)' },
-                  { icon:'📡', label:'情报雷达', action:()=>{setTab('materials');setMatTab('trending')}, bg:'rgba(255,59,48,0.08)' },
-                  { icon:'👥', label:'博主追踪', action:()=>{setTab('materials');setMatTab('creator')}, bg:'rgba(52,199,89,0.08)' },
-                  { icon:'📊', label:'运营数据', action:()=>setTab('operations'), bg:'rgba(175,82,222,0.08)' },
-                ].map((item,i)=>(
-                  <button key={i} onClick={item.action}
-                    style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'12px 4px 10px',borderRadius:12,background:'transparent',border:'none',cursor:'pointer',gap:6}} className="press">
-                    <div style={{width:44,height:44,borderRadius:12,background:item.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}}>
-                      {item.icon}
-                    </div>
-                    <span style={{fontSize:11,fontWeight:500,color:'#3C3C43',letterSpacing:-0.1}}>{item.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+                <div style={{background:'white',borderRadius:16,padding:'16px 8px 12px',boxShadow:'0 1px 3px rgba(0,0,0,0.06)'}}>
+                  <div style={{fontSize:11,fontWeight:600,color:'#8E8E93',letterSpacing:0.5,marginBottom:14,paddingLeft:8,textTransform:'uppercase' as const}}>快速开始</div>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:0}}>
+                    {[
+                      { icon:'💡', label:'生成选题', action:()=>setTab('content'), bg:'rgba(88,86,214,0.1)', shadow:'rgba(88,86,214,0.18)' },
+                      { icon:'✍️', label:'写文案',   action:()=>setTab('content'), bg:'rgba(0,122,255,0.1)', shadow:'rgba(0,122,255,0.18)' },
+                      { icon:'🎬', label:'做视频',   action:()=>setTab('video'),   bg:'rgba(255,149,0,0.1)', shadow:'rgba(255,149,0,0.18)' },
+                      { icon:'📡', label:'情报雷达', action:()=>{setTab('materials');setMatTab('trending')}, bg:'rgba(255,59,48,0.1)', shadow:'rgba(255,59,48,0.18)' },
+                      { icon:'👥', label:'博主追踪', action:()=>{setTab('materials');setMatTab('creator')}, bg:'rgba(52,199,89,0.1)', shadow:'rgba(52,199,89,0.18)' },
+                      { icon:'📊', label:'运营数据', action:()=>setTab('operations'), bg:'rgba(175,82,222,0.1)', shadow:'rgba(175,82,222,0.18)' },
+                    ].map((item:any,i:number)=>(
+                      <button key={i} onClick={item.action}
+                        style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'8px 4px 10px',borderRadius:12,background:'transparent',border:'none',cursor:'pointer',gap:7}} className="press">
+                        <div style={{width:52,height:52,borderRadius:14,background:item.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,boxShadow:`0 2px 8px ${item.shadow}`}}>
+                          {item.icon}
+                        </div>
+                        <span style={{fontSize:11,fontWeight:500,color:'#3C3C43',letterSpacing:-0.1}}>{item.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            {/* 今日任务 */}
+                            {/* 今日任务 */}
             {(() => {
               const totalCount = todaySchedule.length + 3
               const completedCount = completedTasks.size
@@ -3533,25 +3533,25 @@ function Dashboard({ acc, accounts, accountIdx, setAccountIdx, setTab, setMatTab
             })()}
 
             {/* 数据统计 4格 */}
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-              {statsCards.map((card:any)=>{
-                const colorMap:any = { blue:'#007AFF', purple:'#5856D6', indigo:'#007AFF', green:'#34C759' }
-                const bgMap:any = { blue:'rgba(0,122,255,0.08)', purple:'rgba(88,86,214,0.08)', indigo:'rgba(0,122,255,0.08)', green:'rgba(52,199,89,0.08)' }
-                const c = colorMap[card.color]||'#8E8E93'
-                const bg = bgMap[card.color]||'rgba(120,120,128,0.08)'
-                return (
-                  <button key={card.label}
-                    onClick={()=>{if(card.action==='topics'){setTab('content')}else if(card.action==='knowledge'){setTab('materials');setMatTab('mine')}else setTab(card.action)}}
-                    style={{background:'white',borderRadius:14,padding:'14px 14px 12px',textAlign:'left',border:'none',cursor:'pointer',boxShadow:'0 1px 3px rgba(0,0,0,0.06)',WebkitTapHighlightColor:'transparent'}} className="press">
-                    <div style={{width:32,height:32,borderRadius:9,background:bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,marginBottom:10}}>{card.icon}</div>
-                    <div style={{fontSize:26,fontWeight:700,color:'#000',letterSpacing:-0.8,lineHeight:1}}>{card.value}</div>
-                    <div style={{fontSize:12,color:'#8E8E93',marginTop:5,letterSpacing:-0.1}}>{card.label}</div>
-                  </button>
-                )
-              })}
-            </div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                  {statsCards.map((card:any)=>{
+                    const colorMap:any = { blue:'#007AFF', purple:'#5856D6', indigo:'#007AFF', green:'#34C759' }
+                    const bgMap:any = { blue:'rgba(0,122,255,0.1)', purple:'rgba(88,86,214,0.1)', indigo:'rgba(0,122,255,0.1)', green:'rgba(52,199,89,0.1)' }
+                    const c = colorMap[card.color]||'#8E8E93'
+                    const bg = bgMap[card.color]||'rgba(120,120,128,0.1)'
+                    return (
+                      <button key={card.label}
+                        onClick={()=>{if(card.action==='topics'){setTab('content')}else if(card.action==='knowledge'){setTab('materials');setMatTab('mine')}else setTab(card.action)}}
+                        style={{background:'white',borderRadius:16,padding:'16px 16px 14px',textAlign:'left' as const,border:'none',cursor:'pointer',boxShadow:'0 1px 3px rgba(0,0,0,0.06)',WebkitTapHighlightColor:'transparent'}} className="press">
+                        <div style={{width:36,height:36,borderRadius:10,background:bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,marginBottom:12}}>{card.icon}</div>
+                        <div style={{fontSize:30,fontWeight:700,color:'#000',letterSpacing:-1,lineHeight:1}}>{card.value}</div>
+                        <div style={{fontSize:12,color:'#8E8E93',marginTop:6,letterSpacing:-0.1}}>{card.label}</div>
+                      </button>
+                    )
+                  })}
+                </div>
 
-            {/* 知识库 + 灵感 */}
+                            {/* 知识库 + 灵感 */}
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
               <div style={{background:'white',borderRadius:14,padding:'12px 12px 10px',boxShadow:'0 1px 3px rgba(0,0,0,0.06)'}}>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
